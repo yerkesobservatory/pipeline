@@ -1,0 +1,362 @@
+# HAWC Pipeline Configuration Validation File - General (public) version
+#
+# 2008-11-3 Marc Berthoud Version 0.1: Configuration file for Pipeline Testing
+# 2012 Marc Berthoud: Numerous updates
+# 2013-10-09 Nicholas Chapman: Made a config validation file
+
+# General Section: configuration of the pipeline
+[general]
+    # list of packages to look for pipe step modules (order matters)
+    steppacks = hawc, hawcV0, detbolo, sharp, drp
+    # list of steps for unknown instrument mode
+    stepslist = StepLoadHAWC, StepDemod
+
+# Pipeline Section: Configuration of the pipeline
+[pipeline]
+    # Number of final results to save
+    finalsaveN = 5
+
+# Testing Section: Information for testing the pipeline
+[testing]
+    # Folder for test files
+    testpath = testfiles
+    # Information for IDL test code
+    # IDL Executable path
+    idlexec = None
+    # Path to HAWC IDL functions
+    idlpath = None
+
+### Pipelines Section: configuration for individual pipeline modes
+
+# Test Mode Configuration
+[mode_test]
+    # list of data reduction steps
+    stepslist = StepLoadHAWC, StepDemod
+
+# ChopNod Mode Configuration
+[mode_nod]
+    # list of steps
+    stepslist = StepLoadHAWC, StepDemod, save, StepFlat, save, StepNodBeams, save, StepNodSub, save, StepNodMerge, save
+
+# ChopScan Mode Configuration
+[mode_scan]
+    # list of steps
+    stepslist = StepLoadHAWC, StepDemod, save, StepFlat, save, StepScanSub, save, StepScanMerge, save
+
+# Noise Mode Configuration
+[mode_noise]
+    # list of steps
+    stepslist = StepNoiseFFT, save, StepNoisePlots, save
+
+# I-V Curve Mode Configuration
+[mode_ivc]
+    # list of steps
+    stepslist = StepIVCReduce, save, StepIVCPlots, save
+
+# Chop Mode Configuration
+[mode_chop]
+    # list of steps
+    stepslist = StepLoadHAWC, StepDemod, save, StepFlat, save, StepNodBeams, save
+
+# DOG Mode Configuration
+[mode_dog]
+    # list of steps
+    stepslist = StepLoadHAWC, StepDemod, save, StepFlat, save, StepDogMerge, save, StepDogPsf, save, StepDogPlots, save
+
+### Pipe Step Section
+
+# Parent step configuration
+[parent]
+    # Sample parameter - no practical use
+    sampar = 0.25
+
+# Parent step Multiple Inputs configuration
+[parentmi]
+    # Sample parameter - no practical use
+    sampar = 0.5
+
+# Parent step Multiple Outputs configuration
+[parentmo]
+    # Sample parameter - no practical use
+    sampar = 0.75
+
+# R and T alignment step
+[align]
+    # rotation angle of R relative to T, in degrees
+    angle  = 0.0
+    # Magnification of R relative to T, in the x,y pixel direction
+    mag    = 1.0,1.0 
+    # Pixel displacement of R relative to T, in the x,y directions
+    disp   = 0.0,0.0 
+    # Pointing offset in x pixels of R relative to T, for each HWP angle
+    xpoint = 0.0,0.0,0.0,0.0 
+    # Pointing offset in y pixels of R relative to T, for each HWP angle
+    ypoint = 0.0,0.0,0.0,0.0
+
+# background subtraction step
+[bgsubtract]
+    # Pixel size in arcseconds of output map
+    cdelt = 2.5
+    # Projection of output map
+    proj = TAN
+    # Number of iterations of background subtraction with slope term
+    bgslope = 0
+    # Number of iterations of background subtract with offset (intercept) term
+    bgoffset = 10
+    # FWHM of gaussian smoothing kernel, in arcseconds
+    fwhm = 2.0
+    # Integration radius for smoothing, in arcseconds
+    radius = 4.0
+    # Use Chauvenet's criterion in background subtraction?
+    chauvenet = True
+    # Use errors in intensity when fitting?
+    errflag = False
+    # Use covariances when performing gaussian smoothing?
+    covflag = True
+
+# Combine R-T and R+T data
+[combine]
+    # Reject outliers more than this many sigma from the mean
+    sigma = 3.0
+
+# Demodulation step configuration
+[demod]
+    curve = sin
+    medfilter = 0
+    lowfilter = 0.0
+    highfilter = 0.0
+    chopphasecorrect = True
+
+[demodsqr]
+    # chopper tolerance in arcseconds
+    chop_tol = 4.0
+    # nod tolerance in arcseconds
+    nod_tol  = 2.0
+    # hwp angle tolerance in degrees
+    hwp_tol  = 2.0
+    # Azimuth error tolerance in arcseconds
+    az_tol   = 5.0
+    # Elivation error tolerance in arcseconds
+    el_tol   = 5.0
+    # EDAS tolerance (used to detect when HWP is moving)
+    edas_tol = 0.2
+    # Sample tolerance as a percentage.  High and low chop states must have
+    # a difference in number of samples less than this value.
+    samp_tol = 50.0
+
+# DOG merge step configuration
+[dogmerge]
+    # Number to round scan limits to
+    roundval = 1.0
+    # Flag indicating if chop data should be stored
+    savechops = False
+    # Time offset between the start of the file and the start of the scan
+    #   If the number is negative, the start time is searched in the DOG signal.
+    startoffset = -1.0
+
+# DOG plots step configuration
+[dogplots]
+    # List of bad pixels to ignore for flatfields and such
+    badpix = D7, A8, A11, F2, L7, L15, O14, M9, R7, X8, U8
+    # Filenamepath to database of pixel images
+    charpixs = None
+    # Flag indicating if data should be subtracted by flatfield
+    subflat = True
+
+# DOG psf step configuration
+[dogpsf]
+    # Flag to indicate if PSF fit should be done
+    #   Options are: 'lowres' (default), 'highres'
+    #   (highres reverts to lowres if no chops data is available - 
+    #    - see dogmerge:savechops )
+    psffit = lowres
+
+# Flat step configuration
+[flat]
+    # filename that overrules the fit keys ('search' looks for file in flatdir)
+    flatfile = search
+    # list of keys that need to match flat and data file (only if flatfile=search)
+    fitkeys = DETSIZE, PASSBAND, PUPIL # HAWC
+    # flatfolder: folder for flat files (only used if flatfile=search)
+    flatfolder = None
+    # list of input file datasets to flatten
+    # - Expects None or a list of image HDU or table column names
+    datalist = R array, T array
+    # method to normalize data (standard is NO, options are NO, RE, IM and ABS)
+    l0method = NO
+
+# Correction for instrumental polarization step configuration
+[ip]
+    # Instrumental polarization in Q (fractional)
+    Qinst = 0.0
+    # Instrumental polarization in U (fractional)
+    Uinst = 0.0 
+    # Telescope polarization in Q (fractional)
+    Qtel  = 0.0 
+    # Telescope polarization in U (fractional)
+    Utel  = 0.0 
+
+# IVCReduce step configuration
+[ivcreduce]
+    # List of IDL files to compile
+    tocompile = trim_iv_v4.pro, ramp_iv_v7.4.pro, radpower2.1.pro
+    # String for trim_iv command (placeholder for input and output file)
+    runtrim = "trim_iv, '%s', new_file = '%s' "
+    # String for ramp_iv command (placeholder for input and output file)
+    runramp = "ramp_iv, '%s', '%s', -1, -1, /drift, skip=[1000,0], /rp, /noplots"
+    # String for radpower command (placeholder for input, detparam, loadres, output)
+    runrad = "radpower, '%s', '%s', loadfile='%s', outfile='%s', /nostep, /noplots, RPfilebase='%s'"
+    # Load resistors file
+    loadres = None
+    # Detector parameters file
+    detpars = None
+
+# IVCPlots step configuration
+[ivcplots]
+    # Type of Plot for pixels: VDCofTIME, VDCofIBIAS or RofP
+    pixelplottype = VDCofIBIAS
+    # Percent of pixels to be ignored at the top and bottom for the image plots
+    scalepercent = 2.0
+
+# LoadHAWC step configuration
+[loadhawc]
+    # Channels from the aux board that are multiplexed
+    auxmuxed = 0, 1, 2, 14, 15, 16
+    # Aux Board calibration in counts/V
+    auxcal = 102390
+
+# Merge step configuration
+[merge]
+    # Pixel size in arcseconds of output map
+    cdelt = 2.5
+    # Projection of output map
+    proj = TAN
+    # FWHM of gaussian smoothing kernel, in arcseconds
+    fwhm = 9.5
+    # Integration radius for smoothing, in arcseconds
+    radius = 12.0
+    # Use covariances when performing gaussian smoothing?
+    covflag = False
+    # Name of output merged file
+    out = merge
+
+# NodMerge step configuration
+[nodmerge]
+    # scale at which the ouput should be
+    outscale = 50.0
+    # pixel size in sky units for each band (same units as chopamp and nodamp)
+    skypix1 = 54
+    skypix2 = 85
+    skypix3 = 146
+    skypix4 = 200
+
+# Subtract L and R nods with HWP configuration
+[nodpolsub]
+
+# NodBeams step configuration
+[nodsbeams]
+
+# NodSub step configuration
+[nodsub]
+
+# NoiseFFT step configuration
+[noisefft]
+    # List of IDL files to compile
+    tocompile = hawc_powspec.pro,
+    # String for hawc_i command (with placeholders for infname and outfname)
+    runcmd = "hawc_powspec, '%s', '%s', /noplots, /truncate"
+    # ## ## Options for old IDL commands
+    # Option for using old (hawc_i IDL command)
+    oldidlcode = False
+
+# NoisePlots step configuration
+[noiseplots]
+    # Option for using old data format (for use with hawc_i)
+    oldformat = False
+    # 1 / fraction of pixels to show for detailed pixels plots
+    #     (plotn=1 for showing all pixels, plotn=4 for showing everying fourth)
+    plotn = 1
+
+# Correction for atmospheric opacity step configuration
+[opacity]
+
+# Polarization vector step configuration
+[polvec]
+    # telescope polarization efficiency
+    eff = 1.0
+    # inflate errors in q,u by sqrt of this factor
+    chi2 = 1.0
+
+# Rotate Q and U from detector to sky frame step configuration
+[rotate]
+    # HWP Zero angle, in degrees
+    hwpzero = 0.0
+
+# ScanMerge step configuration
+[scanmerge]
+    # scale at which the ouput should be
+    outscale = 100.0
+    # pixel size in sky units for each band (same units as chopamp and nodamp)
+    skypix1 = 54
+    skypix2 = 85
+    skypix3 = 146
+    skypix4 = 200
+
+# Split data by HWP angle and nod position step configuration
+[split]
+    # Nod tolerance, as the percent difference allowed in number of chop cycles
+    # between 1st and 2nd left, and between left and right
+    nod_tol = 30.0
+
+# Compute Stokes I, Q, U step configuration
+[stokes]
+    # HWP angles for Stokes parameters must differ by no more than 45+-hwp_tol
+    # degrees
+    hwp_tol = 5.0
+
+### Data Section
+
+# Treatement of the FITS header: can include keyword replacement
+# The keyword value and comment must be printed as they would in a FITS header
+# If the value is another keyword, the value of that keyword will be used
+# instead (This only works if the other keywords starts with an alphabetic
+# character).
+[header]
+    INSTMODE = "'test' / instrument mode"
+    CHPFREQ  = 10.0 / Chop Frequency
+    SKYANGL  = 0.0 / Sky Angle
+    CHOPPING = T / Chopping flag
+    CHPMODE  = "'2-POINT' / Chopping mode"
+    CHPAMP1  = 30000 / Chop Amplitude
+    CHPANGLE = 0.0 / Chop Angle
+    DETSIZE  = "'(32,12)'"
+    NODDING  = T / Nodding flag
+    NODANGLE = 92.8 / Nod Angle
+    NODPATT  = "'ABBA' / Nod Pattern"
+    NODTIME  = 5.0 / Nod Integration Time
+    NODSETL  = 0.05 / Nod Settle Time
+    OBSRA    = 5000 / Observation RA (now DOG units)
+    OBSDEC   = 5000 / Observation DEC (now DOG units)
+    SCANNING = T / Scanning flag
+
+# Treatement for table values when combining images
+# Options are MIN, MED, AVG, FIRST, LAST, SUM
+[table]
+    Sample_Number = MIN
+    Detector_Time = MED
+    Chop_Signal   = AVG
+    Chop_Demod    = AVG
+    Phase_Corr    = AVG
+    Scan_Signal   = MED
+    DTimeStart    = MIN
+    DTimeEnd      = MAX
+    BeamPosRA     = FIRST
+    BeamPosDec    = FIRST
+    ScanRA        = AVG
+    ScanDec       = AVG
+    ImageRA       = FIRST
+    ImageDec      = FIRST
+    ImageScale    = FIRST
+    SkyTime       = SUM
+    NAMES         = LAST
+    index         = SUM

@@ -1,0 +1,105 @@
+# HAWC Pipeline Configuration Validation File - General (public) version
+#
+# 2008-11-3 Marc Berthoud Version 0.1: Configuration file for Pipeline Testing
+# 2012 Marc Berthoud: Numerous updates
+# 2013-10-09 Nicholas Chapman: Made a config validation file
+
+# General Section: configuration of the pipeline
+[general]
+    # list of packages to look for pipe step modules (order matters)
+    steppacks = stonesteps, drp
+    # list of steps for unknown instrument mode
+    stepslist = StepLoadStoneedge, StepDemod
+
+# Pipeline Section: Configuration of the pipeline
+[pipeline]
+    # Number of final results to save
+    finalsaveN = 5
+
+### Pipelines Section: configuration for individual pipeline modes
+
+# ChopNod Mode Configuration
+[mode_stoneedge]
+# List of keyword=values required in file header to select this pipeline mode
+    #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
+    datakeys = "OBSERVAT=StoneEdge"
+    # list of steps
+    stepslist = load, StepAstrometrica, save, StepHotpix, StepRGBAuto
+
+### Pipe Step Section
+
+# Parent step configuration
+[parent]
+    # Sample parameter - no practical use
+    sampar = 0.25
+
+# Parent step Multiple Inputs configuration
+[parentmi]
+    # Sample parameter - no practical use
+    sampar = 0.5
+
+# Parent step Multiple Outputs configuration
+[parentmo]
+    # Sample parameter - no practical use
+    sampar = 0.75
+
+# Dark step configuration
+[dark]
+    # filename that overrules the fit keys ('search' looks for file in darkdir)
+    darkfile = /data/scripts/DataReduction/dark.fits
+    # list of keys that need to match dark and data file (only if darkfile=search)
+    fitkeys = DETSIZE, PASSBAND, PUPIL # HAWC
+    # darkfolder: folder for dark files (only used if darkfile=search)
+    darkfolder = None
+    # list of input file datasets to subtract dark
+    # - Expects None or a list of image HDU or table column names
+    #datalist = R array, T array
+    # method to normalize data (standard is NO, options are NO, RE, IM and ABS)
+    l0method = NO
+
+# Flat step configuration
+[flat]
+    # filename that overrules the fit keys ('search' looks for file in flatdir)
+    flatfile = search
+    # list of keys that need to match flat and data file (only if flatfile=search)
+    fitkeys = DETSIZE, PASSBAND, PUPIL # HAWC
+    # flatfolder: folder for flat files (only used if flatfile=search)
+    flatfolder = /data/images/StoneEdge/0.5meter/2014/Flats/Flats2014-10-30
+    # list of input file datasets to flatten
+    # - Expects None or a list of image HDU or table column names
+    #datalist = R array, T array
+    # method to normalize data (standard is NO, options are NO, RE, IM and ABS)
+    l0method = NO
+
+# Hotpix step configuration
+[hotpix]
+
+# Astrometrica Step Configuration
+[astrometrica]
+    # Command to call astrometrica, should contain 2 string
+    # placeholders for intput and output file (default: cp %s %s)
+    astrocmd = 'cp %s %s'
+    # Flag to log full astrometrica output at DEBUG level
+    verbose = False
+
+# RGB step configuration
+[makergb]
+    # percentile value for miniumum scaling (in decimal form)
+    minpercent = 0.5
+    # percentile value for maximum scaling
+    maxpercent = 0.999
+
+### Data Section
+
+# Treatement of the FITS header: can include keyword replacement
+# The keyword value and comment must be printed as they would in a FITS header
+# If the value is another keyword, the value of that keyword will be used
+# instead (This only works if the other keywords starts with an alphabetic
+# character).
+[header]
+    INSTMODE = "stoneedge"
+    COMPLETE = 1
+    
+# Treatement for table values when combining images
+# Options are MIN, MED, AVG, FIRST, LAST, SUM
+[table]

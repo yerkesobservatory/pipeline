@@ -1,0 +1,8 @@
+cd /home/yerkesstudent11/Documents/DataReduce/source/
+import logging
+logging.basicConfig(level = logging.INFO)
+from drp.pipeline import PipeLine
+pipe = PipeLine(config = '../pipeconf_master_edit.txt')
+result = pipe(['../medusaneb_i-band_180sec_bin1_2013dec29_vhoette_num10_seo.raw.fits',
+	       '../medusaneb_r-band_180sec_bin1_2013dec29_vhoette_num9_seo.raw.fits',
+	       '../medusaneb_g-band_180sec_bin1_2013dec29_vhoette_num11_seo.raw.fits'])
