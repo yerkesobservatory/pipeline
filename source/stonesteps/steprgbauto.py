@@ -149,8 +149,13 @@ class StepRGBAuto(StepMIParent):
             # This should work fo linux
 	    font = ImageFont.truetype('/usr/share/fonts/liberation/LiberationSans-Regular.ttf',imgheight/41)
         except:
-            # This should work for Mac
-            font = ImageFont.truetype('/Library/Fonts/Arial.ttf',imgheight/41)
+            try:
+                # This should work for Mac
+                font = ImageFont.truetype('/Library/Fonts/arial.ttf',imgheight/41)
+            except:
+                # This should work on Windows
+                font = ImageFont.truetype(r'C:\Windows\Fonts\arial.tff',imgheight/41)
+                # If this still doesn't work - then add more code to make it run on YOUR system
 	# Use the beginning of the FITS filename as the object name
 	filename = os.path.split(self.dataout.filename)[-1]
 	objectname = filename.split('_')[0]
