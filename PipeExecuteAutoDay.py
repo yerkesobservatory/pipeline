@@ -21,8 +21,12 @@ import os
 import sys
 import logging
 
+# Set system variables
+logfile = '/data/scripts/DataReduction/PipeLineLog.txt'
+
 # Set logging format
-logging.basicConfig(level = logging.DEBUG)
+logging.basicConfig(filename = logfile, level = logging.DEBUG,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s' )
 
 # Change directory & import the pipeline settings
 sys.path.append('/data/scripts/DataReduction/source/')
