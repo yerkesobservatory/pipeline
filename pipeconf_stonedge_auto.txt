@@ -24,7 +24,7 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    stepslist = load, StepAstrometrica, save, StepHotpix, StepRGBAuto
+    stepslist = load, StepAddKeys, save, StepHotpix, StepRGBAuto
 
 ### Pipe Step Section
 
@@ -87,7 +87,7 @@
     # percentile value for miniumum scaling (in decimal form)
     minpercent = 0.5
     # percentile value for maximum scaling
-    maxpercent = 0.999
+    maxpercent = 1.0
 
 ### Data Section
 
