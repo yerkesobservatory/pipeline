@@ -27,6 +27,8 @@ logfile = '/data/scripts/DataReduction/PipeLineLog.txt'
 # Set logging format
 logging.basicConfig(filename = logfile, level = logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s' )
+log = logging.getLogger('pipe.ExecuteAutoDay')
+log.info('Starting up')
 
 # Change directory & import the pipeline settings
 sys.path.append('/data/scripts/DataReduction/source/')

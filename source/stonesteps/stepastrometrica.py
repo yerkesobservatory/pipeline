@@ -68,7 +68,7 @@ class StepAstrometrica(StepParent):
         fp.close()
         # Make sure input data exists as file
         if not os.path.exists(self.datain.filename) :
-            self.datain.save(fpathname)
+            self.datain.save()
         # Make command string
         command = self.getarg('astrocmd') % (self.datain.filename, outname)
 
