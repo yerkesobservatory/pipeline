@@ -23,18 +23,14 @@ import logging
 
 # Set system variables
 logfile = '/data/scripts/DataReduction/PipeLineLog.txt'
-#logfile = '/Users/atreyopal/Desktop/pipeline/PipeLineLog.txt'
 
 # Set logging format
 logging.basicConfig(filename = logfile, level = logging.DEBUG,
-#logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s' )
 log = logging.getLogger('pipe.ExecuteAutoDay')
 log.info('Starting up')
 
-
 # Change directory & import the pipeline settings
-#sys.path.append('/Users/atreyopal/Desktop/pipeline/source/')
 sys.path.append('/data/scripts/DataReduction/source/')
 from drp.pipeline import PipeLine
 import datetime
@@ -50,12 +46,10 @@ if len(day) == 1:
 
 date = year + '-' + month + '-' + day
 
-#datefilepath = '/Users/atreyopal/Desktop/pipeline/Examples'
 datefilepath = '/data/images/StoneEdge/0.5meter/'+year+'/'+date
 
 def execute():
     # Call the pipeline configuration
-    #pipe = PipeLine(config = '/Users/atreyopal/Desktop/pipeline/pipeconf_stonedge_remote.txt')
     pipe = PipeLine(config = '/data/scripts/DataReduction/pipeconf_stonedge_auto.txt')
     # This version only needs to be executed from a terminal. A specific image folder
     # (like the ones on the stars base) is specified for the pipeline.  The pipeline
@@ -80,6 +74,7 @@ def execute():
     # THIS IS THE MAIN LOOP OVER ALL OBSERVED OBJECTS
     for entry in objectlist:
         # The empty list is created here so that it keeps getting rewritten for the pipeline
+        # (only 3 files at a time)
         imagelist = []
         # Add the full path the the path for the observation
         fullentry = os.path.join(topdirectory,entry)
@@ -94,13 +89,43 @@ def execute():
                 continue
             # Adds the correct images to imagelist
             imagelist.append(os.path.join(fullentry,image))
-        log.info('Object = %s Image list = %s' % (entry, repr(imagelist)))
-        if len(imagelist) == 0 :
-            log.warning('Image List is Empty, skipping object = %s' % entry)
-            continue
-        # Now the program will run the files placed in imagelist through the pipeline.
+        log.info('Image list = %s' %repr(imagelist))
+        # Selecta make a list of all the images for i, r and g filters
+        ilist = [] # Make empty lists for each filter
+        rlist = []
+        glist = []
+        for File in imagelist: # Loop through the files and add to the lists
+            if 'i-band' in File or 'iband' in File or '%si' % entry.lower() in File:
+                ilist.append(File)
+            if 'r-band' in File or 'rband' in File or '%sr' % entry.lower() in File:
+                rlist.append(File)
+            if 'g-band' in File or 'gband' in File or '%sg' % entry.lower() in File:
+                glist.append(File)
+            else:
+                continue
+        # Now the program will run the files placed in (ilist, rlist, and glist)
+        #     or imagelist through the pipeline.
         # It will do this for every entry in objectlist (i.e. for every object)
-        pipe.reset()
+        # Allow for use with only one or two FITS files (won't result in normal color).
+        pipe.reset()                   # Resets pipeline for running through multiple folders
+        # If there is at least one i-, r-, and g-band filter found in imagelist (best case)
+        if len(ilist) >= 1 and len(rlist) >= 1 and len(glist) >= 1:
+            # The first image from each filter list will be reduced in the correct order.
+            result = pipe([ilist[0], rlist[0], glist[0]])
+        elif len(imagelist) == 1:
+                # Cases where there is only one image in imagelist
+                try...except
+                result = pipe(imagelist)
+        elif len(imagelist) == 2:
+                # Cases where there are only two images in imagelist
+                result = pipe([imagelist[0], imagelist[1], imagelist[1]])
+        elif len(imagelist) >= 3:
+                # Cases where there are three or more images in imagelist,
+                # but not one of each filter.
+                result = pipe([imagelist[0], imagelist[1], imagelist[2]])
+        else:
+                # No images found in imagelist
+                print "***ERROR: Invalid entries. No files found in folder: %s***" %entry
 
 execute()
 ''' 

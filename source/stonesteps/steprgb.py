@@ -9,7 +9,7 @@
     descendants from this one. Pipe steps are callable objects that return
     the reduced data product (as pipedata object).
     
-    @author: berthoud
+    @author: M. Berthoud and A. Pal
 """
 
 import os # os library
@@ -20,13 +20,12 @@ import img_scale # image scaling for balancing the different filters
 from PIL import Image # image library for saving rgb file as JPEG
 '''import tifffile as tiff # tiff library for saving data as .tif file'''
 from PIL import ImageFont # Libraries for adding a label to the color image
-from PIL import Image
 from PIL import ImageDraw
 from drp.pipedata import PipeData # pipeline data object
 from drp.stepmiparent import StepMIParent # pipe step parent object
 
 class StepRGB(StepMIParent):
-    """ HAWC Pipeline Step Parent Object
+    """ Stone Edge Pipeline Step Parent Object
         The object is callable. It requires a valid configuration input
         (file or object) when it runs.
     """
@@ -43,7 +42,7 @@ class StepRGB(StepMIParent):
         self.log.debug('Init: done')
     
     def setup(self):
-        """ ### Names and Prameters need to be Set Here ###
+        """ ### Names and Parameters need to be Set Here ###
             Sets the internal names for the function and for saved files.
             Defines the input parameters for the current pipe step.
             Setup() is called at the end of __init__
@@ -64,7 +63,7 @@ class StepRGB(StepMIParent):
         # saved file names.
         self.procname = 'rgb'
         # Set Logger for this pipe step
-        self.log = logging.getLogger('hawc.pipe.step.%s' % self.name)
+        self.log = logging.getLogger('stoneedge.pipe.step.%s' % self.name)
         ### Set Parameter list
         # Clear Parameter list
         self.paramlist = []
@@ -78,31 +77,94 @@ class StepRGB(StepMIParent):
         """ Runs the combining algorithm. The self.datain is run
             through the code, the result is in self.dataout.
         """
-	# Copy input to output header
-	self.log.debug('Number of input files = %d' % len(self.datain))
-	self.dataout.header = self.datain[0].header
-	self.dataout.filename = self.datain[0].filename
-	img = self.datain[0].image
+	''' Select 3 input dataset to use, store in datause '''
+	#Store number of inputs
+	num_inputs = len(self.datain)
+	# Create variable to hold input files
+	# Copy input to output header and filename
+	datause = []
+	self.log.debug('Number of input files = %d' % num_inputs)
 	
-	''' Finding Min/Max scaling values '''
+	# Ensure datause has 3 elements irrespective of number of input files
+	if num_inputs == 0:   # Raise exception for no input
+	    raise ValueError('No input')
+	elif num_inputs == 1:
+	    datause = [self.datain[0], self.datain[0], self.datain[0]]
+	elif num_inputs == 2:
+	    datause = [self.datain[0], self.datain[1], self.datain[1]]
+	elif num_inputs == 3:
+	    datause = [self.datain[0], self.datain[1], self.datain[2]]
+	else:   # If inputs exceed 3 in number
+	    ilist = []  # Make empty lists for each filter
+	    rlist = []
+	    glist = []
+	    other = []
+	    for element in self.datain: # Loop through the input files and add to the lists
+                if 'i-band' in element.filename or 'iband' in element.filename or 'i' in element.filename or 'I' in element.filename:
+                    ilist.append(element)
+                elif 'r-band' in element.filename or 'rband' in element.filename or 'r' in element.filename or 'R' in element.filename:
+                    rlist.append(element)
+                elif 'g-band' in element.filename or 'gband' in element.filename or 'g' in element.filename or 'G' in element.filename:
+                    glist.append(element)
+                else:
+                    other.append(element)
+                    continue
+            # If there is at least one i-, r-, and g-band filter found in self.datain (best case)
+            if len(ilist) >= 1 and len(rlist) >= 1 and len(glist) >= 1:
+                # The first image from each filter list will be reduced in the correct order.
+                datause = [ilist[0], rlist[0], glist[0]]
+            elif len(ilist) == 0 and len(rlist) >=1 and len(glist) >=1:
+                # Cases where there is no ilist
+                if len(rlist) > len(glist):
+                    datause = [rlist[0], rlist[1], glist[0]]
+                else:
+                    datause = [rlist[0], glist[0], glist[1]]
+            elif len(glist) == 0 and len(rlist) >=1 and len(ilist) >=1:
+                # Cases where there is no glist
+                if len(rlist) > len(ilist):
+                    datause = [rlist[0], rlist[1], ilist[0]]
+                else:
+                    datause = [rlist[0], ilist[0], ilist[1]]
+            elif len(ilist) == 0 and len(rlist) >=1 and len(glist) >=1:
+                # Cases where there is no rlist
+                if len(ilist) > len(glist):
+                    datause = [ilist[0], ilist[1], glist[0]]
+                else:
+                    datause = [ilist[0], glist[0], glist[1]]
+            elif len(rlist) == 0 and len(glist) ==0:
+                # Case where there is only ilist
+                datause = [ilist[0], ilist[1], ilist[2]]
+            elif len(rlist) == 0 and len(ilist) ==0:
+                # Case where there is only glist
+                datause = [glist[0], glist[1], glist[2]]
+            elif len(ilist) == 0 and len(glist) ==0:
+                # Case where there is only rlist
+                datause = [rlist[0], rlist[1], rlist[2]]
+        self.dataout = PipeData(config = self.config)
+        self.dataout.header = datause[0].header
+	self.dataout.filename = datause[0].filename
+        img = datause[0].image
+	img1 = datause[1].image
+	img2 = datause[2].image
+	
+        ''' Finding Min/Max scaling values '''
 	# Create a Data Cube with floats
-	datacube = numpy.zeros((self.datain[0].image.shape[0], self.datain[0].image.shape[1], 3), dtype=float)
+	datacube = numpy.zeros((img.shape[0], img.shape[1], 3), dtype=float)
 	# Enter the image data into the cube so an absolute max can be found
-	datacube[:,:,0] = self.datain[0].image
-	datacube[:,:,1] = self.datain[1].image
-	datacube[:,:,2] = self.datain[2].image
+	datacube[:,:,0] = img
+	datacube[:,:,1] = img1
+	datacube[:,:,2] = img2
 	# Find how many data points are in the data cube
-	datalength = self.datain[0].image.shape[0] * self.datain[0].image.shape[1] * 3
+	datalength = img.shape[0] * img.shape[1] * 3
 	# Create a 1-dimensional array with all the data, then sort it	
 	datacube.shape=(datalength,)
 	datacube.sort()
 	# Now use arrays for each filter to find separate min values
-	rarray = self.datain[0].image.copy()
-	garray = self.datain[1].image.copy()
-	barray = self.datain[2].image.copy()
+	rarray = img.copy()
+	garray = img1.copy()
+	barray = img2.copy()
 	# Shape and sort the arrays
-	arrlength = self.datain[0].image.shape[0] * self.datain[0].image.shape[1]
-        print(rarray.shape,self.datain[0].image.shape,arrlength)
+	arrlength = img.shape[0] * img.shape[1]
 	rarray.shape=(arrlength,)
 	rarray.sort()
 	garray.shape=(arrlength,)
@@ -110,30 +172,9 @@ class StepRGB(StepMIParent):
 	barray.shape=(arrlength,)
 	barray.sort()
 	# Find the min/max percentile values in the data for scaling
-	# Values are determined by user's raw input; either a custom value or
-	# 'default', which is set by parameters in the pipe configuration file
-	while True:
-	    minvalue = raw_input("Choose a percentile value for the minimum scaling. You may enter your own or type \"Default\" to use the default value (50%). Custom values must be integers only (without a percent sign): ")
-	    try:
-		if minvalue == "Default" or minvalue == "default":
-		    minpercent = arrlength * self.getarg('minpercent')
-		    break
-		elif int(minvalue):
-		    minpercent = arrlength * float('0.%d' % int(minvalue))
-		    break
-	    except ValueError:
-	        print "***ERROR: Input is invalid. Please try again.***"
-	while True:
-	    maxvalue = raw_input("Choose a percentile value for the maximum scaling. You may enter your own or type \"Default\" to use the default value (99.9%). Custom values must be integers only (without a percent sign): ")
-	    try:
-		if maxvalue == 'Default' or maxvalue == 'default':
-		    maxpercent = datalength * self.getarg('maxpercent')
-		    break
-		elif int(maxvalue):
-		    maxpercent = datalength * float('0.%d' % int(maxvalue))
-		    break
-	    except ValueError:
-		print "***ERROR: Input is invalid. Please try again.***"
+	# Values are determined by parameters in the pipe configuration file
+	minpercent = arrlength * self.getarg('minpercent')
+	maxpercent = datalength * self.getarg('maxpercent')
 	# Find the final data values to use for scaling from the image data
 	rminsv = rarray[minpercent]  #sv stands for "scalevalue"
 	gminsv = garray[minpercent]
@@ -148,10 +189,10 @@ class StepRGB(StepMIParent):
 	# Make new cube with the proper data type for color images (uint8)
 	# Use square root (sqrt) scaling for each filter
 	# log or asinh scaling is also available
-	imgcube = numpy.zeros((self.datain[0].image.shape[0], self.datain[0].image.shape[1], 3), dtype='uint8')
-	imgcube[:,:,0] = 255 * img_scale.sqrt(self.datain[0].image, scale_min= rminsv, scale_max= maxsv)
-	imgcube[:,:,1] = 255 * img_scale.sqrt(self.datain[1].image, scale_min= gminsv, scale_max= maxsv)
-	imgcube[:,:,2] = 255 * img_scale.sqrt(self.datain[2].image, scale_min= bminsv, scale_max= maxsv)
+	imgcube = numpy.zeros((img.shape[0], img.shape[1], 3), dtype='uint8')
+	imgcube[:,:,0] = 255 * img_scale.sqrt(datause[0].image, scale_min= rminsv, scale_max= maxsv)
+	imgcube[:,:,1] = 255 * img_scale.sqrt(datause[1].image, scale_min= gminsv, scale_max= maxsv)
+	imgcube[:,:,2] = 255 * img_scale.sqrt(datause[2].image, scale_min= bminsv, scale_max= maxsv)
         self.dataout.image = imgcube
 	# Create variable containing all the scaled image data
 	imgcolor = Image.fromarray(self.dataout.image, mode='RGB')
@@ -164,38 +205,48 @@ class StepRGB(StepMIParent):
 	''' Add a Label to the Image '''
 	draw = ImageDraw.Draw(imgcolor)
 	# Use a variable to make the positions and size of text relative
-	imgwidth = self.datain[0].image.shape[0]
-	imgheight = self.datain[0].image.shape[1]
-	# Open Sans Serif Font with a size relative to the picture size
-	font = ImageFont.truetype('/usr/share/fonts/liberation/LiberationSans-Regular.ttf',imgheight/41)
+	imgwidth = img.shape[1]
+	imgheight = img.shape[0]
+	# Open Sans-Serif Font with a size relative to the picture size
+        try:
+            # This should work on Linux
+	    font = ImageFont.truetype('/usr/share/fonts/liberation/LiberationSans-Regular.ttf',imgheight/41)
+        except:
+            try:
+                # This should work on Mac
+                font = ImageFont.truetype('/Library/Fonts/arial.ttf',imgheight/41)
+            except:
+                # This should work on Windows
+                font = ImageFont.truetype(r'C:\Windows\Fonts\arial.tff',imgheight/41)
+                # If this still doesn't work - then add more code to make it run on YOUR system
 	# Use the beginning of the FITS filename as the object name
 	filename = os.path.split(self.dataout.filename)[-1]
 	objectname = filename.split('_')[0]
 	objectname = objectname[0].upper()+objectname[1:]
 	objectname = 'Object:  %s' % objectname
-	# Print labels at their respective position (kept relative to image size)
+	# Read labels at their respective position (kept relative to image size)
 	# Left corner: object, observer, observatory
 	# Right corner: Filters used for red, green, and blue colors
-	# Read FITS keywords for the observer, observatory, and filters
-	# Print them if they exist
 	draw.text((imgwidth/100,imgheight/1.114), objectname, (255,255,255), font=font)
-	if self.dataout.header.has_key('OBSERVER'):
+	# Read FITS keywords for the observer, observatory, and filters
+	if 'OBSERVER' in self.dataout.header:
 	    observer = 'Observer:  %s' % self.dataout.getheadval('OBSERVER')
 	    draw.text((imgwidth/100,imgheight/1.073), observer, (255,255,255), font=font)
-	if self.dataout.header.has_key('OBSERVAT'):
+	if 'OBSERVAT' in self.dataout.header:
 	    observatory = 'Observatory:  %s' % self.dataout.getheadval('OBSERVAT')
 	    draw.text((imgwidth/100,imgheight/1.035), observatory, (255,255,255), font=font)
-	if self.datain[0].header.has_key('FILTER'):
-	    red = 'R:  %s' % self.datain[0].getheadval('FILTER')
+	if 'FILTER' in datause[0].header:
+	    red = 'R:  %s' % datause[0].getheadval('FILTER')
 	    draw.text((imgwidth/1.15,imgheight/1.114),red, (255,255,255), font=font)
-	if self.datain[1].header.has_key('FILTER'):
-	    green = 'G:  %s' % self.datain[1].getheadval('FILTER')
+	if 'FILTER' in datause[1].header:
+	    green = 'G:  %s' % datause[1].getheadval('FILTER')
 	    draw.text((imgwidth/1.15,imgheight/1.073),green, (255,255,255), font=font)
-	if self.datain[2].header.has_key('FILTER'):
-	    blue = 'B:  %s' % self.datain[2].getheadval('FILTER')
+	if 'FILTER' in datause[2].header:
+	    blue = 'B:  %s' % datause[2].getheadval('FILTER')
 	    draw.text((imgwidth/1.15,imgheight/1.035),blue, (255,255,255), font=font)
 	# Save the completed image
-	imgcolor.save('%s.jpg' % self.dataout.filenamebase)
+	imgcolor.save('%sjpg' % self.dataout.filenamebegin)
+        self.log.info('Saving file %sjpg' %self.dataout.filenamebegin)
 	''' End of Label Code '''
         # Set complete flag
         self.dataout.setheadval('COMPLETE',1,
@@ -230,10 +281,29 @@ if __name__ == '__main__':
     """
     StepRGB().execute()
 
+#!/usr/bin/env python
+
+
+''' This is a version of a script that executes the Data Reduction Pipeline
+    from a folder one level above the images. The final goal is to have a script 
+    connected to Yerkes' File Manager server that will automatically execute 
+    whenever new images are uploaded, or on a set time interval (whichever is 
+    more practical).
+
+    This version of the pipeline is optimized for use with i/r/g-band images.
+    It will still work if they are not there, but the order of images run through
+    the pipeline may be incorrect.  If a different combination of filters are
+    being used, the code can be edited appropriately (this version contains
+    'dummy' code that is currently commented out that can be easily
+    edited/uncommented to work with any set of desired filters).
+'''
+
+
+
 """ === History ===
     2014-06-30 New file created by Neil Stilin from template file by Nicolas Chapman
     2014-07-09 Main code for creating RBG image added by Neil Stilin
     2014-07-29 Code has been improved by adding better scaling and image labels
     2014-08-06 Added 'if' functions to the label printing so that if keywords do not exist in the header(s), they are skipped rather than raising an error --NS
-    2014-08-07 Edited code so that raw inputs are used to determine the scaling values. Another copy (steprgbauto.py) was made of the original that runs the pipeline without input (automatically uses default values).  --NS
+    2014-08-11 This file was essentially just renamed. The file called steprgb.py now uses raw inputs to determine the scaling values.  --NS
 """

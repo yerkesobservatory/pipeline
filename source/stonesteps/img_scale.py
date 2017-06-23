@@ -93,7 +93,6 @@ def linear(inputArray, scale_min=None, scale_max=None):
 	@return: image data array
 	
 	"""		
-	print "img_scale : linear"
 	imageData=numpy.array(inputArray, copy=True)
 	
 	if scale_min == None:
@@ -125,7 +124,6 @@ def sqrt(inputArray, scale_min=None, scale_max=None):
 	
 	"""		
     
-	print "img_scale : sqrt"
 	imageData=numpy.array(inputArray, copy=True)
 	
 	if scale_min == None:
@@ -157,7 +155,6 @@ def log(inputArray, scale_min=None, scale_max=None):
 	
 	"""		
     
-	print "img_scale : log"
 	imageData=numpy.array(inputArray, copy=True)
 	
 	if scale_min == None:
@@ -194,7 +191,6 @@ def asinh(inputArray, scale_min=None, scale_max=None, non_linear=2.0):
 	
 	"""		
     
-	print "img_scale : asinh"
 	imageData=numpy.array(inputArray, copy=True)
 	
 	if scale_min == None:
