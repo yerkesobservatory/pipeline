@@ -101,6 +101,11 @@ def execute():
         # Now the program will run the files placed in imagelist through the pipeline.
         # It will do this for every entry in objectlist (i.e. for every object)
         pipe.reset()
+        # Run the pipeline (return with error message)
+        try:
+            result = pipe(imagelist)
+        except:
+            log.warning("Pipeline for object = %s returned Error" % entry)
 
 execute()
 ''' 
