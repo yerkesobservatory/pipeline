@@ -11,8 +11,6 @@
 
 """
     2DO:
-    - Convert all steps to new format and test them
-
     - later:
       - rename callstart/end -> runstart/end
       - remove parameter from callstart/end
@@ -22,7 +20,8 @@ import time # time library
 import logging # logging object library
 import argparse # Argument parsing library
 from configobj import ConfigObj # configuration object
-from drp.pipedata import PipeData # pipeline data object
+from drp.dataparent import DataParent # data parent object
+#from drp.pipedata import PipeData # pipeline data object
 
 class StepParent(object):
     """ HAWC Pipeline Step Parent Object
@@ -36,11 +35,12 @@ class StepParent(object):
 
     def __init__(self):
         """ Constructor: Initialize data objects and variables
-            calls the setup function.
+            calls the setup function. Steps get the configuration
+            from the datain that is handed to them.
         """
         # initialize input and output
-        self.datain = PipeData()
-        self.dataout = PipeData()
+        self.datain = DataParent()
+        self.dataout = DataParent()
         # set names
         self.name = None
         self.procname = None
@@ -124,10 +124,10 @@ class StepParent(object):
         for k in arglist.keys():
             self.arglist[k.lower()] = arglist[k]
         # Check input data type and set data config
-        if isinstance(data,PipeData):
+        if issubclass(data.__class__, DataParent):
             self.config = data.config
         else:
-            msg = 'Invalid input data type: PipeData object is required'
+            msg = 'Invalid input data type: DataParent child object is required'
             self.log.error(msg)
             raise TypeError('Runstart: '+msg)
         # Set Configuration
@@ -144,10 +144,10 @@ class StepParent(object):
         """ Method to call at the end of pipe the pipe step call
             - Sends final log messages
         """
-        # clear input arguments
-        self.arglist = {}
         # update header (status and history)
         self.updateheader(data)
+        # clear input arguments
+        self.arglist = {}
         self.log.info('Finished Reduction: Pipe Step %s' % self.name)
 
     def updateheader(self,data):
@@ -159,13 +159,34 @@ class StepParent(object):
         data.setheadval('PRODTYPE',self.name,'Product Type')
         histmsg = 'Reduced: ' + self.name + ' v' + self.stepver + ' '
         histmsg += time.strftime('%Y-%m-%d_%H:%M:%S')
-        data.header.add_history(histmsg)
+        data.setheadval('HISTORY',histmsg)
         # Add input parameters to history
         for p in [par[0] for par in self.paramlist]:
             histmsg = ' %s: %s=%s' % (self.name, p, self.getarg(p))
-            data.header.add_history(histmsg)
-        # update file name with .PipeStepName.fits
+            data.setheadval('HISTORY',histmsg)
+        # Update file name with .PipeStepName.fits
         data.filename = data.filenamebegin + self.procname.upper() + data.filenameend
+        # Add config file name if available and not already present
+        # in HISTORY
+        try:
+            # This may fail if config has no filename - in that case,
+            # don't add the message.
+            conffilename = '' + self.config.filename
+            # New history message
+            histmsg = 'CONFIG: %s' % conffilename
+            # Check history for presence of the full message or possibly
+            # a truncated version (eg. for long filenames in FITS headers)
+            full_history = data.getheadval('HISTORY')
+            if len(histmsg) > 72:
+                shortmsg = histmsg[0:72]
+            else:
+                shortmsg = histmsg
+            if histmsg not in full_history and shortmsg not in full_history:
+                self.log.debug('Recording config file name %s' % conffilename)
+                data.setheadval('HISTORY',histmsg)
+        except TypeError:
+            pass
+
         # Send log messages
 
     def getarg(self, parname):
@@ -192,21 +213,24 @@ class StepParent(object):
             self.log.error(msg)
             raise KeyError(msg)
         parnameraw = self.paramlist[ind][0] # ParName in original Case
+        default = self.paramlist[ind][1]
         # get from arguments if possible
         if self.arglist.has_key(parname):
             # assumes that: if value is not default, then set on command line
             # by the user.
             if self.arglist[parname] != self.parser.get_default(parnameraw):
-                self.log.debug('GetArg: from command line, done (%s)' % parnameraw )
-                return self.arglist[parnameraw]
+                ret = self.arglist[parnameraw]
+                self.log.debug('GetArg: from command line, done (%s=%s)'
+                               % (parnameraw, repr(ret)) )
+                return ret
         # make temporary config entry with lowercase key names
         conftmp = {}
-        for keyname in self.config[self.name].keys():
-            conftmp[keyname.lower()] = self.config[self.name][keyname]
+        if self.config.has_key(self.name): # skip if no step entry in config
+            for keyname in self.config[self.name].keys():
+                conftmp[keyname.lower()] = self.config[self.name][keyname]
         # get from config if possible
         if conftmp.has_key(parname):
             value = conftmp[parname]
-            default = self.paramlist[ind][1]
             # If default is a sequence:
             if isinstance(default,(tuple,list)):
                 # Get type for list elements
@@ -262,23 +286,8 @@ class StepParent(object):
             config['stepname']['parname']. If the parameter is not found,
             a warning is returned and a KeyError is raised.
         """
-        default = 0
-        # get from params if possible
-        if self.arglist.has_key(parname):
-            self.log.debug('GetParam: Done (%s)' % parname )
-            return self.arglist[parname]
-        # get from config
-        try:
-            ret = self.config[self.name][parname]
-        except KeyError:
-            msg = ('GetParam: Missing %s entry in config: using default = %s'
-                   % (parname,str(default)) )
-            self.log.error('GetParam: Missing %s entry in config: using default = %s'
-                          % (parname,str(default)) )
-            raise KeyError(msg)
-        # return parameter
-        self.log.debug('GetParam: done (%s)' % parname)
-        return ret
+        self.log.warn('GetParam is Decrecated - use GetArg')
+        return self.getarg(parname)
 
     def reset(self):
         """ Resets the step to the same condition as it was when it was
@@ -286,8 +295,8 @@ class StepParent(object):
             erased.
         """
         # initialize input and output
-        self.datain = PipeData()
-        self.dataout = PipeData()
+        self.datain = DataParent()
+        self.dataout = DataParent()
         self.log.debug('Reset: done')
 
     def execute(self):
@@ -344,7 +353,7 @@ class StepParent(object):
             logging.getLogger().addHandler(fhand)
         # Set configuration (load if specified)
         if args.config is not None:
-            datain = PipeData(config = args.config)
+            datain = DataParent(config = args.config)
             self.config = datain.config
         elif not args.test: # Set config unless test is requested
             self.config = ConfigObj()
@@ -364,9 +373,9 @@ class StepParent(object):
 
         if len(self.arglist['inputfiles']) > 0:
             for filename in inputfiles:
-                # Read input file
-                self.datain = PipeData(config = self.config)
-                self.datain.load(filename)
+                # Read input file: make dataparent, get child from load() ##-
+                datain = DataParent(config = self.config)
+                self.datain = datain.load(filename)
                 # Call start - run and call end
                 self.runstart(self.datain,self.arglist)
                 self.run()
@@ -387,9 +396,9 @@ class StepParent(object):
         # test function call
         #testout=self(1) # should raise TypeError
         if self.config != None:
-            testin = PipeData(config=self.config)
+            testin = DataParent(config=self.config)
         else:
-            testin = PipeData(config=self.testconf)
+            testin = DataParent(config=self.testconf)
         testin.filename = 'this.file.type.fts'
         testout=self(testin, sampar=5.0)
         print(testout.header)

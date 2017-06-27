@@ -10,7 +10,12 @@
     @author: berthoud
 """
 
+import os # os library
+import subprocess # sys library
 import logging # logging object library
+import configobj # config object library
+import drp.pipeline # for getting folder
+from drp.pipedata import PipeData
 from drp.stepparent import StepParent
 
 class StepSubPipe(StepParent):
@@ -37,26 +42,77 @@ class StepSubPipe(StepParent):
         """
         ### Set Names
         # Name of the pipeline reduction step
-        self.name='parent'
+        self.name='subpipe'
         # Shortcut for pipeline reduction step and identifier for
         # saved file names.
-        self.procname = 'unk' # taken from pipemode of subpipe
+        self.procname = 'unk' # taken from last pipestep of subpipe
         # Set Logger for this pipe step
         self.log = logging.getLogger('pipe.step.%s' % self.name)
         ### Set Parameter list
         # Clear Parameter list
         self.paramlist = []
         # Append parameters
-        self.paramlist.append(['pipemode','unk','ProcName for returned files'])
-        self.paramlist.append()
-        self.paramlist.append(['sampar', 1.0,
-            'Sample Parameter - parent only - no practical use'])
+        self.paramlist.append(['pipeconf','',
+                               "Pipeconf file to run subpipe. Default is '' i.e. use self.config"])
+        self.paramlist.append(['pipemode','subtest','pipeline mode to run subpipe'])
 
     def run(self):
         """ Runs the data reduction algorithm. The self.datain is run
             through the code, the result is in self.dataout.
         """
-        self.log.debug('Running step %s' % self.name)
+        ### Get parameters
+        pipemode = self.getarg('pipemode')
+        pipeconf = self.getarg('pipeconf')
+        # Save pipeline configuration file if no file given
+        savedconf = False
+        if len(pipeconf) < 1:
+            pipeconf = os.path.join(os.path.split(self.datain.filename)[0],'subconf.txt')
+            # Make a copy to not overwrite config
+            conftemp = configobj.ConfigObj(self.config)
+            conftemp.filename = pipeconf
+            conftemp.write()
+            savedconf = True
+        # Load pipeconf into separate pipeobject
+        confdata = PipeData(config=pipeconf)
+        ### Save file if not saved
+        if not os.path.exists(self.datain.filename):
+            self.datain.save()
+        ### Setup and run pipeline
+        # Get pipeline command
+        cmd = 'python ' + drp.pipeline.__file__
+        # Add arguments
+        logfile = os.path.join(os.path.split(self.datain.filename)[0],'sublog.txt')
+        cmd += ' --loglevel DEBUG --logfile ' + logfile
+        cmd += ' --pipemode ' + pipemode
+        # Add config and filename
+        cmd += ' ' + pipeconf
+        cmd += ' ' + self.datain.filename
+        # Run the pipeline
+        self.log.debug('running command = %s' % cmd)
+        subprocess.call(cmd, shell=True)
+        ### Load log messages and submit them (optional)
+        ### Get step name of last step of subpipe
+        try:
+            stepslist = list(confdata.config['mode_'+pipemode]['stepslist'])
+            laststepind = len(stepslist)-1
+            while(stepslist[laststepind] != 'save'): laststepind -= 1 # search for last save
+            stepname = stepslist[laststepind-1]
+        except:
+            msg = 'Could not find last step for mode_%s in config=%s' % (pipemode, pipeconf)
+            self.log.error(msg)
+            raise ValueError(msg)        
+        # Load the step (use existing confdata object)
+        laststep = confdata.getobject(stepname)
+        ### Load file to memory
+        # Make filename
+        self.procname = laststep.procname
+        lastfile = self.datain.filenamebegin + laststep.procname.upper() + self.datain.filenameend
+        # Load file
+        self.dataout = PipeData(config=self.config)
+        self.dataout.load(lastfile)
+        ### Remove pipeconf if written
+        if savedconf:
+            os.remove(pipeconf)
     
     def reset(self):
         """ Resets the step to the same condition as it was when it was
@@ -85,7 +141,7 @@ if __name__ == '__main__':
           --loglevel=LEVEL : configures the logging output for a particular level
           -h, --help : Returns a list of 
     """
-    blah().execute()
+    StepSubPipe().execute()
 
 """ === History ===
 """

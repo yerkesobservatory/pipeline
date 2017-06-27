@@ -15,9 +15,17 @@ import time # time library
 import configobj # config object library
 import validate  # to check input config file is correct
 import re # regexp
+import gc # garbage collect
 from astropy.io import fits # fits libary
+from datafits import DataFits
 
-class PipeData(object):
+
+class PipeData(DataFits):
+    """ HAWC Pipeline Data Object
+        DEPRECIATED - use DataFits instead
+    """
+    
+class PipeDataOld(DataFits):
     """ HAWC Pipeline Data Object
         The data is stored as a list of (multi-dimensional) images with a
         parameter table (one line in the table for each image). Fits header
@@ -149,11 +157,29 @@ class PipeData(object):
                      fname[extloc:] not in ['.fts','.fits','.fits.gz'] ) :
                     self.log.warn('Filename has non-fits extension')
                     extloc = fname.rfind('.')
-                    if extloc < 0: extloc = len(fname)                    
+                    if extloc < 0: extloc = len(fname)
                 if extloc < 0:
                     return ''
                 else:
                     return fname[extloc:]
+        # return file number if it's requested
+        if name=='filenum':
+            (fpath,fname) = os.path.split(self.filename)
+            # if filenum is specified in pipeconf, use it
+            try:
+                filenum = self.config['data']['filenum']
+                match = re.search(filenum, fname)
+            except (KeyError, TypeError):
+                match = False
+                filenum = "None"
+            if match :
+                # found file num -> return it
+                if len(match.groups()) > 1:
+                    return match.group(1)
+                else:
+                    return match.group()
+            else:
+                return "None"
         # raise error if attribute is unknown
         msg="'%s' object has no attribute '%s'" % (type(self).__name__,name)
         raise AttributeError(msg)
@@ -357,7 +383,7 @@ class PipeData(object):
         #   fills first entry into imgdata, imgnames
         self.loadhead(filename)
         ### Read File
-        hdus=fits.open(filename)
+        hdus=fits.open(filename,memmap=False)
         ### Collect images / Load them
         # Search for ImageHDUs (does not include PrimaryHDU)
         imgind=[i for i in range(len(hdus))
@@ -418,7 +444,7 @@ class PipeData(object):
         for ind in tabind:
             # if table is empty -> warning and skip it
             try:
-                if hdus[ind].data == None:
+                if hdus[ind].data is None:
                     msg = 'Load: Table in HDU number %d has no data' % ind
                     msg += ' -> Ignoring this HDU'
                     self.log.warn(msg)
@@ -440,6 +466,9 @@ class PipeData(object):
             # get data, header
             self.tabdata.append(numpy.rec.array(hdus[ind].data))
             self.tabheads.append(hdus[ind].header)
+        # Close the file
+        hdus.close()
+        gc.collect()
         ### Message
         self.log.debug('Load: loaded pipe file')
 
@@ -452,7 +481,7 @@ class PipeData(object):
         if filename == None:
             filename = self.filename
         # update pipeline keywords
-        self.setheadval('PIPEVERS','Pipe v'+PipeData.pipever.replace('.','_'),
+        self.setheadval('PIPEVERS', PipeData.pipever.replace('.','_'),
                         'Pipeline Version')
         self.setheadval('FILENAME',os.path.split(filename)[-1])
         self.setheadval('DATE',time.strftime('%Y-%m-%dT%H:%M:%S'))
@@ -496,7 +525,7 @@ class PipeData(object):
         out.imgdata=[]
         out.imgheads=[]
         for imgi in range(len(self.imgdata)):
-            if self.imgdata[imgi] != None:
+            if self.imgdata[imgi] is not None:
                 out.imgdata.append(self.imgdata[imgi].copy())
             else:
                 out.imgdata.append(None)
@@ -636,6 +665,21 @@ class PipeData(object):
                 elif operation == 'SUM': selfval += otherval
                 elif operation == 'OR': selfval = selfval | otherval
                 elif operation == 'AND': selfval = selfval & otherval
+                elif operation == 'CONCATENATE':
+                    if ',' in selfval:
+                        vlist = selfval.split(',')
+                    else:
+                        vlist = [selfval]
+                    if otherval not in vlist:
+                        vlist.append(otherval)
+                        selfval = ','.join(sorted(vlist))
+                elif operation == 'DEFAULT':
+                    if type(selfval) is str:
+                        selfval = 'UNKNOWN'
+                    elif type(selfval) is int or type(selfval) is long:
+                        selfval = -9999
+                    elif type(selfval) is float:
+                        selfval = -9999.0
                 self.header[key] = selfval
             except:
                 self.log.warn("Mergehead: Error merging Key=%s" % key)
@@ -955,15 +999,15 @@ class PipeData(object):
             - tablename: The name of the table to be deleted        # Remove Imag columns
         #for tabcol in ['R array Imag','T array Imag','Chop Offset Imag']:
         #    self.dataout.table.columns.del_col(tabcol)
-        
+
         # Remove Imag columns
         #for tabcol in ['R array Imag','T array Imag','Chop Offset Imag']:
         #    self.dataout.table.columns.del_col(tabcol)
-        
+
         # Remove Imag columns
         #for tabcol in ['R array Imag','T array Imag','Chop Offset Imag']:
         #    self.dataout.table.columns.del_col(tabcol)
-        
+
         # Remove Imag columns
         #for tabcol in ['R array Imag','T array Imag','Chop Offset Imag']:
         #    self.dataout.table.columns.del_col(tabcol)

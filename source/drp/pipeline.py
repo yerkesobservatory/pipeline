@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 """ PIPE LINE - Version 1.0.0
     This module defines the HAWC data reduction pipeline object. The
     object identifies, loads, reduces and stores raw HAWC data.
@@ -8,7 +10,7 @@ import logging # logging object library
 import traceback # error traceback library
 import argparse # Argument parsing library
 import configobj # Config Object library
-from drp.pipedata import PipeData # Pipeline Data object
+from drp.dataparent import DataParent # Pipeline Data object
 from drp.stepparent import StepParent # Step Parent
 from drp.stepmiparent import StepMIParent # Step Multiple Input Parent
 
@@ -51,6 +53,7 @@ class PipeLine(object):
         # Files Variables
         self.openfiles = [] # file name list of non-reduced files (fifo)
         self.reducedfiles = [] # file name list of reduced files
+        self.outfiles = [] # file name list of files saved to disk
         # set up the pipeline
         self.setup(filenames=filenames, config=config, pipemode=pipemode,
                    runmode=runmode)
@@ -71,6 +74,7 @@ class PipeLine(object):
         self.steps=[]
         self.openfiles=[]
         self.reducedfiles=[]
+        self.outfiles=[]
         # Reset Data
         self.results=[]
         self.finals=[]
@@ -96,7 +100,7 @@ class PipeLine(object):
             self.log.warn('Setup: Invalid Runmode (%s)' % runmode)
         ### set configuration
         if config != None:
-            self.config = PipeData().setconfig(config)
+            self.config = DataParent().setconfig(config)
         ### set errstop from input or from config
         if errstop != None:
             self.errstop = errstop
@@ -126,9 +130,8 @@ class PipeLine(object):
             else:
                 firstfile = filenames
             # load header
-            headdata = PipeData(config=self.config)
-            headdata.loadhead(firstfile)
-            retmsg='Loaded FITS file header'
+            headdata = DataParent(config=self.config).loadhead(firstfile)
+            retmsg='Loaded file header'
         ### get pipeline mode
         # If available: from input parameter
         if pipemode != None:
@@ -153,7 +156,9 @@ class PipeLine(object):
             self.log.info('Pipe Mode = %s' %self.pipemode)
             conf_section = 'mode_' + self.pipemode
             # Update configuration based on mode preferences
+            confname = self.config.filename
             self.config = configobj.ConfigObj(self.config) # make copy to preserve orig
+            self.config.filename = confname
             modeconf = self.config[conf_section]
             for item in modeconf.sections:
                 for subitem in modeconf[item]:
@@ -168,66 +173,21 @@ class PipeLine(object):
                                +' for PipeMode = ' + self.pipemode )
                 raise error
             self.stepnames = steplist
-            # get list of step packages
-            try:
-                steppacks = self.config['general']['steppacks']
-                if isinstance(steppacks,str): # ensure we have a list if only
-                    steppacks = [steppacks]    # 1 item, steppacks is str
-            except KeyError, error:
-                self.log.error('Setup: Missing steppacks item in configuration')
-                raise error
             # initialize inputs and outputs
             self.inputs = []
             self.outputs = []
             # get the steps - loop through stepnames
-            for stepname in self.stepnames:
-                # Add step
+            dp = DataParent(config = self.config)
+            for stepi in range(len(self.stepnames)):
+                stepname = self.stepnames[stepi]
+                # Add step to steps
                 if stepname in 'load save':
                     self.steps.append(stepname)
                 else:
-                    # Loop through step packages
-                    stepmodule = None
-                    for pack in steppacks:
-                        if pack == '.': # look in local directory
-                            mod = stepname.lower()
-                        else:
-                            mod = '%s.%s' % (pack,stepname.lower())
-                        self.log.debug('looking for %s' % mod)
-                        # import the module
-                        try:
-                            stepmodule = __import__(mod, globals(), locals(),
-                                                    [stepname])
-                            self.log.debug('Pipe step %s found in %s' %
-                                          (stepname,pack))
-                            break
-                        except ImportError,msg:
-                            tmp = 'No module named %s' % stepname.lower()
-                            if str(msg).startswith(tmp): # module not present in directory
-                                self.log.debug('Pipe step %s not found in %s' %
-                                               (stepname, pack))
-                            else: # module tries to import a missing package
-                                raise
-                        except:   # print out import errors not due to missing
-                            raise # modules (e.g., typos in code)
-                    # If not found -> Raise error
-                    if stepmodule == None:
-                        msg = 'Could not find step=%s' % stepname
-                        msg += ' in pipemode=%s' % self.pipemode
-                        self.log.error('Setup: ' + msg)
-                        raise ImportError(msg)
-                    # Make a step instance and add to step list
-                    try:
-                        self.steps.append(stepmodule.__dict__[stepname]())
-                    except KeyError, error:
-                        msg = 'Pipe step=%s' % stepname
-                        msg+= ' not found in module=%s' % mod
-                        self.log.error('Setup: %s' % msg)
-                        raise error
-                # Add results
-                self.results.append(PipeData(config=self.config))
-            # add real stepnames from step.name, fill self.inputs
-            for stepi in range(len(self.steps)):
-                if not (self.stepnames[stepi] in 'load save'):
+                    # Use PipeData.getobject to get step object
+                    stepobj = dp.getobject(stepname)
+                    self.steps.append(stepobj)
+                    # add real stepnames from step.name, fill self.inputs
                     self.stepnames[stepi]=self.steps[stepi].name
                 self.inputs.append([])
                 self.outputs.append(None)
@@ -241,29 +201,30 @@ class PipeLine(object):
             file.  Returns name of first drp mode that matches
             the data.  Returns ' ' if no matching drp mode found.  
         """
-        for sec in self.config.sections:
-            if sec.startswith('mode_'):
-                # Get the datakeys and make list of lists
+        for section in self.config.sections:
+            if section.startswith('mode_'):
+                # Get the datakeys and make list of lists with
+                # format [ [key, val], [key, val], [key,val] ]
                 try:
-                    datakeys = self.config[sec]['datakeys'].split('|')
+                    datakeys = self.config[section]['datakeys'].split('|')
                 except KeyError:
-                    self.log.warn("In configuration, missing datakeys for mode=%s" % sec)
+                    self.log.warn("In configuration, missing datakeys for mode=%s"
+                                   % section)
                     continue
                 datakeys = [dk.split('=') for dk in datakeys]
-                #print(sec,datakeys)
                 # Check all keywords in the file
                 check = True
                 for dk in datakeys:
                     try:
-                        value = data.getheadval(dk[0].strip())
-                        if value.upper().strip() != dk[1].upper().strip(): check = False
-                        #print(value.upper().strip(),dk[1].upper().strip())
+                        value = data.getheadval(dk[0].strip(), errmsg=False)
+                        if value.upper().strip() != dk[1].upper().strip():
+                            check = False
                     except KeyError:
                         self.log.debug('GetPipeMode: Data is missing key=%s', dk[0])
                         check = False
                 if check:
-                    self.log.debug('GetPipeMode: Found mode=%s' % sec[5:])
-                    return sec[5:] # return mode name w/o 'mode_'
+                    self.log.debug('GetPipeMode: Found mode=%s' % section[5:])
+                    return section[5:] # return mode name w/o 'mode_'
         # should only get here in no matching drp mode found
         msg = "GetPipeMode: No DRP mode found matching data = %s" % data.filename
         self.log.warn(msg)
@@ -322,8 +283,9 @@ class PipeLine(object):
         except TypeError, error:
             self.log.error('Add: invalid filenames type')
             raise error
-        # add the files to the list (check if each file exists)
+        # make sure filenames is a valid list
         if namelen < 2: filenames=[filenames]
+        # add the files to the list (check if each file exists)
         for filename in filenames:
             if os.path.isfile(filename):
                 self.openfiles.append(filename)
@@ -338,7 +300,11 @@ class PipeLine(object):
             run or if stepname is invalid. If stepname is 'final', the result
             from the last step is saved.
         """
-        self.getresult(stepname=stepname).save(filename)
+        result = self.getresult(stepname=stepname)
+        if filename is None:
+            filename = result.filename
+        result.save(filename)
+        self.outfiles.append(filename)
         self.log.debug('Save - Done')
 
     def __call__(self, filenames = None, config = None, pipemode = None,
@@ -368,10 +334,8 @@ class PipeLine(object):
         self.results = []
         # Loop through files in openfiles
         for filename in self.openfiles:
-            # Make pipedata object
-            data=PipeData(config=self.config)
-            # Load file header
-            data.loadhead(filename)
+            # Load file header in new data object
+            data = DataParent(config=self.config).loadhead(filename)
             fileshort = os.path.split(filename)[-1]
             self.log.info('Preparing file %s' % fileshort)
             # Check if instmode and instcfg match.  If not, skip file
@@ -422,7 +386,15 @@ class PipeLine(object):
                         if not self.memFlag:
                             self.outputs[stepi] = data
                     elif self.stepnames[stepi] == 'save':
+                        # Check to make sure pipemode is in history
+                        msg = "PipeMode = " + self.pipemode
+                        found = False
+                        for h in data.header['HISTORY']:
+                            if msg in h: found = True
+                        if not found: data.header['HISTORY'] = msg
+                        # Save the file
                         data.save()
+                        self.outfiles.append(data.filename)
                         if not self.memFlag:
                             self.outputs[stepi] = data
                     # run step[stepi]
@@ -553,7 +525,7 @@ class PipeLine(object):
             - loglevel: name of logging level (INFO is default)
             - logfile: log file name
         """
-                ### Read Arguments
+        ### Read Arguments
         # Set up argument parser - Generic parameters
         parser = argparse.ArgumentParser(description="Pipe Line")
         parser.add_argument('config', default = 'pipeconf.txt', type=str, nargs='?',
@@ -593,8 +565,7 @@ class PipeLine(object):
             pipemode = args.pipemode
             force = True
         # Set configuration
-        datain = PipeData(config = args.config)
-        self.config = datain.config
+        self.config = DataParent(config = args.config).config
         ### Reduce data
         if len(args.inputfiles) > 0:
             self(args.inputfiles,pipemode=pipemode,force=force)

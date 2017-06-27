@@ -1,44 +1,47 @@
+#!/usr/bin/env python
 """ PIPE FLAT - Version 0.1.0
 
     This module defines the HAWC pipeline flatfielding step object.
     The object is a child of stepparent. Flat loads the appropriate
     flat file.
-    
-    In the input data, Flat looks for data objects to be flatted named in 
+
+    In the input data, Flat looks for data objects to be flatted named in
     datalist and flats them with the images in the flatfile. The objects
     in datalist are flatted with the first images in the flat file. If
     datalist is empty (None), the first image of the input data is flatted
     using the first image of the flatfile. Alternatively if no images are
     found in the data the Flat looks for the data as columns of the
     first table. In that case the data is moved from the table to images.
-    
+
     Flat also accepts input images that contain real and
     imaginary components of the demodulated data. In that case l0method
     is used to normalize to real values.
-    
-    The selection of the flat file is done my matching specific keywords in
-    the header of the input data. If no such file can be found, the best fit
-    is selected. For each subsequent data set the keywords in the header
-    are checked against the ones from the flat file.
-    
-    Task List (changes to do)
-    * loadflat: still make good pixel map (now list with one for each
-      detector) - WILL BE DONE LATER (probably need badpixel map and
-      several codes for bad pixels)
-      * Make badpixmap for bad pixels
+
+    A specific flat file can be specified in the configuration. Alternatively,
+    a flat file is selected by matching specific keywords in the header of
+    the input data to files in a specified folder. If no perfect match can be
+    found, the best fit is selected. For each subsequent data set the keywords
+    in the header are checked against the ones from the initial data file.
+
+    In addition, Flat can add images (HDUs) from the flat file to the data
+    for later use (for instance bad pixel maps or distortion information).
+    The addfromfile keyword is used for that, it should contain a list of HDU
+    names to add.
+
 """
 
 import os # os library
 import numpy # numpy library
 import logging # logging object library
-from astropy.io import fits # pyfits library (for accessing header data) @UnresolvedImport
+from astropy.io import fits
 from drp.pipedata import PipeData # pipeline data object
 from drp.stepparent import StepParent # pipe step parent object
+from drp.steploadaux import StepLoadAux
 
-class StepFlat(StepParent):
+class StepFlat(StepLoadAux, StepParent):
     """ HAWC Pipeline Flatfielding Step Object
     """
-    
+
     stepver = '0.1' # pipe step version
 
     def __init__(self):
@@ -51,17 +54,16 @@ class StepFlat(StepParent):
         # flat values
         self.flatloaded = 0 # indicates if flat has been loaded
         self.flats = [] # list containing arrays with flat values
-        self.goodpixmap = numpy.zeros([1,1], dtype=numpy.int16) # array with good pixels
+        self.flatdata = PipeData() # Pipedata object containing the flat file
         # flat file info and header keywords to fit
         self.flatfile = '' # name of selected flat file
-        self.flathead = fits.PrimaryHDU(numpy.array(1)) # header of flat file
         self.fitkeys = [] # FITS keywords that have to fit
         self.keyvalues = [] # values of the keywords (from the first data file)
         # set configuration
         self.log.debug('Init: done')
-        
+
     def setup(self):
-        """ ### Names and Prameters need to be Set Here ###
+        """ ### Names and Parameters need to be Set Here ###
             Sets the internal names for the function and for saved files.
             Defines the input parameters for the current pipe step.
             The parameters are stored in a list containing the following
@@ -86,22 +88,20 @@ class StepFlat(StepParent):
         # Clear Parameter list
         self.paramlist = []
         # Append parameters
-        self.paramlist.append(['flatfile', 'search',
-            'Filename for flat file or "search" for searching ' +
-            'file in flatfolder (default = search)'])
-        self.paramlist.append(['fitkeys', ['DETSIZE', 'PASSBAND', 'PUPIL'],
-            'List of keys that need to match flat and data file ' +
-            '(default = DETSIZE PASSBAND PUPIL) ' +
-            '- only used if flatfile=search'])
-        self.paramlist.append(['flatfolder', '.',
-            'Folder for searching flat files ' +
-            '(default = . ) - only used if flatfile=search'])
+        self.paramlist.append(['reload', 'False',
+            'Set to True to look for new flat files for every input'])
         self.paramlist.append(['l0method', 'NO',
             'Method to normalize data: NOne, REal, IMag and ABSolute ' +
             '(default = NO)'])
         self.paramlist.append(['datalist', [],
             'List of data sets to flatten in intput file ' +
             '(default = [] i.e. only flatten image cube in first HDU)'])
+        self.paramlist.append(['addfromfile', [],
+            'List of data sets from the flat file to add to the output data' +
+            '(default = [] i.e. no data to add)'])
+        # Get parameters for StepLoadAux, replace auxfile with flatfile
+        self.loadauxsetup('flatfile')
+        
 
     def run(self):
         """ Runs the flatfielding algorithm. The flatfielded data is
@@ -109,7 +109,7 @@ class StepFlat(StepParent):
         """
         ### Preparation
         # Load flat files if necessary
-        if not self.flatloaded:
+        if not self.flatloaded or self.getarg('reload'):
             self.loadflat()
         # Else: check data for correct instrument configuration
         else:
@@ -150,93 +150,57 @@ class StepFlat(StepParent):
                 self.dataout.imageset(image, dataitem)
                 # Remove table column from dataout
                 self.dataout.tabledelcol(dataitem)
-        # Add goodpixmap to output data
-        self.dataout.imageset(self.goodpixmap, 'goodpixmap')
+        ### Add additional image frames from flat file
+        for dataitem in self.getarg('addfromfile'):
+            ind = self.flatdata.imageindex(dataitem.upper())
+            if ind > -1:
+                self.dataout.imageset(self.flatdata.imageget(dataitem),
+                                      imagename = dataitem,
+                                      imageheader = self.flatdata.getheader(dataitem))
+                continue
+            ind = self.flatdata.tableindex(dataitem.upper())
+            if ind > -1:
+                self.dataout.tableset(self.flatdata.tableget(dataitem),
+                                      tablename = dataitem,
+                                      tableheader = self.flatdata.getheader(dataitem))
+                continue
+            msg = 'No data to add found for <%s>' % dataitem
+            self.log.error('Run: %s' % msg)
+            raise ValueError(msg)
+        # Remove the instrumental configuration HDU
+        if 'CONFIGURATION' in self.dataout.imgnames:
+            self.dataout.imagedel('CONFIGURATION')    
+
         ### Finish - cleanup
-        # Set complete flag
-        self.dataout.setheadval('COMPLETE',1,
-                           'Data Reduction Pipe: Complete Data Flag')
-    
+        # Update DATATYPE
+        self.dataout.setheadval('DATATYPE','IMAGE')
+        # Add flat file to History
+        self.dataout.setheadval('HISTORY','FLAT: %s' % self.flatdata.filename)
+        # Update PROCSTAT to level 2
+        self.dataout.setheadval('PROCSTAT','LEVEL_2')
+
     def loadflat(self):
         """ Loads the flat information for the instrument settings
             described in the header of self.datain.
-            
+
             If an appropriate file can not be found or the file is invalid
             various warnings and errors are returned.
         """
-        ### identify flat file to load, search if requested
-        flatfile = self.getarg('flatfile')
-        if flatfile == 'search' :
-            # get list of keywords to fit
-            fitkeys = self.getarg('fitkeys')
-            # check format (make first element uppercase)
-            try:
-                _ = fitkeys[0].upper()
-            except AttributeError:
-                # AttributeError if it's not a string
-                self.log.error('LoadFlat: fitkeys config parameter is ' +
-                               'incorrect format')
-                raise TypeError('fitkeys config parameter is incorrect format')
-            # get keywords from data
-            datakeys=[]
-            for fitkey in fitkeys:
-                datakeys.append(self.datain.getheadval(fitkey))
-            # get flat files from flatdir folder
-            flatfolder = self.getarg('flatfolder')
-            filelist=[name for name in os.listdir(flatfolder)
-                      if name[0] != '.' and name.find('.fit') > -1 ]
-            if len(filelist) < 1:
-                self.log.error('LoadFlat: no flat files found in folder ' +
-                               flatfolder)
-                raise ValueError('no flat files found in folder ' +
-                                 flatfolder)
-            # match flat files, return best flat file
-            bestind = 0 # index of file with best match in filelist
-            bestfitn = 0 # number of keywords that match in best match
-            fileind = 0 # index for going through the list
-            while fileind < len(filelist) and bestfitn < len(fitkeys):
-                # load keys of flat file
-                filehead = fits.getheader(flatfolder+'/'+filelist[fileind])
-                filekeys=[]
-                for fitkey in fitkeys:
-                    try:
-                        filekeys.append(filehead[fitkey])
-                    except KeyError:
-                        self.log.warning('LoadFlat: missing key [%s] in flatfile <%s>'
-                                       % (fitkey, filelist[fileind] ) )
-                        filekeys.append('')
-                # determine number of fitting keywords
-                keyfitn=0
-                while ( keyfitn < len(fitkeys) and 
-                        datakeys[keyfitn] == filekeys[keyfitn] ):
-                    keyfitn = keyfitn + 1
-                # compare with previous best find
-                if keyfitn > bestfitn:
-                    bestind = fileind
-                    bestfitn = keyfitn
-                fileind=fileind+1
-            flatfile = flatfolder+'/'+filelist[ bestind ]
-            if bestfitn < len(fitkeys):
-                self.log.warn('Could not find perfect flat file match')
-                self.log.warn('Best flat file found is <%s>'
-                              % filelist[bestind] )
-            else:
-                self.log.info('Best flat file found is <%s>'
-                              % filelist[bestind] )
-            self.fitkeys = fitkeys
-            self.keyvalues = datakeys            
-        ### load flat data into a PipeData object
-        self.flatfile = flatfile
-        flatdata = PipeData(config = self.config)
-        flatdata.load(self.flatfile)
+        ### Search for flat and load it into data object
+        self.flatdata = self.loadauxfile()
         ### find flatfields data arrays and store them
         # get sizes of input data
         datalist = self.getarg('datalist')
-        if len(datalist) > 0:
+        if len(datalist) == 0:
+            # Empty datalist -> Flat first image in data with first flat
+            self.checksize(self.datain.image.shape, self.flatdata.image.shape)
+            self.log.debug('LoadFlat: Flatfielding first data image with first flat')
+            self.flats=[self.flatdata.image]
+        else:
             # There are items in datalist -> loop over items
             self.flats = []
             # Check if necessary number of images in flatdata
-            if len(flatdata.imgdata) < len(datalist): 
+            if len(self.flatdata.imgdata) < len(datalist):
                 msg = 'Number of images in flatfield file < '
                 msg += 'number of entries in datalist'
                 self.log.error('LoadFlat: %s' % msg)
@@ -260,56 +224,29 @@ class StepFlat(StepParent):
                         self.log.error('LoadFlat: %s' % msg)
                         raise ValueError(msg)
                 # Get dimensions - append flat to list
-                datasiz = dataimg.shape
-                if self.getarg('l0method').upper() != 'NO':
-                    datasiz = datasiz[1:]
-                flatsiz = flatdata.imgdata[dataind].shape
-                self.flats.append(flatdata.imgdata[dataind])
-                # Check dimension with flat data
-                print(datasiz,flatsiz)
-                if len(datasiz) >= len(flatsiz):
-                    # Data has >= dimensions than flat -> compare
-                    begind = len(datasiz)-len(flatsiz)
-                    if datasiz[begind:] != flatsiz:
-                        msg = 'Flat "%s" does not fit data - A' % dataitem
-                        self.log.error('LoadFlat: %s' % msg)
-                        raise ValueError(msg)
-                else:
-                    # More dimensions in flat data -> report error
-                    msg = 'Flat "%s" does not fit data - B' % dataitem
-                    self.log.error('LoadFlat: %s' % dataitem)
-                    raise ValueError(msg)
-        else:
-            # Empty datalist -> Flat first image in data with first flat
-            datasiz = self.datain.image.shape
-            if self.getarg('l0method').upper() != 'NO':
-                datasiz = datasiz[1:]
-            flatsiz = flatdata.image.shape
-            if len(datasiz) >= len(flatsiz):
-                # Data has >= dimensions than flat -> compare
-                begind = len(datasiz)-len(flatsiz)
-                if datasiz[begind:] != flatsiz:
-                    self.log.error('LoadFlat: Flat does not fit data - A')
-                    raise ValueError('Flat does not fit data - A')
+                self.checksize(dataimg.shape, self.flatdata.imgdata[dataind].shape)
+                self.flats.append(self.flatdata.imgdata[dataind])
+        ### Ensure that data listed in addfromfile is present in flatfile
+        for dataitem in self.getarg('addfromfile'):
+            if dataitem.upper() in self.flatdata.imgnames:
+                pass
+            elif dataitem.upper() in self.flatdata.tabnames:
+                pass
             else:
-                # More dimensions in flat data -> report error
-                self.log.error('LoadFlat: Flat does not fit data - B')
-                raise ValueError('Flat does not fit data - B')
-            self.log.debug('LoadFlat: Flatfielding first data image with first flat')
-            self.flats=[flatdata.image]
-        ### make good pixel map for each detector and add to 
-        #flattemp = numpy.abs(data[0,...])+numpy.abs(data[1,...])
-        #self.goodpixmap = numpy.ones(data.shape[1:])
-        #self.goodpixmap [ numpy.where(flattemp == 0.0)] = 0.0
+                msg = 'No data to add found for <%s>' % dataitem
+                self.log.error('LoadFlat: %s' % msg)
+                raise ValueError(msg)
         # Finish up
         self.flatloaded = 1
         self.log.debug('LoadFlat: done')
-    
+
     def flatfield(self,imgin,flat):
         """ Flatfields an array using flat.
             If r0method != NO then the real image is computed
             This method checks that imagein and flat are compatible
         """
+        # Check flatfield dimension
+        self.checksize(imgin.shape, flat.shape)
         # Do r0method correction if necessary
         l0method = self.getarg('l0method')
         if l0method != 'NO':
@@ -323,13 +260,20 @@ class StepFlat(StepParent):
                 imgin = imgin[1,...].copy()
             else:
                 imgin = imgin[0,...].copy()
-        # Check flatfield dimension
-        datasiz = imgin.shape
-        flatsiz = flat.shape
-        if len(datasiz) >= len(flatsiz):
+        # Apply flatfield
+        imgout = imgin * flat
+        return imgout
+
+    def checksize(self, datashape, flatshape):
+        """ Checks that the shape of the flat is comptatible to be used
+            with image data of datashape. Raises exceptions otherwise.
+        """
+        if self.getarg('l0method').upper() != 'NO':
+            datashape = datashape[1:]
+        if len(datashape) >= len(flatshape):
             # Data has >= dimensions than flat -> compare
-            begind = len(datasiz)-len(flatsiz)
-            if datasiz[begind:] != flatsiz:
+            begind = len(datashape)-len(flatshape)
+            if datashape[begind:] != flatshape:
                 msg='Flat does not fit data in file %s'%self.datain.filename
                 self.log.error('FlatField: %s' % msg)
                 raise ValueError(msg)
@@ -338,28 +282,28 @@ class StepFlat(StepParent):
             msg = 'Flat does not fit data in file %s' % self.datain.filename
             self.log.error('LoadFlat: %s' % msg)
             raise ValueError(msg)
-        # Apply flatfield
-        imgout = imgin / flat
-        return imgout
-    
+
     def reset(self):
         """ Resets the step to the same condition it was when it was
             created. Stored flatfield data is erased and the configuration
             information is cleared.
         """
+        # initialize input and output
+        self.datain = PipeData()
+        self.dataout = PipeData()
         self.flatloaded = 0
         self.flatvalue = numpy.zeros([1,1])
         self.flatphase = numpy.zeros([1,1])
         self.flatheader = fits.PrimaryHDU(numpy.array(1))
         self.flatfile = ''
-    
+
     def test(self):
         """ Test Pipe Step Flat Object: Runs basic tests
         """
         # initial log message
         self.log.info('Testing pipe step flat')
         # get testin and a configuration
-        if len(self.config) > 2: # i.e. if real config is loaded
+        if self.config != None and len(self.config) > 2: # i.e. if real config is loaded
             testin = PipeData(config=self.config)
         else:
             testin = PipeData(config=self.testconf)
@@ -404,6 +348,7 @@ if __name__ == '__main__':
     StepFlat().execute()
 
 """ === History ===
+    2016-4-13 Marc Berthoud: Flat is now MULTIPLIED with data not divided
     2013-9-16 Marc Berthoud: Upgraded to new step format
     2010-12-20 Marc Berthoud: Added creation of the GOODPIXMAP image frame
     2010-10-26 Marc Berthoud: Upgraded to new pipedata

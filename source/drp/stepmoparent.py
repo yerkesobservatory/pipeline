@@ -8,7 +8,7 @@
 '''
 
 import logging # logging object library
-from drp.pipedata import PipeData # pipeline data object
+from drp.dataparent import DataParent # pipeline data object
 from drp.stepmiparent import StepMIParent # pipe step parent object
 
 class StepMOParent(StepMIParent):
@@ -24,7 +24,7 @@ class StepMOParent(StepMIParent):
         # call superclass constructor (calls setup)
         super(StepMOParent,self).__init__()
         # Change dataout
-        self.dataout = [PipeData()]
+        self.dataout = [DataParent()]
         # set iomode
         self.iomode = 'MIMO'
 
@@ -71,11 +71,11 @@ class StepMOParent(StepMIParent):
         """ Method to call at the end of pipe the pipe step call
            - Sends final log messages
         """
-        # clear input arguments
-        self.arglist = {}
         # update header (status and history)
         for d in data:
             self.updateheader(d)
+        # clear input arguments
+        self.arglist = {}
         self.log.info('Finished Reduction: Pipe Step %s' % self.name)
 
     def execfiles(self, inputfiles):
@@ -86,9 +86,8 @@ class StepMOParent(StepMIParent):
             self.datain = []
             for filename in inputfiles:
                 # Read input file
-                data = PipeData(config = self.config)
-                data.load(filename)
-                self.datain.append(data)
+                data = DataParent(config = self.config)
+                self.datain.append(data.load(filename))
             # Call start - run and call end
             self.runstart(self.datain,self.arglist)
             self.run()
@@ -109,9 +108,9 @@ class StepMOParent(StepMIParent):
         self.log.info('Testing pipe step %s' %self.name)
         # read configuration
         if self.config != None:
-            datain = PipeData(config=self.config)
+            datain = DataParent(config=self.config)
         else:
-            datain = PipeData(config=self.testconf)
+            datain = DataParent(config=self.testconf)
         # generate 2 files
         datain.filename = 'this.file.type.fts'
         datain = [datain,datain]

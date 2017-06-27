@@ -28,6 +28,8 @@ class StepLogSocket(StepParent):
         the socket.
     """
     socketactive = [False,]
+    activeloghost = [None,]
+    activelogport = [None,]
 
     def logsocketstart(self):
         """ Opens the log socket if it is not yet active
@@ -43,14 +45,37 @@ class StepLogSocket(StepParent):
                 self.log.warn('Missing [logsocket] configuration ' +
                               '- using default setup: localhost:50747')
                 conf={'host':'localhost','port':50747}
-            sock.bind((conf['host'],int(conf['port'])))
-            sock.listen(5)
-            # Start thread
-            thread.start_new_thread(self.logsocketrun,(sock,))
-            self.log.info('Started Logging Socket')
+            # Try specified port + up to 20
+            cport = int(conf['port'])
+            err = False
+            for i in range(20):
+                try:
+                    self.log.debug('Attempting port ' + str(cport))
+                    sock.bind((conf['host'],cport))
+                    # Start listening
+                    sock.listen(5)
+                    # Start thread
+                    thread.start_new_thread(self.logsocketrun,(sock,))
+                    err = False
+                    break
+                except Exception:
+                    err = True
+                    cport += 1
+                    continue
+            # If still failed, then raise error
+            if err: raise
+
+            # Save host and port
+            self.activeloghost[0] = socket.gethostbyname(conf['host'])
+            self.activelogport[0] = cport
+
+            self.log.info('Started Logging Socket on port %d' % cport)
             self.socketactive[0]=True
         else:
             self.log.debug('Multiple calls to LogSocketStart - socket already running')
+
+        self.loghost = self.activeloghost[0]
+        self.logport = self.activelogport[0]
 
     def logsocketrun(self, sock):
         """ Log socket subprocess loop
