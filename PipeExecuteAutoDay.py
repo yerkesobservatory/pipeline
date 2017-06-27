@@ -85,9 +85,12 @@ def execute():
         fullentry = os.path.join(topdirectory,entry)
         # Run this loop for each file ('image') found in the object folder ('fullentry')
         for image in os.listdir(fullentry):
+            num = image[-14:-5]
             # Makes sure the images collected are FITS images
             # i.e. end with "seo.fits" not KEYS or WCS other reduction product
 	    if not 'seo.fits' in image[-8:]:
+                continue
+            if not 'seo%s.fits' % num in image[-17:]:
                 continue
             # Ignore dark, flat or bias images
             if 'dark' in image or 'flat' in image or 'bias' in image:
@@ -110,6 +113,9 @@ def execute():
 execute()
 ''' 
 HISTORY:
+2017/06/23: This version processes all inputs into the pipeine instead of just 3
+            inputs, so StepMakeRGB can get the desired  3 best inputs for a jpg
+            image -- Atreyo Pal
 2015/02/23: This version can be executed without system arguments to process
             files from the current day -- Ben Mahon
 2015/01/07: This version of the automatic pipeline should be used to reduce
