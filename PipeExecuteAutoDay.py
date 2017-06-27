@@ -20,6 +20,7 @@
 import os
 import sys
 import logging
+import traceback
 
 # Set system variables
 logfile = '/data/scripts/DataReduction/PipeLineLog.txt'
@@ -31,27 +32,6 @@ logging.basicConfig(filename = logfile, level = logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s' )
 log = logging.getLogger('pipe.ExecuteAutoDay')
 log.info('Starting up')
-
-
-# Change directory & import the pipeline settings
-#sys.path.append('/Users/atreyopal/Desktop/pipeline/source/')
-sys.path.append('/data/scripts/DataReduction/source/')
-from drp.pipeline import PipeLine
-import datetime
-
-today = datetime.date.today()
-year = str(today.year)
-month = str(today.month)
-day = str(today.day)
-if len(month) == 1:
-    month = '0'+month
-if len(day) == 1:
-    day = '0'+day
-
-date = year + '-' + month + '-' + day
-
-#datefilepath = '/Users/atreyopal/Desktop/pipeline/Examples'
-datefilepath = '/data/images/StoneEdge/0.5meter/'+year+'/'+date
 
 def execute():
     # Call the pipeline configuration
@@ -107,7 +87,35 @@ def execute():
         except:
             log.warning("Pipeline for object = %s returned Error" % entry)
 
-execute()
+# Run the setup code in an error with reporting traceback
+try:
+    # Change directory & import the pipeline settings
+    #sys.path.append('/Users/atreyopal/Desktop/pipeline/source/')
+    sys.path.append('/data/scripts/DataReduction/source/')
+    from drp.pipeline import PipeLine
+    import datetime
+
+    today = datetime.date.today()
+    year = str(today.year)
+    month = str(today.month)
+    day = str(today.day)
+    if len(month) == 1:
+        month = '0'+month
+    if len(day) == 1:
+        day = '0'+day
+
+    date = year + '-' + month + '-' + day
+
+    #datefilepath = '/Users/atreyopal/Desktop/pipeline/Examples'
+    datefilepath = '/data/images/StoneEdge/0.5meter/'+year+'/'+date
+    execute()
+except Exception, e:
+    log.error('Found Error = %s' % repr(e))
+    trb = traceback.format_exc().split('\n').reverse()
+    for tr in trb:
+        log.error(tr)
+    raise e
+
 ''' 
 HISTORY:
 2015/02/23: This version can be executed without system arguments to process
