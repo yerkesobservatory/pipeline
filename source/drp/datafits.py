@@ -1,10 +1,7 @@
-""" PIPE DATA - Version 1.0.0
+""" PIPE DATA FITS - Version 1.0.0
 
-    This module defines the basic HAWC pipeline data object. The object
+    This module defines the pipeline FITS data object. The object
     is used by the pipeline to store raw, intermediate and reduced data.
-
-    The module also contains crucial variables for the entire pipeline,
-    such as pipever and testconf.
 
 """
 
@@ -17,26 +14,17 @@ import validate  # to check input config file is correct
 import re # regexp
 import gc # garbage collect
 from astropy.io import fits # fits libary
-from datafits import DataFits
+from dataparent import DataParent # Pipe Data Parent
 
-
-class PipeData(DataFits):
-    """ HAWC Pipeline Data Object
-        DEPRECIATED - use DataFits instead
+class DataFits(DataParent):
+    """ Pipeline Data FITS Object
+        The data is stored as a list of (multi-dimensional) images and a
+        similar list of tables. Fits  file name and all headers are
+        stored as well.
     """
-    
-class PipeDataOld(DataFits):
-    """ HAWC Pipeline Data Object
-        The data is stored as a list of (multi-dimensional) images with a
-        parameter table (one line in the table for each image). Fits header
-        and file name are stored as well.
-    """
-    #testconf = 'config/pipeconf_master.txt' # Test configuration
-    testconf = 'config/pipeconf_mgb.txt' # Test configuration
 
-    # General variables: These are valid for all pipeline and all pipesteps
-    pipever = '1.0.0' # Pipeline version
-
+    # File Name Fit: Regexp expression that fits valid filenames
+    filenamefit = r'\.(fits|fts)\Z' # will fit .fits or .fts at end of name
 
     def __init__(self, filename='', config=None):
         """ Constructor: Initialize data object and variables
@@ -56,12 +44,12 @@ class PipeDataOld(DataFits):
         self.tabdata=[] # List with tables each item is a record array
         self.tabnames=[] # List with table names (all uppercase)
         self.tabheads=[] # List with table headers
-        #self.header=pyfits.Header() # Header
         # set up logging and configuration
-        self.log=logging.getLogger('pipe.data') # Logger
+        self.log=logging.getLogger('pipe.datafits') # Logger
         self.config = None # Configuration
         self.setconfig(config) # Set the Configuration
-        self.logcount=0 # Count to decrease frequency of frequenc log messages
+        # Count to decrease number of frequent log messages
+        self.logcount=0
         # if file exists, load it
         if os.path.exists(filename):
             self.load(filename)
@@ -73,10 +61,26 @@ class PipeDataOld(DataFits):
 
     def __getattr__(self, name):
         """ Get Attribute function that allows to access these attributes:
+            - header: header of primary HDU
             - image: the first image
             - table: the first table
-            - filenamebase: filename without .step.fits extention
+            - filenamebase: filename start - depreciated
+            From DataParent.__getattr__:
+            - filenamebegin: filename start
+            - filenameend: filename end
         """
+        # return data
+        if name == 'data':
+            # return image if available
+            if len(self.imgdata) > 0 and self.imgdata[0] != None:
+                return self.imgdata[0]
+            # else return a table
+            elif len(self.tabdata) > 0:
+                return self.tabdata[0]
+            else:
+                msg="'%s' object has no data" % (type(self).__name__)
+                self.log.warn(msg)
+                return None
         # return image if it's requested - raise error if no images present
         if name == 'image':
             if len(self.imgdata) == 0:
@@ -105,81 +109,8 @@ class PipeDataOld(DataFits):
         if name == 'filenamebase':
             self.log.warn('Filenamebase is depreciated - use filenamebegin')
             return self.filenamebegin
-        # return filenamebegin if it's requested
-        if name == 'filenamebegin':
-            (fpath,fname) = os.path.split(self.filename)
-            # if filenamebegin is specified, use it
-            try:
-                filenamebegin = self.config['data']['filenamebegin']
-                match = re.search(filenamebegin,fname)
-            except (KeyError, TypeError):
-                match = False
-                filenamebegin = "None"
-            if match :
-                # found file name beginning -> return it
-                return os.path.join(fpath,match.group())
-            else:
-                # assume filename format is name.filestep.fits or ....fits.gz
-                msg = "Filename=%s doesn't match pattern=%s" % (fname, filenamebegin)
-                self.log.warn(msg)
-                extloc = fname.rfind('.f')
-                #print extloc,fname
-                if ( extloc < 0 or
-                     fname[extloc:] not in ['.fts','.fits','.fits.gz'] ) :
-                    self.log.warn('Filename has non-fits extension')
-                    extloc = fname.rfind('.')
-                    if extloc < 0: extloc = len(fname)
-                    else: extloc += 1 # to add the '.'
-                else: extloc += 1 # to add the '.'
-                typeloc = fname[0:extloc-1].rfind('.')
-                if typeloc < 0:
-                    typeloc = extloc
-                else:
-                    typeloc += 1
-                return os.path.join(fpath,fname[:typeloc])
-        # return filenameend if it's requested
-        if name == 'filenameend':
-            (fpath,fname) = os.path.split(self.filename)
-            # if filenameend is specified, use it
-            try:
-                filenameend = self.config['data']['filenameend']
-                match = re.search(filenameend, fname)
-            except (KeyError, TypeError):
-                match = False
-                filenameend = "None"
-            if match :
-                # found file name end -> return it
-                return match.group()
-            else:
-                msg = "Filename=%s doesn't match pattern=%s" % (fname, filenameend)
-                extloc = fname.rfind('.f')
-                if ( extloc < 0 or
-                     fname[extloc:] not in ['.fts','.fits','.fits.gz'] ) :
-                    self.log.warn('Filename has non-fits extension')
-                    extloc = fname.rfind('.')
-                    if extloc < 0: extloc = len(fname)
-                if extloc < 0:
-                    return ''
-                else:
-                    return fname[extloc:]
-        # return file number if it's requested
-        if name=='filenum':
-            (fpath,fname) = os.path.split(self.filename)
-            # if filenum is specified in pipeconf, use it
-            try:
-                filenum = self.config['data']['filenum']
-                match = re.search(filenum, fname)
-            except (KeyError, TypeError):
-                match = False
-                filenum = "None"
-            if match :
-                # found file num -> return it
-                if len(match.groups()) > 1:
-                    return match.group(1)
-                else:
-                    return match.group()
-            else:
-                return "None"
+        # run parent function (filenamebegin and filenameend)
+        return super(DataFits, self).__getattr__(name)
         # raise error if attribute is unknown
         msg="'%s' object has no attribute '%s'" % (type(self).__name__,name)
         raise AttributeError(msg)
@@ -188,6 +119,14 @@ class PipeDataOld(DataFits):
         """ Set Attribute function that allows to access the first
             image as PipeData.image
         """
+        # set the data to image
+        if name == 'data':
+            # if it's a table put it in table
+            if issubclass(value.__class__, numpy.recarray):
+                self.table = value
+            # else assume it's an image
+            else:
+                self.image = value
         # set the image if it's requested
         if name == 'image':
             if len(self.imgdata) > 0:
@@ -215,94 +154,6 @@ class PipeDataOld(DataFits):
         # else pass the command to the parent function
         else:
             object.__setattr__(self, name, value)
-
-    def setconfig(self,config):
-        """ Sets configuration for the pipe data: if a filename is
-            specified, the configuration file is read. The configuration
-            object is returned.
-        """
-        if isinstance(config,configobj.ConfigObj):
-            # if config is a ConfObj -> set it
-            self.config=config
-            self.log.debug('SetConfig: skipping configuration file validation')
-            retmsg='received ConfigObj'
-        elif isinstance(config,str):
-            # if config is a string - check for file existence -> load it
-            if os.path.isfile(config):
-                try:
-                    valpath = os.path.dirname(__file__)
-                    valpath = os.path.join(valpath,'conf_validate.txt')
-                    valpath = ''
-                    self.config=configobj.ConfigObj(config,configspec=valpath)
-                    #print self.config.configspec
-                    #self.validateconfig() # taken out for now
-                except configobj.ConfigObjError, error:
-                    msg = 'Error while loading configuration file'
-                    self.log.error('SetConfig: ' + msg)
-                    raise error
-                retmsg='loaded config file=' + config
-            else:
-                msg='<%s> is invalid file name for configuration' % config
-                self.log.error('SetConfig: '+msg)
-                raise IOError(msg)
-        elif config is None:
-            # no configuration -> No change
-            # (( The following code would have been to use default config
-            #    from the config validation file ))
-            #self.config = None
-            #path = os.path.dirname(__file__)
-            #path = os.path.join(path,'conf_validate.txt')
-            #self.config = configobj.ConfigObj(configspec=path)
-            #self.config.validate(validate.Validator(),copy=True)
-            #write out default
-            #fp = open("pipe_test_conf.txt",'w')
-            #self.config.write(fp)
-            #fp.close()
-            retmsg='no config given'
-        else:
-            # Invalid configuration - error
-            self.log.error('SetConfig: Invalid configuration variable')
-            raise TypeError('Invalid configuration variable')
-        self.log.debug('SetConfig: done ('+retmsg+')')
-        return self.config
-
-    def validateconfig(self):
-        """ Test config against configspec and print errors if it doesn't
-            conform.
-
-            Things that need to be fixed:
-            * Config validation should not overwrite default value from
-              paramlist in steps
-            * If a keyword is missing in the [HEADER] section config validation
-              shouldn't put it in.
-        """
-
-        errFlag = False # set to true if errors encountered
-        results = self.config.validate(validate.Validator(),copy=True)
-        extra   = configobj.get_extra_values(self.config) # keywords not in spec
-        # List configuration keywords that failed validation
-        if results != True:
-            for (section_list, key,_) in configobj.flatten_errors(self.config,
-                                                                  results):
-                blah = ', '.join(section_list)
-                if key is not None:
-                    msg = "ValidateConfig: key '%s' in section '%s' failed"
-                    self.log.error( msg % (key, blah))
-                    errFlag = True
-                else:
-                    self.log.error("ValidateConfig: Section '%s' failed" %blah)
-                    errFlag = True
-        # Warn for keywords not found in validation
-        for s,k in extra:
-            if len(s) == 0:
-                msg = 'ValidateConfig: Skippping unknown global keyword "%s"'
-                self.log.warning(msg % k)
-            else:
-                msg = 'ValidateConfig: Skippping unknown keyword "%s" in section "%s"'
-                self.log.warning( msg %(k,s[0]))
-        if errFlag:
-            raise validate.ValidateError
-        self.log.debug('ValidateConfig: done')
 
     def loadhead(self,filename='', dataname=''):
         """ Loads and returns the primary header of the FITS file given.
@@ -337,7 +188,7 @@ class PipeDataOld(DataFits):
             # TypeError: invalid filename (not a string)
             self.log.error('LoadHead: filename is invalid type')
             raise error
-        # No dataname -> just set counter to end
+        # No dataname -> return primary header
         if dataname == '':
             header = hdus[0].header
         # Look for correct dataname
@@ -350,18 +201,21 @@ class PipeDataOld(DataFits):
                         found = 1
                         header = hdus[hdui].header
                 hdui += 1
+            if not found:
+                msg = "loadhead: HDU with EXTNAME=%s not found" % dataname
+                self.log.error(msg)
+                raise ValueError(msg)
         # Fill in the header, if necessary fill in data
         self.imgheads = [header]
         self.imgdata = [None]
         try:
-            self.imgnames = [header['EXTNAME']]
+            self.imgnames = [header['EXTNAME'].upper()]
         except:
-            self.imgnames = ['Primary Header']
+            self.imgnames = ['PRIMARY HEADER']
         # Fill the filename
         self.filename = filename
         self.log.debug('LoadHead: done')
         hdus.close()
-        return self.header
 
     def load(self,filename=''):
         """ Load a file into the data object. The file can be a raw HAWC
@@ -391,15 +245,18 @@ class PipeDataOld(DataFits):
         imgn = len(imgind) # store number of images
         # get naxis and naxis1 from primary header, check if keywords exist
         try:
-            naxis=self.getheadval('naxis')
-            naxis1=self.getheadval('naxis1')
+            naxis=self.getheadval('NAXIS')
+            if naxis > 0:
+                naxis1=self.getheadval('NAXIS1',errmsg=False)
+            else:
+                naxis1=0
         except KeyError:
             # KeyError: keyword not found (no keywords available)
             self.log.warn('Load: missing naxis keywords in fits file '
                            + filename)
         # Check if file has no image (i.e. if naxis==1 and naxis1==0)
         # -> No change, primary image stays as it was from loadhead()
-        if naxis == 1 and naxis1 == 0:
+        if naxis * naxis1 == 0:
             self.log.info('Load: No image data in first HDU')
         # else: Load first HDU data if there is image data in it
         else:
@@ -449,7 +306,7 @@ class PipeDataOld(DataFits):
                     msg += ' -> Ignoring this HDU'
                     self.log.warn(msg)
                     continue
-            except TypeError:
+            except:
                 msg = 'Load: Problem loading table in HDU number %d' % ind
                 msg += ' -> Ignoring this HDU'
                 self.log.warn(msg)
@@ -470,7 +327,7 @@ class PipeDataOld(DataFits):
         hdus.close()
         gc.collect()
         ### Message
-        self.log.debug('Load: loaded pipe file')
+        self.log.debug('Load: loaded fits file')
 
     def save(self,filename = None):
         """ Save the data in the object to the specified file. Existing files are
@@ -481,7 +338,7 @@ class PipeDataOld(DataFits):
         if filename == None:
             filename = self.filename
         # update pipeline keywords
-        self.setheadval('PIPEVERS', PipeData.pipever.replace('.','_'),
+        self.setheadval('PIPEVERS', DataParent.pipever.replace('.','_'),
                         'Pipeline Version')
         self.setheadval('FILENAME',os.path.split(filename)[-1])
         self.setheadval('DATE',time.strftime('%Y-%m-%dT%H:%M:%S'))
@@ -519,7 +376,7 @@ class PipeDataOld(DataFits):
     def copy(self):
         """ Returns a copy of self
         """
-        out=PipeData(config=self.config) # create new object
+        out=DataFits(config=self.config) # create new object
         # copy all images
         out.imgnames=self.imgnames[:]
         out.imgdata=[]
@@ -553,7 +410,7 @@ class PipeDataOld(DataFits):
             - raises ValueErrors if other has invalid format
         """
         ### check if other is correct data type
-        if not isinstance(other,PipeData):
+        if not isinstance(other,DataFits):
             self.log.error('Mergedata: other data is not PipeData type')
             raise TypeError('other data is not PipeData type')
         ### If self has no images and no tables: Copy All data from other
@@ -630,7 +487,7 @@ class PipeDataOld(DataFits):
 
     def mergehead(self, other):
         """ Merges the header of another data object to the existing header.
-            Most of the header of the new data is ignored, PARENT,
+            Most of the header of the new data is ignored, COMMENT,
             HISTORY keywords are copied.
         """
         # get self and other cards and parents
@@ -655,7 +512,7 @@ class PipeDataOld(DataFits):
         # Go through keywords listed in headmerge: assume self is first
         headmerge = self.config['headmerge']
         for key in headmerge.keys():
-            try:
+            if key in self.header and key in other.header:
                 selfval = self.header[key]
                 otherval = other.header[key]
                 operation = headmerge[key].upper()
@@ -681,8 +538,6 @@ class PipeDataOld(DataFits):
                     elif type(selfval) is float:
                         selfval = -9999.0
                 self.header[key] = selfval
-            except:
-                self.log.warn("Mergehead: Error merging Key=%s" % key)
         self.log.debug('MergeHead: done')
 
     def copyhead(self,other,name=None,overwrite=True):
@@ -1233,18 +1088,18 @@ class PipeDataOld(DataFits):
                 elif funct == 'last':
                     outrow[colname] = rows[-1][colname]
                 elif funct == 'min':
-                    outrow[colname] = float(rows[colname].min())
+                    outrow[colname] = float(numpy.nanmin(rows[colname]))
                 elif funct == 'max':
-                    outrow[colname] = float(rows[colname].max())
+                    outrow[colname] = float(numpy.nanmax(rows[colname]))
                 elif funct == 'med':
-                    outrow[colname] = float(numpy.median( rows[colname] ))
+                    outrow[colname] = float(numpy.nanmedian(rows[colname]))
                 elif funct == 'avg':
-                    outrow[colname] = float(numpy.average( rows[colname] ))
+                    outrow[colname] = float(numpy.nanmean(rows[colname] ))
                 elif funct == 'sum':
-                    outrow[colname] = float(rows[colname].sum())
+                    outrow[colname] = float(numpy.nansum(rows[colname]))
                 elif funct == 'wtavg':
-                    tmp = float(numpy.sum(rows[colname]*rows['Samples']))
-                    tmpsum = float(numpy.sum(rows['Samples']))
+                    tmp = float(numpy.nansum(rows[colname]*rows['Samples']))
+                    tmpsum = float(numpy.nansum(rows['Samples']))
                     if tmpsum > 0:
                         outrow[colname] = tmp/tmpsum
                     else:
@@ -1311,18 +1166,18 @@ class PipeDataOld(DataFits):
             elif funct == 'last':
                 tmp = tables[-1][n]
             elif funct == 'min':
-                tmp = min([a[n] for a in tables])
+                tmp = numpy.nanmin([a[n] for a in tables])
             elif funct == 'max':
-                tmp = max([a[n] for a in tables])
+                tmp = numpy.nanmax([a[n] for a in tables])
             elif funct == 'med': # median
-                tmp = numpy.median([a[n] for a in tables])
+                tmp = numpy.nanmedian([a[n] for a in tables])
             elif funct == 'avg': # average
-                tmp = numpy.average([a[n] for a in tables])
+                tmp = numpy.nanmean([a[n] for a in tables])
             elif funct == 'sum':
-                tmp = numpy.sum([a[n] for a in tables])
+                tmp = numpy.nansum([a[n] for a in tables])
             elif funct == 'wtavg':
-                tmp = numpy.sum([a[n]*a['Samples'] for a in tables])
-                tmpsum = numpy.sum([a['Samples'] for a in tables])
+                tmp = numpy.nansum([a[n]*a['Samples'] for a in tables])
+                tmpsum = numpy.nansum([a['Samples'] for a in tables])
                 tmp = tmp/float(tmpsum)
             else:
                 self.log.warn('TableMergeTables: Unknown operation -'+funct
@@ -1382,7 +1237,7 @@ class PipeDataOld(DataFits):
         self.log.debug('SetHeader: done')
 
 
-    def getheadval(self, key, dataname = ''):
+    def getheadval(self, key, dataname = '', errmsg=True):
         """ Get Header Value: Returns the value of the requested key from
             the header. If the keyword is present in the [Header] section
             of the configuration that value is returned instead. In case that
@@ -1436,14 +1291,19 @@ class PipeDataOld(DataFits):
             except KeyError:
                 # if keyword is not found
                 msg='Missing %s keyword in header %s' % (key, dataname)
-                self.log.error('GetHeadVal: %s' % msg)
+                if errmsg:
+                    self.log.error('GetHeadVal: %s' % msg)
                 raise KeyError(msg)
         # if Value is a pyfits.core.Undefined i.e. no keyword
         if isinstance(val, fits.Undefined):
             msg = 'Missing value for key = %s - returning empty string' % key
             self.log.warn('GetHeadVal: %s' % msg)
             val = ''
-        self.log.debug('GetHeadVal: done (%s=%s)' % (key,str(val)))
+        # Debug message (only first line if multi-line value)
+        if '\n' in str(val):
+            self.log.debug('GetHeadval: done (%s=%s ...)' % (key, str(val[0])))
+        else:
+            self.log.debug('GetHeadVal: done (%s=%s)' % (key,str(val)))
         return val
 
     def setheadval(self, key, value, comment=None, dataname = ''):
@@ -1611,10 +1471,14 @@ if __name__ == '__main__':
         Changes to the folder with the test files and runs pipedata.test()
     """
     logging.basicConfig(level=logging.DEBUG)
-    data=PipeData()
+    data=DataFits()
     data.test()
 
 """ === History ===
+    2016-9-26 Marc Berthoud: Split PipeData (fits only) into
+        DataParent and DataFits
+        Main Changes:
+        - Added data attribute which can go to image or table
     2015-9-25 Marc Berthoud: Edited save() to update keywords for
         FILENAME and DATE
     2014-7-31 Marc Berthoud: Added output_verify=fix to write()

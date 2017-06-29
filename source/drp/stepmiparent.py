@@ -7,16 +7,18 @@
     @author: berthoud
 '''
 
+import os
+import re
 import logging # logging object library
-from drp.pipedata import PipeData # pipeline data object
+from drp.dataparent import DataParent # pipeline data object
 from drp.stepparent import StepParent # pipe step parent object
 
 class StepMIParent(StepParent):
     """ Pipeline multiple data input parent object
     """
-    
+
     stepver = '1.0' # pipe step version
-    
+
     def __init__(self):
         """ Constructor: Initialize data objects and variables
             calls the setup function.
@@ -24,10 +26,12 @@ class StepMIParent(StepParent):
         # call superclass constructor (calls setup)
         super(StepMIParent,self).__init__()
         # Change datain
-        self.datain = [PipeData()]
+        self.datain = [DataParent()]
         # set iomode
         self.iomode = 'MISO'
-    
+        # add a filenum list, for output filenames
+        self.filenum = []
+
     def setup(self):
         """ ### Names and Prameters need to be Set Here ###
             Sets the internal names for the function and for saved files.
@@ -66,25 +70,66 @@ class StepMIParent(StepParent):
         self.log.debug("Sample Parameter = %.2f" % self.getarg('sampar'))
         # Return the first datain element
         self.dataout = self.datain[0]
-        
+
     def runstart(self, data, arglist):
         """ Method to call at the beginning of the pipe step call.
             Mostly refers to runstart of stepparent
         """
+        # Keep a list of input file numbers for output filename
+        self.filenum = []
+
         # Check input data - should be a list/tuple with PipeData objects
         if isinstance(data, (list,tuple)):
             for d in data:
-                if not isinstance(d, PipeData):
-                    msg = 'Invalid input data type: PipeData object is required'
+                if not isinstance(d, DataParent):
+                    msg = 'Invalid input data type: Pipe Data object is required'
                     self.log.error(msg)
                     raise TypeError('Runstart: '+msg)
+                # try to read numerical file number from input name
+                try:
+                    # test if it is a valid number
+                    fnum = int(d.filenum)
+                    # append the string version if it is
+                    self.filenum.append(d.filenum)
+                except (ValueError, TypeError):
+                    pass
         else:
             msg = 'Invalid input data type: List object is required'
             self.log.error(msg)
             raise TypeError('Runstart: '+msg)
         # Call parent runstart
         super(StepMIParent,self).runstart(data[0],arglist)
-        
+
+    def updateheader(self,data):
+        """ Update the header for a single PipeData object
+            - Sets the PROCSTAT and PROCLEVL keywords in the data header
+            - Adds a history entry to the data header
+            - Update the output filename
+            Mostly refers to updateheader of stepparent
+        """
+        # Call parent updateheader
+        super(StepMIParent,self).updateheader(data)
+
+        # Update file name with PipeStepName and input filenumbers
+        # if available and MISO. Otherwise, use the version set by the parent.
+        if self.iomode == 'MISO' and len(self.filenum) > 1:
+            fn = sorted(self.filenum)
+            filenums = fn[0] + '-' + fn[-1]
+            outdir, basename = os.path.split(data.filename)
+            match = re.search(self.config['data']['filenum'],basename)
+            if match is not None:
+                # regex may contain multiple possible matches --
+                # for middle or end of filename
+                for i,g in enumerate(match.groups()):
+                    if g is not None:
+                        fbegin = basename[:match.start(i+1)]
+                        fend = basename[match.end(i+1):]
+                        data.filename = os.path.join(outdir,
+                                                     fbegin + filenums + fend)
+                        break            
+            #fileend = '_' + fn[0] + '-' + fn[-1] + '.fits'
+            #data.filename = data.filenamebegin + self.procname.upper() + fileend
+
     def execfiles(self, inputfiles):
         """ Runs several files from execute.
         """
@@ -93,9 +138,8 @@ class StepMIParent(StepParent):
             self.datain = []
             for filename in inputfiles:
                 # Read input file
-                data = PipeData(config = self.config)
-                data.load(filename)
-                self.datain.append(data)
+                data = DataParent(config = self.config)
+                self.datain.append(data.load(filename))
             # Call start - run and call end
             self.runstart(self.datain,self.arglist)
             self.run()
@@ -115,20 +159,20 @@ class StepMIParent(StepParent):
         self.log.info('Testing pipe step %s' %self.name)
         # read configuration
         if self.config != None:
-            datain = PipeData(config=self.config)
+            datain = DataParent(config=self.config)
         else:
-            datain = PipeData(config=self.testconf)
+            datain = DataParent(config=self.testconf)
         # generate 2 files
         datain.filename = 'this.file.type.fts'
         datain = [datain,datain]
         # run function call
-        dataout = self(datain)      
+        dataout = self(datain)
         # test output
         print(type(dataout))
         print(dataout.header)
         # log message
         self.log.info('Testing pipe step %s - Done' %self.name)
-    
+
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
         Command:
@@ -137,7 +181,7 @@ if __name__ == '__main__':
           --config=ConfigFilePathName.txt : name of the configuration file
           -t, --test : runs the functionality test i.e. pipestep.test()
           --loglevel=LEVEL : configures the logging output for a particular level
-          -h, --help : Returns a list of 
+          -h, --help : Returns a list of
     """
     StepMIParent().execute()
 

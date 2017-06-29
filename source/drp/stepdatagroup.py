@@ -7,14 +7,14 @@
     reduction step (the redstep) and all the output files are returned by
     StepDataGroup.
     
-    The step to reduce the files with is specified in the configuration
-    file and is found using the same process the pipeline uses.
+    To avoid re-reducing the same groups of files, the outputs are stored
+    and if group elements match earlier group results are returned.
     
     @author: berthoud
 """
 
 import logging # logging object library
-from drp.pipedata import PipeData
+from drp.dataparent import DataParent
 from drp.stepmoparent import StepMOParent
 
 class StepDataGroup(StepMOParent):
@@ -49,16 +49,24 @@ class StepDataGroup(StepMOParent):
         self.log = logging.getLogger('pipe.step.%s' % self.name)
         # Reduction step, unset if == None
         self.redstep = None
+        # Groups variables: store information about reduced data to avoid
+        #   re-reducing unchanged data
+        self.groupoutputs = [] # List of output data objec for each group
+        self.groupidkeys = [] # For each group a list of the dataidkey for
+                              # the data objects that were used for this group
         ### Set Parameter list
         # Clear Parameter list
         self.paramlist = []
         # Append parameters
-        self.paramlist.append(['redstepname', 'stepmiparent',
+        self.paramlist.append(['redstepname', 'StepMIParent',
             'Name of the Pipestep to use'])
         self.paramlist.append(['groupkeys','OBJECT|DATASRC',
             'List of header keywords to decide data group membership (| separated)'])        
         self.paramlist.append(['groupkfmt','',
             'List of group key formats for string comparison (unused if "", | separated)'])
+        self.paramlist.append(['fileidkey','',
+            'Header keyword to re-identify files to avoid re-reducing the same groups' +
+            ' (default is '' indicating all data has to be re-reduced)'])
 
     def run(self):
         """ Runs the data reduction algorithm. The self.datain is run
@@ -66,48 +74,9 @@ class StepDataGroup(StepMOParent):
         """
         ### Get redstep if it's not loaded
         if self.redstep == None:
-            # Get list of step packages
-            steppacks = self.config['general']['steppacks']
-            if isinstance(steppacks,str): # ensure we have a list if only
-                steppacks = [steppacks]    # 1 item, steppacks is str
-            # get stepname
-            stepname = self.getarg('redstepname')
-            for pack in steppacks:
-                if pack == '.': # look in local directory
-                    mod = stepname.lower()
-                else:
-                    mod = '%s.%s' % (pack,stepname.lower())
-                self.log.debug('looking for %s' % mod)
-                # import the module
-                try:
-                    stepmodule = __import__(mod, globals(), locals(),
-                                            [stepname])
-                    self.log.debug('Pipe step %s found in %s' %
-                                   (stepname,pack))
-                    break
-                except ImportError,msg:
-                    tmp = 'No module named %s' % stepname.lower()
-                    if str(msg).startswith(tmp): # module not present in directory
-                        self.log.debug('Pipe step %s not found in %s' %
-                                       (stepname, pack))
-                    else: # module tries to import a missing package
-                        raise
-                except:   # print out import errors not due to missing
-                    raise # modules (e.g., typos in code)
-            # If not found -> Raise error
-            if stepmodule == None:
-                msg = 'Could not find step=%s' % stepname
-                msg += ' in pipemode=%s' % self.pipemode
-                self.log.error('Setup: ' + msg)
-                raise ImportError(msg)
-            # Make a step instance and add to step list
-            try:
-                self.redstep=stepmodule.__dict__[stepname]()
-            except KeyError, error:
-                msg = 'Pipe step=%s' % stepname
-                msg+= ' not found in module=%s' % mod
-                self.log.error('Setup: %s' % msg)
-                raise error                
+            # Get the step
+            datap = DataParent(config=self.config)
+            self.redstep = datap.getobject(self.getarg('redstepname'))
         ### Group the input files
         # Setup datagroups, get keys and key formats
         datagroups=[]
@@ -149,21 +118,73 @@ class StepDataGroup(StepMOParent):
         self.log.debug(" Found %d data groups" % len(datagroups))
         for groupind in range(len(datagroups)):
             group = datagroups[groupind]
-            msg = "  - Group %d len=%d" % (groupind, len(group) )
+            msg = "  Group %d len=%d" % (groupind, len(group) )
             for key in groupkeys:
                 msg += " %s = %s" % (key, group[0].getheadval(key))
             self.log.debug(msg)
         ### Reduce input files - collect output files
         self.dataout = []
+        # Make new variables for groupidkeys and groupoutputs
+        groupidkeys = []
+        groupoutputs = []
         # Loop over groups -> save output in self.dataout
-        for group in datagroups:
-            dataout = self.redstep(group)
+        for groupi in range(len(datagroups)):
+            group = datagroups[groupi]
+            # Get fileidkeys to see if unchanged groups should be re-reduced
+            fileidkey = self.getarg('fileidkey')
+            if len(fileidkey):
+                # Get fileidkeys for the current new group
+                newkeys = [dat.getheadval(fileidkey) for dat in group]
+                copykeys = ['x']
+                # Search for fit in existing groups: fit is index
+                fit = -1
+                for fit in range(len(self.groupidkeys)):
+                    # Make copy of new keys
+                    copykeys = list(newkeys)
+                    # For each key in group[fit]
+                    for val in self.groupidkeys[fit]:
+                        if val in copykeys:
+                            # Remove key from copykeys if found
+                            del copykeys[copykeys.index(val)]
+                        else:
+                            # Else: group[fit] does not match, go to next group
+                            copykeys = ['x'] # if all have been removed
+                            break
+                    # Check if any values left in copykeys
+                    if len(copykeys) == 0:
+                        # No values left in copykeys, group[fit] is valid match
+                        break
+                # Any values left in copykeys -> no match found
+                if len(copykeys):
+                    fit = -1
+                    self.log.debug('New datagroup # %d has no previous match'
+                                   % groupi)
+                else:
+                    self.log.debug('New datagroup # %d matches previous group # %d' 
+                                   % (groupi, fit))
+            else:
+                fit = -1
+            # Reduce the data
+            if fit < 0:
+                dataout = self.redstep(group)
+                # Add groupoutputs and groupidkeys
+                if len(fileidkey):
+                    groupoutputs.append(dataout)
+                    idkeys = [dat.getheadval(fileidkey) for dat in group]
+                    groupidkeys.append(idkeys)
+            else:
+                groupoutputs.append(self.groupoutputs[fit])
+                groupidkeys.append(self.groupidkeys[fit])
+                dataout = self.groupoutputs[fit]
             # add output to dataout
-            if isinstance(dataout,PipeData):
+            if issubclass(dataout.__class__,DataParent):
                 self.dataout.append(dataout)
             else:
                 for data in dataout:
                     self.dataout.append(dataout)
+        # Copy groupidkeys and groupoutputs
+        self.groupoutputs = groupoutputs
+        self.groupidkeys = groupidkeys
         # Set procname to redstep.procname
         self.procname = self.redstep.procname
     
@@ -172,6 +193,9 @@ class StepDataGroup(StepMOParent):
             created. Internal variables are reset, any stored data is
             erased.
         """
+        self.redstep = None
+        self.groupoutputs = []
+        self.groupidkeys = []
         self.log.debug('Reset: done')
         
     def test(self):
