@@ -69,9 +69,8 @@ def execute():
             # Makes sure the images collected are FITS images
             # i.e. end with "seo.fits" not KEYS or WCS other reduction product
 	    if not 'seo.fits' in image[-8:]:
-                continue
-            if not 'seo%s.fits' % num in image[-17:]:
-                continue
+                if not 'seo%s.fits' % num in image[-17:]:
+                    continue
             # Ignore dark, flat or bias images
             if 'dark' in image or 'flat' in image or 'bias' in image:
                 continue
