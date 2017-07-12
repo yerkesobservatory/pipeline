@@ -67,12 +67,10 @@ def execute():
         fullentry = os.path.join(topdirectory,entry)
         # Run this loop for each file ('image') found in the object folder ('fullentry')
         for image in os.listdir(fullentry):
-            num = image[-14:-5]
             # Makes sure the images collected are FITS images
             # i.e. end with "seo.fits" not KEYS or WCS other reduction product
 	    if not 'seo.fits' in image[-8:]:
-                if not 'seo%s.fits' % num in image[-17:]:
-                    continue
+                continue
             # Ignore dark, flat or bias images
             if 'dark' in image or 'flat' in image or 'bias' in image:
                 continue
