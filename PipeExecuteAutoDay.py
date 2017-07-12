@@ -24,7 +24,6 @@ import os
 import sys
 import logging
 import traceback
-from drp.pipeline import PipeLine
 import datetime
 
 # Set system variables
@@ -40,6 +39,7 @@ log.info('Starting up')
 # Change directory & import the pipeline settings
 #sys.path.append('/Users/atreyopal/Desktop/pipeline/source/')
 sys.path.append('/data/scripts/DataReduction/source/')
+from drp.pipeline import PipeLine
 
 today = datetime.date.today()
 year = str(today.year)
