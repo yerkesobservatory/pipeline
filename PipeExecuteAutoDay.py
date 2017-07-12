@@ -24,6 +24,8 @@ import os
 import sys
 import logging
 import traceback
+from drp.pipeline import PipeLine
+import datetime
 
 # Set system variables
 logfile = '/data/scripts/DataReduction/PipeLineLog.txt'
@@ -34,6 +36,24 @@ logging.basicConfig(filename = logfile, level = logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s' )
 log = logging.getLogger('pipe.ExecuteAutoDay')
 log.info('Starting up')
+
+# Change directory & import the pipeline settings
+#sys.path.append('/Users/atreyopal/Desktop/pipeline/source/')
+sys.path.append('/data/scripts/DataReduction/source/')
+
+today = datetime.date.today()
+year = str(today.year)
+month = str(today.month)
+day = str(today.day)
+if len(month) == 1:
+    month = '0'+month
+if len(day) == 1:
+    day = '0'+day
+
+date = year + '-' + month + '-' + day
+
+#datefilepath = '/Users/atreyopal/Desktop/pipeline/Examples'
+datefilepath = '/data/images/StoneEdge/0.5meter/'+year+'/'+date
 
 def execute():
     # Call the pipeline configuration
@@ -67,10 +87,12 @@ def execute():
         fullentry = os.path.join(topdirectory,entry)
         # Run this loop for each file ('image') found in the object folder ('fullentry')
         for image in os.listdir(fullentry):
+            num = image[-14:-5]
             # Makes sure the images collected are FITS images
             # i.e. end with "seo.fits" not KEYS or WCS other reduction product
 	    if not 'seo.fits' in image[-8:]:
-                continue
+	        if not 'seo%s.fits' % num in image[-17:]:
+                    continue
             # Ignore dark, flat or bias images
             if 'dark' in image or 'flat' in image or 'bias' in image:
                 continue
@@ -91,25 +113,6 @@ def execute():
 
 # Run the setup code in an error with reporting traceback
 try:
-    # Change directory & import the pipeline settings
-    #sys.path.append('/Users/atreyopal/Desktop/pipeline/source/')
-    sys.path.append('/data/scripts/DataReduction/source/')
-    from drp.pipeline import PipeLine
-    import datetime
-
-    today = datetime.date.today()
-    year = str(today.year)
-    month = str(today.month)
-    day = str(today.day)
-    if len(month) == 1:
-        month = '0'+month
-    if len(day) == 1:
-        day = '0'+day
-
-    date = year + '-' + month + '-' + day
-
-    #datefilepath = '/Users/atreyopal/Desktop/pipeline/Examples'
-    datefilepath = '/data/images/StoneEdge/0.5meter/'+year+'/'+date
     execute()
 except Exception, e:
     log.error('Found Error = %s' % repr(e))
