@@ -1,3 +1,6 @@
+#!/usr/local/bin/python
+
+# Below is the "default" python path, the one above is necessary on stars.
 #!/usr/bin/env python
 
 # this file was created from PipeExecuteAutoDay b/c there's no write permission
