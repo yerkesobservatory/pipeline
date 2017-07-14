@@ -17,12 +17,13 @@
 import os
 import sys
 import logging
+import traceback
 
 # Set system variables
 logfile = '/data/scripts/DataReduction/PipeLineLog.txt'
 
 # Set logging format
-logging.basicConfig(filename = logfile, level = logging.DEBUG,
+logging.basicConfig(filename = logfile, level = logging.DEBUG, 
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s' )
 log = logging.getLogger('pipe.ExecuteAutoYear')
 log.info('Starting up')
@@ -44,88 +45,58 @@ def execute():
     datelist = []
     for date in rawlist:
         if not '.' in date:            # This line makes sure to exlude any stray files
-            datelist.append(date)      # datelist is simply a cleaned version of rawlist -- guaranteed to only contain the actual date folders from topdirectory
+            datelist.append(date)      # datelist is simply a cleaned version of rawlist -- and only contains the actual date folders from topdirectory
     objectlist = []
     for day in datelist:                                         # Run this loop for every folder ('day') found in datelist
         fullday = os.path.join(topdirectory,day)                 # Full directory path is required for the os.listdir to function properly
         for Object in os.listdir(fullday):                       # Run loop for each object folder found in each of the days in datelist
             fullobject = os.path.join(topdirectory,day,Object)   # Full directory path is needed (again)
             if not '.' in Object:                                # This line makes sure to exlude any stray files
-                objectlist.append(fullobject)                    # Adds all object folders found in each day folder to objectlist
-    print objectlist
+                objectlist.append(fullobject)       # Adds all object folders found in each day folder to objectlist
+    log.info('Object list = %s' %repr(objectlist))
     for entry in objectlist:                        # Run this loop for each object folder ('entry') found in objectlist
-        imagelist = []                              # The empty list is created here so that it keeps getting rewritten for the pipeline (only 3 files at a time)
+        imagelist = []                              # The empty list is created here so that it keeps getting rewritten for the pipeline
         fullentry = os.path.join(fullobject,entry)  # This line must be included for the pipeline to find the files
         for image in os.listdir(fullentry):         # Run this loop for each file ('image') found in the object folder ('fullentry')
-	    if not '.fits' in image:                # Makes sure the images collected are FITS images
-                continue
-            if 'dark' in image or 'flat' in image or 'bias' in image:    # Makes sure the images are regular filters
+	    num = image[-14:-5]
+	    if not 'seo.fits' in image[-8:]:                # Makes sure the images collected are FITS images, not KEYS or WCS
+                if not 'seo%s.fits' % num in image[-17:]:
+                    continue
+            if 'dark' in image or 'flat' in image or 'bias' in image:    # Ignore dark, flat and bias files 
                 continue
             imagelist.append(os.path.join(fullentry,image))   # Adds the correct images to imagelist
-        print imagelist
-        ilist = []
-        rlist = []
-        glist = []
-        for File in imagelist:
-            if 'i-band' in File or 'iband' in File or '%si' % entry.lower() in File:
-                ilist.append(File)
-            if 'r-band' in File or 'rband' in File or '%sr' % entry.lower() in File:
-                rlist.append(File)
-            if 'g-band' in File or 'gband' in File or '%sg' % entry.lower() in File:
-                glist.append(File)
-            else:
-                continue
-        print ilist
-        print rlist
-        print glist
-        '''
-        redlist = []                          # This is the section of code that can be edited/uncommented to optimize the pipeline for different filters
-        greenlist = []                        # These lines create empty lists that organize the full imagelist into separate lists for each filter
-        bluelist = []
-        for File in imagelist:                # These lines look for specified 'keywords' in all the files in imagelist to decide if they should be put in one of the filter lists
-            if 'redkeyword' in File:          
-                redlist.append(File)
-            if 'greenkeyword' in File:
-                greenlist.append(File)
-            if 'bluekeyword' in File:
-                bluelist.append(File)
-            else:
-                continue
-        print redlist                         # These lines just print off all the contents of the separate filter lists; not actually necessary for operation
-        print greenlist
-        print bluelist
-        '''
+        log.info('Object = %s Image list = %s' % (entry, repr(imagelist)))
+        if len(imagelist) == 0 :
+            log.warning('Image List is Empty, skipping object = %s' % entry)
+            continue
         # Now the program will run the files placed in imagelist through the pipeline.
         # It will do this for every entry in objectlist (i.e. for every object)
-        # Allow for use with only one or two FITS files (won't result in normal color).
-        pipe.reset()                   # Resets pipeline for running through multiple folders
+        pipe.reset()
+        # Run the pipeline (return with error message)
         try:
-            '''
-            if len(redlist) >= 1 and len(greenlist) >= 1 and len(bluelist) >= 1:             # This is section of code is used to optimize pipeline for other filter combinations
-                result = pipe([redlist[0], greenlist[0], bluelist[0]])                       # red/green/bluelist variables should be the same as the previous section of edited code
-            '''
-            if len(ilist) >= 1 and len(rlist) >= 1 and len(glist) >= 1:                      # This occurs if there is at least one i-, r-, and g-band filter found in imagelist (optimal circumstance)
-                result = pipe([ilist[0], rlist[0], glist[0]])                                # In this case, the first image from each filter list will be put through the pipeline in the correct order.
-            elif len(imagelist) == 1:
-                result = pipe([imagelist[0], imagelist[0], imagelist[0]])                    # Cases where there is only one image in imagelist
-            elif len(imagelist) == 2:
-                result = pipe([imagelist[0], imagelist[1], imagelist[1]])                    # Cases where there are only two images in imagelist
-            elif len(imagelist) >= 3:
-                result = pipe([imagelist[0], imagelist[1], imagelist[2]])                    # Cases where there are three or more images in imagelist, but not one of each filter.
-            else:
-                print "***ERROR: Invalid entries. No files found in folder: %s***" %entry    # No images found in imagelist
+            result = pipe(imagelist)
         except:
-            print "***ERROR: Issue occured while reducing files in folder: %s***" %entry     # Other miscellaneous error, written so that the pipeline won't be killed by such errors.
+            log.warning("Pipeline for object = %s returned Error" % entry)
+
+# Run the setup code in an error with reporting traceback
+try:
+    execute()
+except Exception, e:
+    log.error('Found Error = %s' % repr(e))
+    trb = traceback.format_exc().split('\n').reverse()
+    for tr in trb:
+        log.error(tr)
+    raise e
 
 def confirmation():
     response = raw_input("Are you sure you wish to reduce an entire year's worth of images? yes/no: ")
     while True:
         if response == "Yes" or response == 'yes':
-            print "Alright, here we go. Grab some popcorn or something, this is going to take a while."
+            print "Alright, here we go. You may want to go for a run, this is going to take a while."
             execute()
             break
         elif response == "No" or response == "no":
-            print "Aborting reduction. Thanks for not making me do a ton of work :)"
+            print "Aborting reduction. Thanks for saving me a ton of work :)"
             break
         else:
             response = raw_input("Invalid entry. Please type \"yes\" or \"no\": ")
@@ -135,7 +106,8 @@ confirmation()
 
 ''' HISTORY '''
 
-''' 2014/07/29: Original script created by Neil Stilin. Only used in local folder.
+''' 2017/07/13: This version processes all inputs into the pipeine instead of just 3 inputs, so StepMakeRGB can get the desired  3 best inputs for a jpgimage -- Atreyo Pal
+    2014/07/29: Original script created by Neil Stilin. Only used in local folder.
     2014/08/07: Added code to allow for use with only one or two FITS files -NS
     2015/01/05: Edited code to automatically find and process all image files from a specified multi-level directory  -- Neil S.
     2015/01/07: This version should be used to reduce all images taken in a given year; added a confirmation function to remove possiblity of unintentional use.  -- Neil
