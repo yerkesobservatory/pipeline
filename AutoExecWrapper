@@ -1,0 +1,8 @@
+#!/bin/bash
+#
+# This wrapper program extends the $PATH environment variable before running a python
+# program. It is needed to run python code with such that /usr/local/bin/python is
+# used.
+#
+export PATH=/usr/local/bin:$PATH
+if [ $1 > 0 ] ; then python $1 ; else echo 'usage: AutoExecWrapper pythonfile.py'; fi
