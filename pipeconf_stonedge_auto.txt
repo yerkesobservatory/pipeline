@@ -37,7 +37,7 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    stepslist = load, StepBiasDarkFlat, StepAstrometrica, save, StepHotpix, StepRGB
+    stepslist = load, StepAddKeys, StepAstrometrica, save, StepBiasDarkFlat, save, StepHotpix, StepRGB
     #stepslist = load, StepAddKeys, save, StepHotpix, StepRGBAuto
 
 ### Pipe Step Section
@@ -57,47 +57,18 @@
     # Sample parameter - no practical use
     sampar = 0.75
 
-# Dark step configuration
-[dark]
-    # filename that overrules the fit keys ('search' looks for file in darkdir)
-    darkfile = /data/scripts/DataReduction/dark.fits
-    # list of keys that need to match dark and data file (only if darkfile=search)
-    fitkeys = DETSIZE, PASSBAND, PUPIL # HAWC
-    # darkfolder: folder for dark files (only used if darkfile=search)
-    darkfolder = None
-    # list of input file datasets to subtract dark
-    # - Expects None or a list of image HDU or table column names
-    #datalist = R array, T array
-    # method to normalize data (standard is NO, options are NO, RE, IM and ABS)
-    l0method = NO
-
-# Flat step configuration
-[flat]
-    # filename that overrules the fit keys ('search' looks for file in flatdir)
-    flatfile = search
-    # list of keys that need to match flat and data file (only if flatfile=search)
-    fitkeys = DETSIZE, PASSBAND, PUPIL # HAWC
-    # flatfolder: folder for flat files (only used if flatfile=search)
-    flatfolder = /data/images/StoneEdge/0.5meter/2014/Flats/Flats2014-10-30
-    # list of input file datasets to flatten
-    # - Expects None or a list of image HDU or table column names
-    #datalist = R array, T array
-    # method to normalize data (standard is NO, options are NO, RE, IM and ABS)
-    l0method = NO
 
 # BiasDarkFlat step configuration
 [biasdarkflat]
     # filename that overrules the fit keys
-    biasfile = /data/scripts/DataReduction/bias/*.fits
-    darkfile = /data/scripts/DataReduction/dark/*.fits
-    flatfile = /data/scripts/DataReduction/flat/*.fits
+    biasfile = /data/images/StoneEdge/0.5meter/2017/2017-07-25/bias/*.fits
+    darkfile = /data/images/StoneEdge/0.5meter/2017/2017-07-25/dark/*.fits
+    flatfile = /data/images/StoneEdge/0.5meter/2017/2017-07-25/flat/*.fits
     # list of keys that need to match bias and data file
     #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
-    biasfitkeys = SIMPLE, BITPIX, XBIN  
-    darkfitkeys = SIMPLE, BITPIX, XBIN, EXPTIME
-    flatfitkeys = SIMPLE, BITPIX, XBIN, FILTER
-    # biasfolder: folder for bias files (only used if biasfile=search)
-    # biasfolder = /data/images/StoneEdge/0.5meter/2017/2017-07-07/bias
+    biasfitkeys = XBIN  
+    darkfitkeys = XBIN, EXPTIME
+    flatfitkeys = XBIN, FILTER
     # list of input file datasets to flatten
     # - Expects None or a list of image HDU 
     #datalist = R array, T array
