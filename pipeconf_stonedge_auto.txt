@@ -3,6 +3,7 @@
 # 2008-11-3 Marc Berthoud Version 0.1: Configuration file for Pipeline Testing
 # 2012 Marc Berthoud: Numerous updates
 # 2013-10-09 Nicholas Chapman: Made a config validation file
+# 2017-07-28 Atreyo Pal config file (added bdf section, removed KEYS)
 
 # General Section: configuration of the pipeline
 [general]
@@ -87,12 +88,9 @@
 # BiasDarkFlat step configuration
 [biasdarkflat]
     # filename that overrules the fit keys
-    #biasfile = /Users/atreyopal/Desktop/pipelineMe/biasmaster/mbias.20170720.163839.fits
-    biasfile = bias/*.fits
-    #darkfile = /Users/atreyopal/Desktop/pipelineMe/darkmaster/mdark.20170726.163921.fits
-    darkfile = dark/*.fits
-    #flatfile = /Users/atreyopal/Desktop/pipelineMe/flatmaster/mflat.20170727.214555.fits
-    flatfile = flat/*.fits
+    biasfile = /data/scripts/DataReduction/bias/*.fits
+    darkfile = /data/scripts/DataReduction/dark/*.fits
+    flatfile = /data/scripts/DataReduction/flat/*.fits
     # list of keys that need to match bias and data file
     #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
     biasfitkeys = SIMPLE, BITPIX, XBIN  
