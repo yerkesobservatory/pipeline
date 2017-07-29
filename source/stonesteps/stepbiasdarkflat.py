@@ -113,7 +113,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             self.loadbias()
         # Else: check data for correct instrument configuration
         else:
-            for keyind in range(len(self.biaskeys)):
+            for keyind in range(len(self.biasfitkeys)):
                 if self.biaskeyvalues[keyind] != self.datain.getheadval(self.biasfitkeys[keyind]):
                     self.log.warn('New data has different FITS key value for keyword %s' %
                                   self.biaskeys[keyind])
@@ -180,6 +180,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         #if there is just one, make it two of the same for the combine!
         if (len(img) == 1):
             biases += ','+img[0]
+        self.log.debug(biases)
         self.log.warn('Creating master bias frame...')
         self.bias = ccdproc.combine(biases, method='median', unit='adu', add_keyword=False)
         # Finish up
@@ -287,7 +288,6 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
                 flats = flat_corrected
             #calc average exposure time for potential dark correction
             if(header.get('EXPTIME') != None):
-                print header.get('EXPTIME')
                 try:
                     exptime = float(header.get('EXPTIME'))
                     flat_ave_exptime += exptime
