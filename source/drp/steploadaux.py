@@ -40,6 +40,7 @@
 import os # os library
 import glob # glob library
 import string # for string.join
+import time # time library
 from drp.dataparent import DataParent # Pipeline Data object
 from drp.stepparent import StepParent
 from drp.stepmiparent import StepMIParent # To check if we have datain or [datain, datain, ...]
@@ -79,6 +80,8 @@ class StepLoadAux(StepParent):
             'List of header keys that need to match auxiliary data file ' +
             '(default = []) - only used if multiple files ' +
             'match %sfile' % auxpar])
+        self.paramlist.append(['daterange',1.0,
+            'If DATE-OBS is in fitkeys, files are matched within this many days.'])
 
     def loadauxname(self, auxpar = '', data = None, multi = False):
         """ Searches for files matching auxfile. If only one match is
@@ -125,19 +128,13 @@ class StepLoadAux(StepParent):
                 data = self.datain[0]
             else:
                 data = self.datain 
-        # Return unique file
-        if len(auxlist) == 1:
-            self.log.info('LoadAuxName: Found unique file = %s' % auxlist[0])
-            data.setheadval('HISTORY','%s: Best %sfile = %s' % 
-                            (self.name, self.auxpar, os.path.split(auxlist[0])[1],))
-            if multi:
-                return auxlist
+        # Return unique file, or all files if fitkeys is empty
+        if len(auxlist) == 1 or len(fitkeys) == 0:
+            if len(auxlist) == 1:
+                self.log.info('LoadAuxName: Found unique file = %s' % auxlist[0])
             else:
-                return auxlist[0]
-        # Return first file if fitkeys is empty
-        if len(fitkeys) == 0:
-            self.log.info('LoadAuxName: No fitkeys: Return first %sfile match = %s' %
-                          (self.auxpar, auxlist[0]) )
+                self.log.info('LoadAuxName: No fitkeys: Return first %sfile match = %s' %
+                              (self.auxpar, auxlist[0]) )
             data.setheadval('HISTORY','%s: Best %sfile = %s' % 
                             (self.name, self.auxpar, os.path.split(auxlist[0])[1],))
             if multi:
@@ -162,11 +159,28 @@ class StepLoadAux(StepParent):
         for key in fitkeys:
             newheadlist = []
             # Look through auxfiles, transfer good ones
-            for auxhead in auxheadlist:
-                # Check if the auxfile fits (compare with data)
-                if auxhead.getheadval(key) == data.getheadval(key) :
-                    # it fits -> add to newheadlist
-                    newheadlist.append(auxhead)
+            if key in 'DATE-OBS': # SPECIAL CASE DATE-OBS: 
+                # get time for data
+                datime = time.mktime(time.strptime(data.getheadval('DATE-OBS'), 
+                                                   '%Y-%m-%dT%H:%M:%S'))
+                # get time offset (from data) for each auxfile
+                auxtimes = []
+                for auxhead in auxheadlist:
+                    auxtime = time.mktime(time.strptime(auxhead.getheadval('DATE-OBS'), 
+                                                        '%Y-%m-%dT%H:%M:%S'))
+                    auxtimes.append(abs(auxtime-datime))
+                # only keep auxfiles which are within daterange of closest auxfile
+                mindiff = min(auxtimes)
+                timerange = self.getarg('daterange') * 86400
+                for auxi in range(len(auxheadlist)):
+                    if auxtimes[auxi] - mindiff < timerange:
+                        newheadlist.append(auxheadlist[auxi])
+            else: # Normal Keyword compare
+                for auxhead in auxheadlist:
+                    # Check if the auxfile fits (compare with data)
+                    if auxhead.getheadval(key) == data.getheadval(key) :
+                        # it fits -> add to newheadlist
+                        newheadlist.append(auxhead)
             # break key loop if no files left
             if len(newheadlist) == 0:
                 break
@@ -235,8 +249,7 @@ class StepLoadAux(StepParent):
         # Load input data
         self.datain = DataParent(config=self.config).load('IN_a0_1.fits')
         # Get test1 auxfile
-        auxf = self.loadauxfile('test1',multi=True)
-        auxf = [a.filename for a in auxf]
+        auxf = self.loadauxname('test1',multi=True)
         print('********** ' + repr(auxf))
         # Get test2 auxfile
         auxf = self.loadauxname('test2')
