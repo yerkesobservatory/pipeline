@@ -4,7 +4,9 @@
 
     This module defines the pipeline step to calibrate data files w.r.t. bias, 
     dark and flat frames. This pipestep works with pipedata object lists called 
-    by StepLoadAux and removes bad pixels from the final RGB image.
+    by StepLoadAux and removes bad pixels from the final RGB image. This is very 
+    important to smoothen the background texture of the image and the final image
+    looks far more clearer once calibration is done.
     
     Author: Atreyo Pal
 """
@@ -98,8 +100,8 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
     '''# Looking for similar exptime
     def closestExp(self):
         input_exptime = self.datain.getheadval('EXPTIME')
-        dark_ave_exptime = self.loadauxname('dark').getheadval('EXPTIME')
-        nearexp = {abs(dark_ave_exptime - exp): exp for exp in input_exptime} 
+        dark_exptime = self.loadauxname('dark', multi = True).getheadval('EXPTIME')
+        nearexp = {abs(dark_ave_exptime - exp): exp for exp in dark_exptime} 
         return nearexp[min(nearexp.keys())]
     '''
    
@@ -116,7 +118,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             for keyind in range(len(self.biasfitkeys)):
                 if self.biaskeyvalues[keyind] != self.datain.getheadval(self.biasfitkeys[keyind]):
                     self.log.warn('New data has different FITS key value for keyword %s' %
-                                  self.biaskeys[keyind])
+                                  self.biasfitkeys[keyind])
         # Load dark files if necessary
         if not self.darkloaded or self.getarg('reload'):
             self.loaddark()
@@ -180,8 +182,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         #if there is just one, make it two of the same for the combine!
         if (len(img) == 1):
             biases += ','+img[0]
-        self.log.debug(biases)
-        self.log.warn('Creating master bias frame...')
+        self.log.debug('Creating master bias frame...')
         self.bias = ccdproc.combine(biases, method='median', unit='adu', add_keyword=False)
         # Finish up
         self.biasloaded = True
@@ -200,7 +201,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         img = self.loadauxname('dark', multi = True)
         if(len(img) == 0):
             self.log.error('Dark calibration frame(s) not found.')
-            sys.exit(-1)
+            raise RuntimeError('No dark file loaded')
         darks = None
         for i in range(0,len(img)):
             #is (any) dark file bias corrected?
@@ -218,14 +219,14 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         #if there is just one, make it two of the same for the combine!
         if (len(img) == 1):
             darks += ','+img[0]
-        self.log.warn('Creating master dark frame...')
+        self.log.debug('Creating master dark frame...')
         self.dark = ccdproc.combine(darks, method='median', unit='adu', add_keyword=False, **{'verify': 'ignore'})
         #bias correct, if necessary
         if(not dark_is_bias_corrected):
             #Subtracting master bias frame from master dark frame
             self.dark = ccdproc.subtract_bias(self.dark, self.bias, add_keyword=False)
         else:
-            self.log.warn('Master dark frame is *already* bias corrected (%s).' % dark_bias) 
+            self.log.debug('Master dark frame is *already* bias corrected (%s).' % dark_bias) 
         # Finish up 
         self.darkloaded = True 
         self.log.debug('LoadDark: done')
@@ -272,16 +273,16 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             self.flat = ccdproc.CCDData.read(flat_corrected, unit='adu', relax=True)
             #bias correct, if necessary
             if(not flat_is_bias_corrected):
-                self.log.warn('Subtracting master bias frame from flat frame...')
+                self.log.debug('Subtracting master bias frame from flat frame...')
                 self.flat = ccdproc.subtract_bias(self.flat, self.bias, add_keyword=False)
             else:
-                self.log.warn('Flat frame (%s) is *already* bias corrected.'%flat_bias)
+                self.log.debug('Flat frame (%s) is *already* bias corrected.'%flat_bias)
             #dark correct, if necessary
             if(not flat_is_dark_corrected):
-                #self.log.warn('Subtracting master dark frame from flat frame...')
+                self.log.debug('Subtracting master dark frame from flat frame...')
                 self.flat = ccdproc.subtract_dark(self.flat, self.dark, scale=True, exposure_time='EXPTIME', exposure_unit=u.second, add_keyword=False)
             else:
-                self.log.warn('Flat frame (%s) is *already* dark corrected.'%flat_dark)      
+                self.log.debug('Flat frame (%s) is *already* dark corrected.'%flat_dark)      
             if(flats):
                 flats += ','+flat_corrected
             else:
@@ -298,11 +299,11 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         if(count > 0):
             flat_ave_exptime = flat_ave_exptime/count
             self.flat.header['EXPTIME'] = flat_ave_exptime
-            self.log.warn("Average exposure time for flats is %f"%flat_ave_exptime)
+            self.log.info("Average exposure time for flats is %f"%flat_ave_exptime)
         #if there is just one, make it two of the same!
         if (len(img) == 1):
             flats += ','+flat_corrected       
-        self.log.warn('Creating master flat frame...')
+        self.log.debug('Creating master flat frame...')
         #scale the flat component frames to have the same mean value, 10000.0
         scaling_func = lambda arr: 10000.0/numpy.ma.median(arr)
         #combine them
