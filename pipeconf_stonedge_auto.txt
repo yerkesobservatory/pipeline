@@ -62,13 +62,13 @@
 [biasdarkflat]
     # filename that overrules the fit keys
     biasfile = /data/images/StoneEdge/0.5meter/2017/2017-07-25/bias/*.fits
-    darkfile = /data/images/StoneEdge/0.5meter/2017/2017-07-25/dark/*.fits
-    flatfile = /data/images/StoneEdge/0.5meter/2017/2017-07-25/flat/*.fits
+    darkfile = /data/images/StoneEdge/0.5meter/2017/*/dark/dark*.fits
+    flatfile = /data/images/StoneEdge/0.5meter/2017/2017-07-25/flat/flat*.fits
     # list of keys that need to match bias and data file
     #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
-    biasfitkeys = XBIN  
-    darkfitkeys = XBIN, EXPTIME
-    flatfitkeys = XBIN, FILTER
+    biasfitkeys = XBIN, DATE-OBS  
+    darkfitkeys = XBIN, EXPTIME, DATE-OBS
+    flatfitkeys = XBIN, FILTER, DATE-OBS
     # list of input file datasets to flatten
     # - Expects None or a list of image HDU 
     #datalist = R array, T array
