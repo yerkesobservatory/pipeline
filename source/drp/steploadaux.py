@@ -80,8 +80,9 @@ class StepLoadAux(StepParent):
             'List of header keys that need to match auxiliary data file ' +
             '(default = []) - only used if multiple files ' +
             'match %sfile' % auxpar])
-        self.paramlist.append(['daterange',1.0,
-            'If DATE-OBS is in fitkeys, files are matched within this many days.'])
+        if 'daterange' not in [ par[0] for par in self.paramlist] :
+            self.paramlist.append(['daterange',1.0,
+                'If DATE-OBS is in fitkeys, files are matched within this many days.'])
 
     def loadauxname(self, auxpar = '', data = None, multi = False):
         """ Searches for files matching auxfile. If only one match is
