@@ -67,7 +67,7 @@
     daterange = 0.5
     # list of keys that need to match bias and data file
     #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
-    biasfitkeys = XBIN, DATE-OBS  
+    biasfitkeys = DATE-OBS, XBIN  
     darkfitkeys = XBIN, DATE-OBS, EXPTIME
     flatfitkeys = XBIN, FILTER, DATE-OBS
     # list of input file datasets to flatten
