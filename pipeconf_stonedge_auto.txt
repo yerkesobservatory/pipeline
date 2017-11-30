@@ -23,6 +23,7 @@
     filenameend = '\.fits(\.gz)?\Z' # .fits with optional .gz
     #filenameend = 'not-applicable-use-fallback' # Uses .f* as filenameend
     dataobjects = DataFits, DataText #, DataCsv
+    filenum = ''
 
 # Pipeline Section: Configuration of the pipeline
 [pipeline]
