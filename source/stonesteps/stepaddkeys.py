@@ -52,18 +52,32 @@ class StepAddKeys(StepParent):
         """ Runs the data reduction algorithm. The self.datain is run
             through the code, the result is in self.dataout.
         """
-        #getting observer from file name
-        observer = self.datain.filename.split('_')[-3]
+        ### Add Observer
+        # Check if observer keyword exists and is valid
+        try:
+            observer = self.datain.getheadval('OBSERVER')
+            # Make sure it's not invalid entry
+            if observer.lower() in ['', 'unk', 'unknown'] :
+                got_observer = False
+            else:
+                got_observer = True
+        except KeyError:
+            # if there's a key error -> there's no OBSERVER
+            got_observer = False
+        if not got_observer:
+            # getting observer from file name
+            observer = self.datain.filename.split('_')[-3]
+            self.log.debug('Observer from filename = ' + observer)
+        else:
+            self.log.debug('Observer from header = ' + observer)
         #Getting the object from the file name
         itemA = os.path.split(self.datain.filename)[1]
         item = itemA.split('_')[0]
-        self.log.debug('Observer = ' + self.datain.filename.split('_')[-3])
         self.log.debug('Object = ' + self.datain.filename.split('_')[0])
         # Copy input file to output file
         self.dataout = self.datain.copy()
         # Put keyword into the output file
         # (need: OBSERVER and OBJECT keywords with values from the filename)
-       # self.dataout.setheadval('JOEKEY','This is a test FITS keyword')
         self.dataout.setheadval('OBSERVER', observer )
         self.dataout.setheadval('OBJECT', item)
     

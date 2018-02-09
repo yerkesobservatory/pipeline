@@ -92,23 +92,24 @@ class StepRGB(StepMIParent):
 	    datause = [self.datain[0], self.datain[0], self.datain[0]]
 	elif num_inputs == 2:
 	    datause = [self.datain[0], self.datain[1], self.datain[1]]
-	elif num_inputs == 3:
-	    datause = [self.datain[0], self.datain[1], self.datain[2]]
+	#elif num_inputs == 3:
+	#    datause = [self.datain[0], self.datain[1], self.datain[2]]
 	else:   # If inputs exceed 3 in number
 	    ilist = []  # Make empty lists for each filter
 	    rlist = []
 	    glist = []
 	    other = []
 	    for element in self.datain: # Loop through the input files and add to the lists
-                if 'i-band' in element.filename or 'iband' in element.filename or 'i' in element.filename or 'I' in element.filename:
+                if 'i-band' in element.filename.lower() or 'iband' in element.filename.lower():
                     ilist.append(element)
-                elif 'r-band' in element.filename or 'rband' in element.filename or 'r' in element.filename or 'R' in element.filename:
+                elif 'r-band' in element.filename.lower() or 'rband' in element.filename.lower():
                     rlist.append(element)
-                elif 'g-band' in element.filename or 'gband' in element.filename or 'g' in element.filename or 'G' in element.filename:
+                elif 'g-band' in element.filename.lower() or 'gband' in element.filename.lower():
                     glist.append(element)
                 else:
                     other.append(element)
                     continue
+            self.log.debug('len(ilist) = %d, len(rlist) = %d, len(glist) = %d' % (len(ilist), len(rlist), len(glist)))
             # If there is at least one i-, r-, and g-band filter found in self.datain (best case)
             if len(ilist) >= 1 and len(rlist) >= 1 and len(glist) >= 1:
                 # The first image from each filter list will be reduced in the correct order.
@@ -140,6 +141,7 @@ class StepRGB(StepMIParent):
             elif len(ilist) == 0 and len(glist) ==0:
                 # Case where there is only rlist
                 datause = [rlist[0], rlist[1], rlist[2]]
+        self.log.debug('Files used: R = %s  G = %s  B = %s' % (datause[0].filename, datause[1].filename, datause[2].filename) )
         self.dataout = PipeData(config = self.config)
         self.dataout.header = datause[0].header
 	self.dataout.filename = datause[0].filename
