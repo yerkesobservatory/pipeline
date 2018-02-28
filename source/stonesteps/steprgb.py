@@ -100,11 +100,12 @@ class StepRGB(StepMIParent):
 	    glist = []
 	    other = []
 	    for element in self.datain: # Loop through the input files and add to the lists
-                if 'i-band' in element.filename.lower() or 'iband' in element.filename.lower():
+                fname = element.filename.lower()
+                if 'i-band' in fname or 'iband' in fname or 'iprime' in fname:
                     ilist.append(element)
-                elif 'r-band' in element.filename.lower() or 'rband' in element.filename.lower():
+                elif 'r-band' in fname or 'rband' in fname or 'rprime' in fname:
                     rlist.append(element)
-                elif 'g-band' in element.filename.lower() or 'gband' in element.filename.lower():
+                elif 'g-band' in fname or 'gband' in fname or 'gprime' in fname:
                     glist.append(element)
                 else:
                     other.append(element)
