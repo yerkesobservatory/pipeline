@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Hi! It's Thomas. This is my first git push!
+# Hi! It's Thomas! This is my first git push!
 """ PIPE STEP ADD KEYS - Version 1.0.0
 
     This pipe step adds FITS keywords to the file based on information
