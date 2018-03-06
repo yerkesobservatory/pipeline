@@ -1,13 +1,12 @@
 #!/usr/bin/env python
-# Hi! It's Thomas! This is my first git push!
 """ PIPE STEP ADD KEYS - Version 1.0.0
-
     This pipe step adds FITS keywords to the file based on information
     in the file name.
 
     @author: Joe Polk
 """
 
+import re
 import logging # logging object library
 import os
 from drp.stepparent import StepParent
@@ -36,7 +35,7 @@ class StepAddKeys(StepParent):
         """
         ### Set Names
         # Name of the pipeline reduction step
-        self.name='AddKeys'
+        self.name='addkeys'
         # Shortcut for pipeline reduction step and identifier for
         # saved file names.
         self.procname = 'keys'
@@ -46,19 +45,19 @@ class StepAddKeys(StepParent):
         # Clear Parameter list
         self.paramlist = []
         # Append parameters
-        #self.paramlist.append(['sampar', 1.0,
-        #    'Sample Parameter - parent only - no practical use'])
+        self.paramlist.append(['filternames', ['unknown'], 'List of valid strings for filter names'])
 
     def run(self):
         """ Runs the data reduction algorithm. The self.datain is run
             through the code, the result is in self.dataout.
         """
+        ### Get file name only (no path)
+        fileonly = os.path.split(self.datain.filename)[1]
         ### Add Observer
         # Check if observer keyword exists and is valid
         try:
             observer = self.datain.getheadval('OBSERVER')
-            # Make sure it's not invalid entry
-            if observer.lower() in ['', 'unk', 'unknown'] :
+            if observer.lower() in ['', 'unk', 'unknown', 'remote']:
                 got_observer = False
             else:
                 got_observer = True
@@ -66,21 +65,66 @@ class StepAddKeys(StepParent):
             # if there's a key error -> there's no OBSERVER
             got_observer = False
         if not got_observer:
-            # getting observer from file name
-            observer = self.datain.filename.split('_')[-3]
-            self.log.debug('Observer from filename = ' + observer)
+			## File patterns:
+				# filepatt[0] <==> OBJECT_BAND_EXPOSURE_BINNING_YYMMDD_HHMMSS_seo_OBSERVER_FILENUM_RAW.fits (newest format)
+				# filepatt[1] <==> OBJECT_BAND_EXPOSURE_BINNING_OBSERVER_DATE(YYYYMmmDD)_TIME(11h11m11s)_num0000_HjfyiYt5_seo.fits
+				# filepatt[2] <==> OBJECT_BAND_EXPOSURE_BINNING_YYYYmmmDD_OBSERVER_OBSNUM_seo.fits
+				# filepatt[3] <==> YYYY-MM-DD_OBSERVER_OBJECT_Ez5/ (astroclass)
+
+            filepatt = ['(_\d{6}){2}',
+						'bin\d_[a-zA-Z]',
+						'bin\d_\d{4}[a-z]{3}\d{2}',
+						'^20\d{2}\-[0-1]\d\-[0-3]\d']
+
+            obsbefore = ['_seo_','bin\d_','20\d{2}[a-z]{3}\d{2}_','^.{11}']
+            obsafter = ['_\d{3}_RAW','_20\d{2}','_num','_[a-zA-Z]|_\d']
+            for i in range(len(filepatt)):
+                if re.compile(filepatt[i]).search(self.datain.filename):
+                    # splits file name before observer name
+                    obstemp = re.split(obsbefore[i],self.datain.filename)[-1]
+                    #splits file name after observer name
+                    observer = re.split(obsafter[i],obstemp)[0]
+                    self.log.debug('File name is type %d, which fits regex pattern \'%s\'' % (i, filepatt[i]))
         else:
             self.log.debug('Observer from header = ' + observer)
-        #Getting the object from the file name
-        itemA = os.path.split(self.datain.filename)[1]
-        item = itemA.split('_')[0]
-        self.log.debug('Object = ' + self.datain.filename.split('_')[0])
+        ### Add Object name
+        got_object = False # assume it's not there
+        try:
+            objname = self.datain.getheadval('OBJECT')
+            # Make sure it's not invalid entry
+            if not objname.lower() in ['', 'unk', 'uknown'] :
+                got_object = True
+        except KeyError:
+            pass # b/c got_object is already false
+        if not got_object:
+            # Getting the object from the file name
+            objname = fileonly.split('_')[0]
+            self.log.debug('Object = ' + fileonly.split('_')[0])
+        ### Add Filter
+        got_filter = False # assume it's not there
+        try:
+            filtername = self.datain.getheadval('FILTER')
+            if not filtername.lower() in ['', 'unk', 'uknown'] :
+                got_filter = True
+        except KeyError:
+            pass # b/c got_filter is already false
+        if not got_filter:
+            # Getting the filter from the file name
+            filtername = 'unknown' # in case no filter name is found
+            for f in self.getarg('filternames'):
+                if f in fileonly:
+                    filtername = f
+                    break # exit the for loop
+            self.log.debug('Filter = ' + filtername)
+        ### Make changes to file
         # Copy input file to output file
         self.dataout = self.datain.copy()
         # Put keyword into the output file
         # (need: OBSERVER and OBJECT keywords with values from the filename)
         self.dataout.setheadval('OBSERVER', observer )
-        self.dataout.setheadval('OBJECT', item)
+        self.dataout.setheadval('OBJECT', objname )
+        self.dataout.setheadval('FILTER', filtername )
+        self.log.debug('Keys Updated')
 
     def test(self):
         """ Test Pipe Step Parent Object:
