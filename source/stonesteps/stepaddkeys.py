@@ -7,6 +7,7 @@
     @author: Joe Polk
 """
 
+import re
 import logging # logging object library
 import os
 from drp.stepparent import StepParent
@@ -58,7 +59,7 @@ class StepAddKeys(StepParent):
         try:
             observer = self.datain.getheadval('OBSERVER')
             # Make sure it's not invalid entry
-            if observer.lower() in ['', 'unk', 'unknown'] :
+            if observer.lower() in ['', 'unk', 'unknown', 'remote'] :
                 got_observer = False
             else:
                 got_observer = True
@@ -66,9 +67,30 @@ class StepAddKeys(StepParent):
             # if there's a key error -> there's no OBSERVER
             got_observer = False
         if not got_observer:
-            # getting observer from file name
-            observer = fileonly.split('_')[-3]
-            self.log.debug('Observer from filename = ' + observer)
+            ## File patterns:
+                # filepatt[0] <==> OBJECT_BAND_EXPOSURE_BINNING_YYMMDD_HHMMSS_seo_OBSERVER_FILENUM_RAW.fits (newest format)
+                # filepatt[1] <==> OBJECT_BAND_EXPOSURE_BINNING_OBSERVER_DATE(YYYYMmmDD)_TIME(11h11m11s)_num0000_HjfyiYt5_seo.fits
+                # filepatt[2] <==> OBJECT_BAND_EXPOSURE_BINNING_YYYYmmmDD_OBSERVER_OBSNUM_seo.fits
+                # filepatt[3] <==> YYYY-MM-DD_OBSERVER_OBJECT_Ez5/ (astroclass)
+
+            filepatt = ['(_\d{6}){2}',
+                        'bin\d_[a-zA-Z]',
+                        'bin\d_\d{4}[a-z]{3}\d{2}',
+                        '^20\d{2}\-[0-1]\d\-[0-3]\d']
+
+            obsbefore = ['_seo_','bin\d_','20\d{2}[a-z]{3}\d{2}_','^.{11}']
+            obsafter = ['_\d{3}_RAW','_20\d{2}','_num','_[a-zA-Z]|_\d']
+
+            fileindex = 0
+            for i in range(len(filepatt)):
+                if re.compile(filepatt[i]).search(self.datain.filename):
+                    fileindex = i
+                    break
+            # splits file name before observer name
+            obsTemp = re.split(obsbefore[fileindex],self.datain.filename)[-1]
+            #splits file name after observer name
+            observer = re.split(obsafter[fileindex],obsTemp)[0]
+            self.log.debug('File name is type %d, which fits regexp pattern \'%s\'' % (fileindex, filepatt[fileindex]))
         else:
             self.log.debug('Observer from header = ' + observer)
         ### Add Object name
@@ -88,7 +110,7 @@ class StepAddKeys(StepParent):
         got_filter = False # assume it's not there
         try:
             filtername = self.datain.getheadval('FILTER')
-            if not filtername.lower() in ['', 'unk', 'uknown'] :
+            if not filtername.lower() in ['', 'unk', 'unknown'] :
                 got_filter = True
         except KeyError:
             pass # b/c got_filter is already false
