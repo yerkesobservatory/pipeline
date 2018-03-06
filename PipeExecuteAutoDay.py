@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 #!/usr/local/bin/python
 
 # Below is the "default" python path, the one above is necessary on stars.
@@ -24,6 +26,7 @@ import os
 import sys
 import logging
 import traceback
+import datetime
 
 # Set system variables
 logfile = '/data/scripts/DataReduction/PipeLineLog.txt'
@@ -31,10 +34,28 @@ logfile = '/data/scripts/DataReduction/PipeLineLog.txt'
 
 # Set logging format
 logging.basicConfig(filename = logfile, level = logging.DEBUG,
-#logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s' )
 log = logging.getLogger('pipe.ExecuteAutoDay')
 log.info('Starting up')
+
+# Change directory & import the pipeline settings
+#sys.path.append('/Users/atreyopal/Desktop/pipeline/source/')
+sys.path.append('/data/scripts/DataReduction/source/')
+from drp.pipeline import PipeLine
+
+today = datetime.date.today()
+year = str(today.year)
+month = str(today.month)
+day = str(today.day)
+if len(month) == 1:
+    month = '0'+month
+if len(day) == 1:
+    day = '0'+day
+
+date = year + '-' + month + '-' + day
+
+#datefilepath = '/Users/atreyopal/Desktop/pipeline/Examples'
+datefilepath = '/data/images/StoneEdge/0.5meter/'+year+'/'+date
 
 def execute():
     # Call the pipeline configuration
@@ -71,10 +92,11 @@ def execute():
             num = image[-14:-5]
             # Makes sure the images collected are FITS images
             # i.e. end with "seo.fits" not KEYS or WCS other reduction product
-	    if not 'seo.fits' in image[-8:]:
-                continue
-            if not 'seo%s.fits' % num in image[-17:]:
-                continue
+	    if not image[-8:] in ['seo.fits', 'RAW.fits']: # if file ends with "seo.fits" - regular SEO data
+                                                           # if file ends with "RAW.fits" - raw data
+	        if not '_0.fits' in image[-7:]: # check if file ends with "0.fits" - queue data
+	            if not 'seo%s.fits' % num in image[-17:]: # check if file ends with "seoNUMBER.fits"
+                        continue
             # Ignore dark, flat or bias images
             if 'dark' in image or 'flat' in image or 'bias' in image:
                 continue
@@ -95,25 +117,6 @@ def execute():
 
 # Run the setup code in an error with reporting traceback
 try:
-    # Change directory & import the pipeline settings
-    #sys.path.append('/Users/atreyopal/Desktop/pipeline/source/')
-    sys.path.append('/data/scripts/DataReduction/source/')
-    from drp.pipeline import PipeLine
-    import datetime
-
-    today = datetime.date.today()
-    year = str(today.year)
-    month = str(today.month)
-    day = str(today.day)
-    if len(month) == 1:
-        month = '0'+month
-    if len(day) == 1:
-        day = '0'+day
-
-    date = year + '-' + month + '-' + day
-
-    #datefilepath = '/Users/atreyopal/Desktop/pipeline/Examples'
-    datefilepath = '/data/images/StoneEdge/0.5meter/'+year+'/'+date
     execute()
 except Exception, e:
     log.error('Found Error = %s' % repr(e))

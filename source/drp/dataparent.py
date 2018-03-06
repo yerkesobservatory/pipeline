@@ -146,16 +146,21 @@ class DataParent(object):
         raise AttributeError(msg)
 
     def setconfig(self,config):
-        """ Sets configuration for the pipe data: if a filename is
-            specified, the configuration file is read. The configuration
-            object is returned.
+        """ Sets configuration for the pipe data: The configuration
+            object is returned. The config variable can be one of these
+            - A ConfigObj object
+            - A string to the filename of a valid config file
+            - A list with strings to valid config files. In this case
+              the first file is loaded, the others are merged with it.
+              If all files have the same folder, only the first
+              filepathname needs the full path.
         """
         if isinstance(config,configobj.ConfigObj):
             # if config is a ConfObj -> set it
             self.config=config
             self.log.debug('SetConfig: skipping configuration file validation')
             retmsg='received ConfigObj'
-        elif isinstance(config,str):
+        elif isinstance(config,basestring):
             # if config is a string - check for file existence -> load it
             if os.path.isfile(config):
                 try:
@@ -190,29 +195,50 @@ class DataParent(object):
             #self.config.write(fp)
             #fp.close()
             retmsg='no config given'
-        else:
-            # Invalid configuration - error
-            self.log.error('SetConfig: Invalid configuration variable')
-            raise TypeError('Invalid configuration variable')
+        else: # Assume it's a list-like object of config files
+            # Get first object and check if it's really a list
+            try:
+                baseconf = config[0]
+            except: # If it's not list-ish 
+                # Invalid configuration - error
+                self.log.error('SetConfig: Invalid configuration variable = %s' % repr(config))
+                raise TypeError('Invalid configuration variable = %s' % repr(config))
+            # Load first config
+            self.setconfig(baseconf)
+            basefolder = os.path.split(baseconf)[0]
+            # Load other configs on top
+            for conf in config[1:]:
+                # Check if file exists
+                if os.path.isfile(conf):
+                    self.mergeconfig(conf)
+                else:
+                    cnf = os.path.join(basefolder, os.path.split(conf)[1])
+                    if os.path.isfile(cnf):
+                        self.mergeconfig(cnf)
+                    else:
+                        self.log.error('SetConfig: Invalid configuration file in list = %s' % conf)
+                        raise ValueError('Invalid configuration file in list = %s' % conf)
+            retmsg  = 'config list with %d files' % len(config)
         self.log.debug('SetConfig: done ('+retmsg+')')
         return self.config
 
-    def addconfig(self, newconfig):
-        """ Adds information form another config object (or file) to the
-            current configuration. For existing entries the values from
-            newconfig are used.
+    def mergeconfig(self, newconfig):
+        """ Merges a configuration object (or file) into the existing
+            configuration. All values from the new configuration are used,
+            overwriting old values if they are already in the old
+            configuration.
         """
-        # Check if newconfig is a config object
-        if isinstance(newconfig,configobj.ConfigObj):
-            # Merge new to existing config
-            self.config.merge(newconfig)
-        # else assume it's a filename
-        else:
-            # Make data object, load newconfig to it
-            dp = DataParent(config = newconfig)
-            # Merge the new config into the existing one
-            self.config.merge(dp.config)
-    
+        # If there is no existing config: Just load the new config
+        if not self.config:
+            self.setconfig(newconfig)
+            return
+        # Store the existing config and load new config
+        oldconf = self.config
+        newconf = self.setconfig(newconfig)
+        # Merge new to old config and store it
+        oldconf.merge(newconf)
+        self.config = oldconf
+        
     def validateconfig(self):
         """ Test config against configspec and print errors if it doesn't
             conform.
@@ -320,7 +346,7 @@ class DataParent(object):
             if isinstance(dataobjects,str): # ensure we have a list if only
                 dataobjects = [dataobjects]    # 1 item, steppacks is str
         except KeyError, error:
-            self.log.error('Setup: Missing steppacks item in configuration')
+            self.log.error('Setup: Missing dataobjects item in configuration')
             raise error
         # Loop through dataobjects
         found = False

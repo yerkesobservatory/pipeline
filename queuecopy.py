@@ -1,0 +1,159 @@
+#!/usr/bin/env python
+
+""" QUEUE COPY
+    ==========
+
+    This program copies Stoneedge data from the queue folder on stars:
+    - Science raw data gets copied into the data folder and if not available
+      .RAW.fits is attached to the filename.
+    - Flats / Bias / Dark data is copied to the regular data folder if there
+      is no duplicate already there
+
+    Usage:
+      queuecopy.py source_folders
+ 
+      source_folders: folders where the data to copy is (current folder if omitted)
+                      multiple entries are possible
+
+"""
+
+### Settings
+# bias dark flat folder: folder below which yyyy-mm-dd/flat folders are
+bdfpath = '/data/images/StoneEdge/0.5meter/2018' 
+# raw path: folder below which User/Observation_YYMMDD/rawfile.RAW.fits are copied
+rawpath = '/data/images/astroclass'
+# piperunpath: folder for the piperun files
+piperunpath = '/data/images/astroclass/A_Test/piperuns'
+
+### Preparation
+# Imports
+import os
+import sys
+import logging
+import glob
+import time
+import string
+import re
+import shutil
+from drp.datafits import DataFits
+
+# Set up logging
+logging.basicConfig(level = logging.DEBUG)
+log=logging.getLogger('QueueCopy')
+log.setLevel(logging.DEBUG)
+log.info('Logging Set Up')
+
+# Read Source Folders
+if len(sys.argv) > 1:
+    source_folders = sys.argv[1:]
+else:
+    source_folders = [os.getcwd()]
+log.debug('Source Folder = %s' % repr(source_folders))
+
+### Loop over source folders
+for source_folder in source_folders:
+
+    ### Copy Bias / Dark / Flats
+    for ftype in []: #['bias', 'dark', 'flat']:
+        # Get all fitting files: Files must have something like */flat/*flat*.fits
+        globstr = os.path.join(source_folder,'*/%s/*%s*.fits' % (ftype, ftype) )
+        flist = glob.glob(globstr)
+        # Glob target folder for file type
+        typefiles = [ f for f in glob.glob(os.path.join(bdfpath,'*/*/*.fits')) if ftype in f]
+        # Loop over all files
+        for fpathname in flist:
+            fpath, fname = os.path.split(fpathname)
+            # Get file date - type 1
+            ftime = None
+            match = re.search(r'^\d{4}-\d\d-\d\d',fname)
+            if match:
+                # YYYY-MM-DD type string found -> get date
+                ftime = time.strptime(match.group(), '%Y-%m-%d')
+            # Get file date - type 2
+            if not ftime:
+                match = re.search(r'\d{4}[A-Za-z]+\d+',fname)
+                if match:
+                    # YYYYMmmDD type string found -> get date
+                    ftime = time.strptime(match.group(), '%Y%b%d')
+            # Get file date - get yesterday's date
+            #print('%s - %d-%d-%d' % (fname,ftime.tm_year,ftime.tm_mon,ftime.tm_mday) )
+            # Check if file is already there
+            found = False
+            for f in typefiles:
+                if fname in f:
+                    found = True
+                    log.debug('File %s is already in %s' % (fname, os.path.split(f)[0]) )
+                    break
+            # if not found: copy it there
+            if not found:
+                # Get target folder
+                tpath = os.path.join(bdfpath, time.strftime('%Y-%m-%d',ftime) )
+                if not os.path.exists(tpath): os.makedirs(tpath)
+                tpath = os.path.join(tpath, ftype)
+                if not os.path.exists(tpath): os.makedirs(tpath)
+                # Copy file
+                log.debug('File %s copied to %s' % (fname, tpath) )
+                shutil.copy(fpathname, os.path.join(tpath, fname) )
+
+    ### Copy Raw Data
+    # get last part of source_folder i.e. 2018-02-08_galaxieslab1group2_NGC_2129_7K9
+    spart = os.path.split(source_folder)[1]
+    ssplit = spart.split('_')
+    # Get date, username, object name from folderpart
+    sdate = ftime = time.strptime(ssplit[0], '%Y-%m-%d')
+    suser = ssplit[1][0].upper()+ssplit[1][1:] # i.e. Galaxieslab1group2
+    sobject = string.join(ssplit[2:-1],'') # i.e. NGC_2129
+    # Get files in raw folder
+    sfiles = glob.glob(os.path.join(source_folder,'raw/science','*.fits') )
+    if len(sfiles) < 1:
+        log.error("No files found for folder %s" % source_folder)
+        continue
+    # Get exposure time from first file
+    df = DataFits()
+    df.loadhead(sfiles[0])
+    expt = int(df.getheadval('EXPTIME'))
+    # Make raw folder for files
+    rpath = os.path.join(rawpath, suser)
+    if not os.path.exists(rpath): os.makedirs(rpath)
+    #opath = "%s_%ds_%s" % (sobject, expt, time.strftime('%y%m%d',sdate) ) # Taken out as we go back to queue names
+    opath = spart # new version, just take path from above
+    rpath = os.path.join(rpath, opath )
+    if not os.path.exists(rpath): os.makedirs(rpath)
+    # Copy files
+    for f in sfiles:
+        #df.loadhead(f)
+        #expt = int(df.getheadval('EXPTIME'))
+        #rname = os.path.split(f)[1].replace('.fits', '_%ds.RAW.fits' % expt )
+        rname = os.path.split(f)[1].replace('.fits', '.RAW.fits' )
+        log.debug('Copy %s to %s/%s' % (os.path.split(f)[1], rpath, rname) )
+        shutil.copy(f, os.path.join(rpath, rname) )
+
+    ### Make PipeRun file
+    sdate = time.strftime('%y%m%d', sdate) # change sdate to YYMMDD
+    # Make piperun filepathname
+    #piperun = 'piperun_%s_%s_%d_%s.txt' % (suser, sobject, expt, sdate )
+    piperun = spart + '.txt'
+    piperun = os.path.join(piperunpath, piperun)
+    # Make file header
+    text = """# === Piperun file for %s %s %s ===
+
+# !!! Auto-generated Pipeconf file - may be overwritten !!!
+pythonpath = /data/scripts/DataReduction/source
+pipeconf = /data/scripts/DataReduction/pipeconf_stonedge_auto.txt
+pipemode = stoneedge
+loglevel = DEBUG
+logfile = /data/scripts/DataReduction/PipeLineLog.txt
+""" % (suser, sobject, sdate)
+    # Add custom log file
+    #logfile = '%s_%s_%d_%s_pipelog.txt' % (suser, sobject, expt, sdate )
+    logfile = spart + '_pipelog.txt'
+    logfile = os.path.join(rpath, logfile)
+    text += logfile + '\n'
+    # Add input and output folders
+    text += 'inputfiles = %s\n' % os.path.join(rpath, '*RAW.fits')
+    text += 'outputfolder = %s\n' % rpath
+    # Save file
+    log.info('Writing piperun at %s' % piperun)
+    outf = open(piperun,'wt')
+    outf.write(text)
+    outf.close()
