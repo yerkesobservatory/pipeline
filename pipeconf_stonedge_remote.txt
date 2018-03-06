@@ -1,7 +1,7 @@
 # HAWC Pipeline Configuration Validation File - General (public) version
 #
 # 2008-11-3 Marc Berthoud Version 0.1: Configuration file for Pipeline Testing
-# 2012 Marc Berthoud: Numerous updates
+# 2012 Marc Berthoud: Numerous updates.
 # 2013-10-09 Nicholas Chapman: Made a config validation file
 
 # General Section: configuration of the pipeline
@@ -25,7 +25,7 @@
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
     #stepslist = load, StepAddKeys, StepAstrometrica, save, StepHotpix, StepRGB
-    stepslist = load, StepAddKeys, save, StepHotpix, StepRGB
+    stepslist = load, StepAddKeys, save, StepBiasDarkFlat, StepHotpix, StepRGB
 
 ### Pipe Step Section
 
