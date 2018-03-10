@@ -87,7 +87,7 @@ class DataFits(DataParent):
                 msg="'%s' object has no image data" % (type(self).__name__)
                 self.log.warn(msg)
                 return None
-            elif self.imgdata[0] == None:
+            elif self.imgdata[0] is None:
                 msg="'%s' object has no image data" % (type(self).__name__)
                 self.log.warn(msg)
             return self.imgdata[0]
