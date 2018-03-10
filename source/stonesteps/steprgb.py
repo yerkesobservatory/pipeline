@@ -176,8 +176,8 @@ class StepRGB(StepMIParent):
 	barray.sort()
 	# Find the min/max percentile values in the data for scaling
 	# Values are determined by parameters in the pipe configuration file
-	minpercent = arrlength * self.getarg('minpercent')
-	maxpercent = datalength * self.getarg('maxpercent')
+	minpercent = int(arrlength * self.getarg('minpercent'))
+	maxpercent = int(datalength * self.getarg('maxpercent'))
 	# Find the final data values to use for scaling from the image data
 	rminsv = rarray[minpercent]  #sv stands for "scalevalue"
 	gminsv = garray[minpercent]
