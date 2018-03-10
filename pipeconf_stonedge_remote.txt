@@ -11,6 +11,19 @@
     # list of steps for unknown instrument mode
     stepslist = StepLoadStoneedge, StepDemod
 
+# Data Section: information on data objects and file names
+[data]
+    # Regexp for part of the filename before the file step identifier
+    # - default is '\A.+\.' for all filename before the last '.' including the '.'
+    filenamebegin = "\A.+_[A-Za-z0-9]+\." # Stonedge: All before last '_', one more word and following '.'
+    #filenamebegin = 'not-appl' # Uses bla.TypeID.fits
+    # Regexp for part of the filename after the file step identifier
+    # - default is '\.[A-Za-z0-9]+\Z' for alphanum characters after last '.'
+    filenameend = '\.fits(\.gz)?\Z' # .fits with optional .gz
+    #filenameend = 'not-applicable-use-fallback' # Uses .f* as filenameend
+    dataobjects = DataFits, DataText #, DataCsv
+    filenum = ''
+
 # Pipeline Section: Configuration of the pipeline
 [pipeline]
     # Number of final results to save
