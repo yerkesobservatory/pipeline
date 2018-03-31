@@ -18,17 +18,23 @@
 """
 
 ### Settings
+# inpath path combined with current date yyyy-mm-dd to grep for folders
+#   this is only used for the today option
+inpath = '/data/public/queue/*/*%s*'
 # bias dark flat folder: folder below which yyyy-mm-dd/flat folders are
 bdfpath = '/data/images/StoneEdge/0.5meter/2018' 
 # raw path: folder below which User/Observation_YYMMDD/rawfile.RAW.fits are copied
 rawpath = '/data/images/astroclass'
 # piperunpath: folder for the piperun files
 piperunpath = '/data/images/astroclass/A_Test/piperuns'
+# pythonpath
+pypath = '/data/scripts/DataReduction/source'
 
 ### Preparation
 # Imports
 import os
 import sys
+sys.path.append(pypath)
 import logging
 import glob
 import time
@@ -45,15 +51,20 @@ log.info('Logging Set Up')
 
 # Read Source Folders
 if len(sys.argv) > 1:
-    source_folders = sys.argv[1:]
+    if sys.argv[1].lower() == 'today':
+        source_folders = inpath % time.strftime("%Y-%m-%d", time.localtime())
+        source_folders = glob.glob(source_folders)
+    else:
+        source_folders = sys.argv[1:]
 else:
     source_folders = [os.getcwd()]
 log.debug('Source Folder = %s' % repr(source_folders))
 
+print(a)
 ### Loop over source folders
 for source_folder in source_folders:
 
-    ### Copy Bias / Dark / Flats
+    ### Copy Bias / Dark / Flats - Has been deactivated b/c filenameformat changed.
     for ftype in []: #['bias', 'dark', 'flat']:
         # Get all fitting files: Files must have something like */flat/*flat*.fits
         globstr = os.path.join(source_folder,'*/%s/*%s*.fits' % (ftype, ftype) )
@@ -97,13 +108,15 @@ for source_folder in source_folders:
 
     ### Copy Raw Data
     # get last part of source_folder i.e. 2018-02-08_galaxieslab1group2_NGC_2129_7K9
-    spart = os.path.split(source_folder)[1]
+    srest, spart = os.path.split(source_folder)
     ssplit = spart.split('_')
     # Get date, username, object name from folderpart
-    sdate = ftime = time.strptime(ssplit[0], '%Y-%m-%d')
-    suser = ssplit[1][0].upper()+ssplit[1][1:] # i.e. Galaxieslab1group2
+    #sdate = ftime = time.strptime(ssplit[0], '%Y-%m-%d')
+    #suser = ssplit[1][0].upper()+ssplit[1][1:] # i.e. Galaxieslab1group2
+    suser = os.path.split(srest)[1] # Get from upper level folder -- i.e. rich
+    suser = suser[0].upper() + suser[1:] # Uppercase first character -- i.e. Rich
     sobject = string.join(ssplit[2:-1],'') # i.e. NGC_2129
-    # Get files in raw folder
+    # Get list of files in raw folder
     sfiles = glob.glob(os.path.join(source_folder,'raw/science','*.fits') )
     if len(sfiles) < 1:
         log.error("No files found for folder %s" % source_folder)
@@ -119,6 +132,7 @@ for source_folder in source_folders:
     opath = spart # new version, just take path from above
     rpath = os.path.join(rpath, opath )
     if not os.path.exists(rpath): os.makedirs(rpath)
+    os.system('chmod 775 %s' % rpath)
     # Copy files
     for f in sfiles:
         #df.loadhead(f)
@@ -127,15 +141,18 @@ for source_folder in source_folders:
         rname = os.path.split(f)[1].replace('.fits', '.RAW.fits' )
         log.debug('Copy %s to %s/%s' % (os.path.split(f)[1], rpath, rname) )
         shutil.copy(f, os.path.join(rpath, rname) )
+        os.system('chmod 664 %s' % os.path.join(rpath,rname) )
 
     ### Make PipeRun file
-    sdate = time.strftime('%y%m%d', sdate) # change sdate to YYMMDD
+    #sdate = time.strftime('%y%m%d', sdate) # change sdate to YYMMDD
     # Make piperun filepathname
     #piperun = 'piperun_%s_%s_%d_%s.txt' % (suser, sobject, expt, sdate )
     piperun = spart + '.txt'
     piperun = os.path.join(piperunpath, piperun)
     # Make file header
-    text = """# === Piperun file for %s %s %s ===
+    #runame = "%s %s %s" % (suser,sobject,sdate)
+    runame = piperun
+    text = """# === Piperun file for %s ===
 
 # !!! Auto-generated Pipeconf file - may be overwritten !!!
 pythonpath = /data/scripts/DataReduction/source
@@ -143,7 +160,7 @@ pipeconf = /data/scripts/DataReduction/pipeconf_stonedge_auto.txt
 pipemode = stoneedge
 loglevel = DEBUG
 logfile = /data/scripts/DataReduction/PipeLineLog.txt
-""" % (suser, sobject, sdate)
+""" % (runame)
     # Add custom log file
     #logfile = '%s_%s_%d_%s_pipelog.txt' % (suser, sobject, expt, sdate )
     logfile = spart + '_pipelog.txt'

@@ -39,7 +39,7 @@
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
     stepslist = load, StepAddKeys, save, StepAstrometrica, save, StepBiasDarkFlat, save, StepHotpix, StepRGB
-    #stepslist = load, StepAddKeys, save, StepHotpix, StepRGBAuto
+    #stepslist = load, StepAddKeys, save, StepBiasDarkFlat, StepHotpix, StepRGB
 
 ### Pipe Step Section
 
