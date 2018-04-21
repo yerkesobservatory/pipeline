@@ -24,7 +24,7 @@ class DataFits(DataParent):
     """
 
     # File Name Fit: Regexp expression that fits valid filenames
-    filenamefit = r'\.(fits|fts)\Z' # will fit .fits or .fts at end of name
+    filenamefit = r'\.(fits|fts|fit)\Z' # will fit .fits or .fts at end of name
 
     def __init__(self, filename='', config=None):
         """ Constructor: Initialize data object and variables
