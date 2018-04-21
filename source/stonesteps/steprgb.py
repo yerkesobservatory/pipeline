@@ -220,7 +220,7 @@ class StepRGB(StepMIParent):
                 font = ImageFont.truetype('/Library/Fonts/arial.ttf',imgheight/41)
             except:
                 # This should work on Windows
-                font = ImageFont.truetype(r'C:\Windows\Fonts\arial.tff',imgheight/41)
+                font = ImageFont.truetype('C:\\Windows\\Fonts\\arial.ttf',imgheight/41)
                 # If this still doesn't work - then add more code to make it run on YOUR system
 	# Use the beginning of the FITS filename as the object name
 	filename = os.path.split(self.dataout.filename)[-1]
