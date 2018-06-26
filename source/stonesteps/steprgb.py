@@ -2,12 +2,6 @@
 """ PIPE RGB - Version 1.1.0
 
     Code for StepRGB in pipeline: combines filters to colored image & adds a label
-
-    This module defines the HAWC pipeline step parent object. Pipe steps are
-    the modules responsible for all HAWC data reduction. They are called by
-    the pipeline and work with pipedata objects. All pipe step objects are
-    descendants from this one. Pipe steps are callable objects that return
-    the reduced data product (as pipedata object).
     
     @author: M. Berthoud and A. Pal
 """
@@ -25,7 +19,7 @@ from drp.pipedata import PipeData # pipeline data object
 from drp.stepmiparent import StepMIParent # pipe step parent object
 
 class StepRGB(StepMIParent):
-    """ Stone Edge Pipeline Step Parent Object
+    """ Stone Edge Pipeline Step RGB Object
         The object is callable. It requires a valid configuration input
         (file or object) when it runs.
     """
@@ -92,111 +86,110 @@ class StepRGB(StepMIParent):
 	    datause = [self.datain[0], self.datain[0], self.datain[0]]
 	elif num_inputs == 2:
 	    datause = [self.datain[0], self.datain[1], self.datain[1]]
-	#elif num_inputs == 3:
-	#    datause = [self.datain[0], self.datain[1], self.datain[2]]
-	else:   # If inputs exceed 3 in number
+	else:   # If inputs exceed 2 in number
+        # Here we know there are at least 3 files
 	    ilist = []  # Make empty lists for each filter
 	    rlist = []
 	    glist = []
 	    other = []
-	    for element in self.datain: # Loop through the input files and add to the lists
-                fname = element.filename.lower()
-                if 'i-band' in fname or 'iband' in fname or 'iprime' in fname:
-                    ilist.append(element)
-                elif 'r-band' in fname or 'rband' in fname or 'rprime' in fname:
-                    rlist.append(element)
-                elif 'g-band' in fname or 'gband' in fname or 'gprime' in fname:
-                    glist.append(element)
-                else:
-                    other.append(element)
-                    continue
-            self.log.debug('len(ilist) = %d, len(rlist) = %d, len(glist) = %d' % (len(ilist), len(rlist), len(glist)))
-            # If there is at least one i-, r-, and g-band filter found in self.datain (best case)
-            if len(ilist) >= 1 and len(rlist) >= 1 and len(glist) >= 1:
-                # The first image from each filter list will be reduced in the correct order.
-                datause = [ilist[0], rlist[0], glist[0]]
-            elif len(ilist) == 0 and len(rlist) >=1 and len(glist) >=1:
-                # Cases where there is no ilist
-                if len(rlist) > len(glist):
-                    datause = [rlist[0], rlist[1], glist[0]]
-                else:
-                    datause = [rlist[0], glist[0], glist[1]]
-            elif len(glist) == 0 and len(rlist) >=1 and len(ilist) >=1:
-                # Cases where there is no glist
-                if len(rlist) > len(ilist):
-                    datause = [rlist[0], rlist[1], ilist[0]]
-                else:
-                    datause = [rlist[0], ilist[0], ilist[1]]
-            elif len(ilist) == 0 and len(rlist) >=1 and len(glist) >=1:
-                # Cases where there is no rlist
-                if len(ilist) > len(glist):
-                    datause = [ilist[0], ilist[1], glist[0]]
-                else:
-                    datause = [ilist[0], glist[0], glist[1]]
-            elif len(rlist) == 0 and len(glist) ==0:
-                # Case where there is only ilist
-                datause = [ilist[0], ilist[1], ilist[2]]
-            elif len(rlist) == 0 and len(ilist) ==0:
-                # Case where there is only glist
-                datause = [glist[0], glist[1], glist[2]]
-            elif len(ilist) == 0 and len(glist) ==0:
-                # Case where there is only rlist
-                datause = [rlist[0], rlist[1], rlist[2]]
-        self.log.debug('Files used: R = %s  G = %s  B = %s' % (datause[0].filename, datause[1].filename, datause[2].filename) )
-        self.dataout = PipeData(config = self.config)
-        self.dataout.header = datause[0].header
-	self.dataout.filename = datause[0].filename
-        img = datause[0].image
-	img1 = datause[1].image
-	img2 = datause[2].image
+        for element in self.datain: # Loop through the input files and add to the lists
+            fname = element.filename.lower()
+            if 'i-band' in fname or 'iband' in fname or 'iprime' in fname:
+                ilist.append(element)
+            elif 'r-band' in fname or 'rband' in fname or 'rprime' in fname:
+                rlist.append(element)
+            elif 'g-band' in fname or 'gband' in fname or 'gprime' in fname:
+                glist.append(element)
+            else:
+                other.append(element)
+                continue
+        self.log.debug('len(ilist) = %d, len(rlist) = %d, len(glist) = %d' % (len(ilist), len(rlist), len(glist)))
+        # If there is at least one i-, r-, and g-band filter found in self.datain (best case)
+        if len(ilist) >= 1 and len(rlist) >= 1 and len(glist) >= 1:
+            # The first image from each filter list will be reduced in the correct order.
+            datause = [ilist[0], rlist[0], glist[0]]
+        elif len(ilist) == 0 and len(rlist) >=1 and len(glist) >=1:
+            # Cases where there is no ilist
+            if len(rlist) > len(glist):
+                datause = [rlist[0], rlist[1], glist[0]]
+            else:
+                datause = [rlist[0], glist[0], glist[1]]
+        elif len(glist) == 0 and len(rlist) >=1 and len(ilist) >=1:
+            # Cases where there is no glist
+            if len(rlist) > len(ilist):
+                datause = [rlist[0], rlist[1], ilist[0]]
+            else:
+                datause = [rlist[0], ilist[0], ilist[1]]
+        elif len(ilist) == 0 and len(rlist) >=1 and len(glist) >=1:
+            # Cases where there is no rlist
+            if len(ilist) > len(glist):
+                datause = [ilist[0], ilist[1], glist[0]]
+            else:
+                datause = [ilist[0], glist[0], glist[1]]
+        elif len(rlist) == 0 and len(glist) ==0:
+            # Case where there is only ilist
+            datause = [ilist[0], ilist[1], ilist[2]]
+        elif len(rlist) == 0 and len(ilist) ==0:
+            # Case where there is only glist
+            datause = [glist[0], glist[1], glist[2]]
+        elif len(ilist) == 0 and len(glist) ==0:
+            # Case where there is only rlist
+            datause = [rlist[0], rlist[1], rlist[2]]
+    self.log.debug('Files used: R = %s  G = %s  B = %s' % (datause[0].filename, datause[1].filename, datause[2].filename) )
+    self.dataout = PipeData(config = self.config)
+    self.dataout.header = datause[0].header
+    self.dataout.filename = datause[0].filename
+    img = datause[0].image
+    img1 = datause[1].image
+    img2 = datause[2].image
 	
-        ''' Finding Min/Max scaling values '''
+    ''' Finding Min/Max scaling values '''
 	# Create a Data Cube with floats
-	datacube = numpy.zeros((img.shape[0], img.shape[1], 3), dtype=float)
+    datacube = numpy.zeros((img.shape[0], img.shape[1], 3), dtype=float)
 	# Enter the image data into the cube so an absolute max can be found
-	datacube[:,:,0] = img
-	datacube[:,:,1] = img1
-	datacube[:,:,2] = img2
+    datacube[:,:,0] = img
+    datacube[:,:,1] = img1
+    datacube[:,:,2] = img2
 	# Find how many data points are in the data cube
-	datalength = img.shape[0] * img.shape[1] * 3
+    datalength = img.shape[0] * img.shape[1] * 3
 	# Create a 1-dimensional array with all the data, then sort it	
-	datacube.shape=(datalength,)
-	datacube.sort()
-	# Now use arrays for each filter to find separate min values
-	rarray = img.copy()
-	garray = img1.copy()
-	barray = img2.copy()
-	# Shape and sort the arrays
-	arrlength = img.shape[0] * img.shape[1]
-	rarray.shape=(arrlength,)
-	rarray.sort()
-	garray.shape=(arrlength,)
-	garray.sort()
-	barray.shape=(arrlength,)
-	barray.sort()
-	# Find the min/max percentile values in the data for scaling
-	# Values are determined by parameters in the pipe configuration file
-	minpercent = int(arrlength * self.getarg('minpercent'))
-	maxpercent = int(datalength * self.getarg('maxpercent'))
-	# Find the final data values to use for scaling from the image data
-	rminsv = rarray[minpercent]  #sv stands for "scalevalue"
-	gminsv = garray[minpercent]
-	bminsv = barray[minpercent]
-	maxsv = datacube[maxpercent]
-	self.log.info(' Scale min r/g/b: %f/%f/%f' % (rminsv,gminsv,bminsv))
-	self.log.info(' Scale max: %f' % maxsv)
+    datacube.shape=(datalength,)
+    datacube.sort()
+    # Now use arrays for each filter to find separate min values
+    rarray = img.copy()
+    garray = img1.copy()
+    barray = img2.copy()
+    # Shape and sort the arrays
+    arrlength = img.shape[0] * img.shape[1]
+    rarray.shape=(arrlength,)
+    rarray.sort()
+    garray.shape=(arrlength,)
+    garray.sort()
+    barray.shape=(arrlength,)
+    barray.sort()
+    # Find the min/max percentile values in the data for scaling
+    # Values are determined by parameters in the pipe configuration file
+    minpercent = int(arrlength * self.getarg('minpercent'))
+    maxpercent = int(datalength * self.getarg('maxpercent'))
+    # Find the final data values to use for scaling from the image data
+    rminsv = rarray[minpercent]  #sv stands for "scalevalue"
+    gminsv = garray[minpercent]
+    bminsv = barray[minpercent]
+    maxsv = datacube[maxpercent]
+    self.log.info(' Scale min r/g/b: %f/%f/%f' % (rminsv,gminsv,bminsv))
+    self.log.info(' Scale max: %f' % maxsv)
 	# The same min/max values will be used to scale all filters
-	''' Finished Finding scaling values	'''
-	
-	''' Combining Function '''
+    ''' Finished Finding scaling values	'''
+
+    ''' Combining Function '''
 	# Make new cube with the proper data type for color images (uint8)
 	# Use square root (sqrt) scaling for each filter
 	# log or asinh scaling is also available
-	imgcube = numpy.zeros((img.shape[0], img.shape[1], 3), dtype='uint8')
-	imgcube[:,:,0] = 255 * img_scale.sqrt(datause[0].image, scale_min= rminsv, scale_max= maxsv)
-	imgcube[:,:,1] = 255 * img_scale.sqrt(datause[1].image, scale_min= gminsv, scale_max= maxsv)
-	imgcube[:,:,2] = 255 * img_scale.sqrt(datause[2].image, scale_min= bminsv, scale_max= maxsv)
-        self.dataout.image = imgcube
+    imgcube = numpy.zeros((img.shape[0], img.shape[1], 3), dtype='uint8')
+    imgcube[:,:,0] = 255 * img_scale.sqrt(datause[0].image, scale_min= rminsv, scale_max= maxsv)
+    imgcube[:,:,1] = 255 * img_scale.sqrt(datause[1].image, scale_min= gminsv, scale_max= maxsv)
+    imgcube[:,:,2] = 255 * img_scale.sqrt(datause[2].image, scale_min= bminsv, scale_max= maxsv)
+    self.dataout.image = imgcube
 	# Create variable containing all the scaled image data
 	imgcolor = Image.fromarray(self.dataout.image, mode='RGB')
 	# Save colored image as a .tif file (without the labels)
