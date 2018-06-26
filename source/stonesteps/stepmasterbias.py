@@ -60,6 +60,8 @@ class StepMasterBias(StepMIParent):
                                'Specifies the percentile for the minimum scaling'])
         self.paramlist.append(['maxpercent', 0.999,
                                'Specifies the percentile for the maximum scaling'])
+        self.paramlist.append(['reductionmethod','normal',
+                               'Specifies how the data should be reduced options are bla, bla, bla'])
 
     def run(self):
         """ Runs the combining algorithm. The self.datain is run
@@ -72,6 +74,16 @@ class StepMasterBias(StepMIParent):
         self.dataout = DataFits(config = self.config)
         # OR Get dataout as copy of first datain
         self.dataout = self.datain[0].copy()
+        # Do a bunch of stuff to commbine self.datain datasets into self.dataout
+        if self.getarg('reductionmethod') == 'normal':
+            # use normal way
+            continue
+        else:
+            # use abnormal way
+            continue
+        # rename filename
+        self.dataout.filename = os.path.join(self.getarg('outputfolder'),
+                                             os.path.split(self.dataout.filename)[1])
         
         
 if __name__ == '__main__':
