@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 #!/usr/local/bin/python
 
 # Below is the "default" python path, the one above is necessary on stars.

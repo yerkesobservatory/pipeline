@@ -1,3 +1,6 @@
+#!/usr/local/bin/python
+
+# Below is the "default" python path, the one above is necessary on stars
 #!/usr/bin/env python
 
 """ QUEUE COPY
@@ -60,7 +63,6 @@ else:
     source_folders = [os.getcwd()]
 log.debug('Source Folder = %s' % repr(source_folders))
 
-print(a)
 ### Loop over source folders
 for source_folder in source_folders:
 
