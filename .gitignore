@@ -1,3 +1,5 @@
 *.pyc
 *.py~
 *.DS_STORE
+.*project
+.DS_Store

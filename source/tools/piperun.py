@@ -209,7 +209,7 @@ else:
     pipe(filein, pipemode = pipemode, force=True)
 
 ### Final message
-log.info('Finished piperun: %s' % os.path.split(args.prdfile)[1])
+log.info('Finished piperun: %s' % os.path.split(args.prdfile[0])[1])
 log.info("Reduced files:")
 for fname in filein:
     log.info("   " + os.path.split(fname)[1])
