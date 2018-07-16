@@ -68,7 +68,7 @@ class StepAddKeys(StepParent):
             got_observer = False
         if not got_observer:
             ## File patterns:
-                # filepatt[0] <==> OBJECT_BAND_EXPOSURE_BINNING_YYMMDD_HHMMSS_seo_OBSERVER_FILENUM_RAW.fits (newest format)
+                # filepatt[0] <==> OBJECT_BAND_EXPOSURE_BINNING_YYMMDD_HHMMSS_OBSERVER_seo_FILENUM_RAW.fits (format starting spring 2018)
                 # filepatt[1] <==> OBJECT_BAND_EXPOSURE_BINNING_OBSERVER_DATE(YYYYMmmDD)_TIME(11h11m11s)_num0000_HjfyiYt5_seo.fits
                 # filepatt[2] <==> OBJECT_BAND_EXPOSURE_BINNING_YYYYmmmDD_OBSERVER_OBSNUM_seo.fits
                 # filepatt[3] <==> YYYY-MM-DD_OBSERVER_OBJECT_Ez5/ (astroclass)
@@ -78,8 +78,8 @@ class StepAddKeys(StepParent):
                         'bin\d_\d{4}[a-z]{3}\d{2}',
                         '^20\d{2}\-[0-1]\d\-[0-3]\d']
 
-            obsbefore = ['_seo_','bin\d_','20\d{2}[a-z]{3}\d{2}_','^.{11}']
-            obsafter = ['_\d{3}_RAW','_20\d{2}','_num','_[a-zA-Z]|_\d']
+            obsbefore = ['\d{6}_','bin\d_','20\d{2}[a-z]{3}\d{2}_','^.{11}']
+            obsafter = ['_seo_','_20\d{2}','_num','_[a-zA-Z]|_\d']
 
             fileindex = 0
             for i in range(len(filepatt)):
@@ -98,7 +98,7 @@ class StepAddKeys(StepParent):
         try:
             objname = self.datain.getheadval('OBJECT')
             # Make sure it's not invalid entry
-            if not objname.lower() in ['', 'unk', 'uknown'] :
+            if not objname.lower() in ['', 'unk', 'unknown'] :
                 got_object = True
         except KeyError:
             pass # b/c got_object is already false
@@ -106,6 +106,40 @@ class StepAddKeys(StepParent):
             # Getting the object from the file name
             objname = fileonly.split('_')[0]
             self.log.debug('Object = ' + fileonly.split('_')[0])
+        if objname.lower() in  ['', 'unk', 'unknown']:
+            objname = ''
+            self.log.info('Object unknown, changeing object name to RA/DEC')
+            #Finds and formats RA/DEC values from the fits header if present, if not sets objname to unknown
+            try:
+                ra = self.datain.getheadval('RA')
+                dec = self.datain.getheadval('DEC')
+                # Make sure it's not invalid entry
+                if ra.lower() in ['', 'unk', 'unknown'] or dec.lower in ['', 'unk', 'unknown']:
+                    got_radec = False
+                else:
+                    got_radec = True
+            except KeyError:
+                # if there's a key error -> there's no RA or DEC
+                got_radec = False
+            if got_radec==True:
+                regexRA=r'(\d{2}):(\d{2}):(\d{2}).?(\d{2})?(\d{1})?'
+                RAre=re.findall(regexRA, self.datain.getheadval('RA'))
+                if RAre[0][3]=='':
+                    obsRA=RAre[0][0]+"h"+RAre[0][1]+"m"+RAre[0][2]+"."+RAre[0][3]+RAre[0][4]+"0"+"s"
+                else:
+                    obsRA=RAre[0][0]+"h"+RAre[0][1]+"m"+RAre[0][2]+"."+RAre[0][3]+RAre[0][4]+"s"
+                regexDEC=r'(\d{2}):(\d{2}):(\d{2}).?(\d{2})?(\d{1})?'
+                DECre=re.findall(regexDEC, self.datain.getheadval('DEC'))
+                DECsign=self.datain.getheadval('DEC')[0]
+                if DECre[0][3]=='':
+                    obsDEC=DECsign+DECre[0][0]+"d"+DECre[0][1]+"m"+DECre[0][2]+"."+DECre[0][3]+DECre[0][4]+"0"+"s"
+                else:
+                    obsDEC=DECsign+DECre[0][0]+"d"+DECre[0][1]+"m"+DECre[0][2]+"."+DECre[0][3]+DECre[0][4]+"s"
+                objname = obsRA+obsDEC
+                self.log.debug('Object RA/DEC = ' + objname)
+                got_object=True
+            else:
+                objname='unknown'
         ### Add Filter
         got_filter = False # assume it's not there
         try:
@@ -116,11 +150,12 @@ class StepAddKeys(StepParent):
             pass # b/c got_filter is already false
         if not got_filter:
             # Getting the filter from the file name
-            filtername = 'unknown' # in case no filter name is found
-            for f in self.getarg('filternames'):
-                if f in fileonly:
-                    filtername = f
-                    break # exit the for loop
+#             filtername = 'unknown' # in case no filter name is found
+            filtername = fileonly.split('_')[1]
+#             for f in self.getarg('filternames'):
+#                 if f in fileonly:
+#                     filtername = f
+#                     break # exit the for loop
             self.log.debug('Filter = ' + filtername)
         ### Make changes to file
         # Copy input file to output file
