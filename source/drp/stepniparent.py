@@ -76,15 +76,10 @@ class StepNIParent(StepMOParent):
         # Check input data type and set data config
         if issubclass(data.__class__, DataParent):
             self.config = data.config
-        else:
-            msg = 'Invalid input data type: DataParent child object is required'
+        elif self.config == None:
+            msg='Invalid configuration information - aborting'
             self.log.error(msg)
-            raise TypeError('Runstart: '+msg)
-        # Set Configuration
-        if self.config is None: # no config specified, make an empty one
-            self.config = ConfigObj()
-            self.config[self.name] = {}
-            self.log.info('No config specified, creating empty config')
+            raise RuntimeError('Runstart: '+msg)
         # Check configuration
         if not isinstance(self.config,ConfigObj):
             msg='Invalid configuration information - aborting'
