@@ -11,7 +11,6 @@
 
 import logging # logging object library
 from configobj import ConfigObj
-from drp.pipedata import PipeData # pipeline data object
 from drp.dataparent import DataParent #pipeline data object
 from drp.stepmoparent import StepMOParent # pipe step parent object
 
@@ -62,6 +61,22 @@ class StepNIParent(StepMOParent):
         self.paramlist.append(['sampar', 1.0,
             'Sample Parameter - parent only - no practical use'])
         
+    def __call__(self,datain=None, **arglist):
+        """ Object Call: returns reduced input data
+            No datain is allowed, in this case the step expects to receive
+            the configuration in another way Ex: step.config=config
+        """
+        # Get input data
+        self.datain = datain
+        # Start Setup
+        self.runstart(self.datain, arglist)
+        # Call the run function
+        self.run()
+        # Finish - call end
+        self.runend(self.dataout)
+        # return result
+        return self.dataout
+
     def runstart(self, data, arglist):
         """ Method to call at the beginning of the pipe step call.
             - Sends initial log message
@@ -86,12 +101,23 @@ class StepNIParent(StepMOParent):
             self.log.error(msg)
             raise RuntimeError('Runstart: '+msg)
     
+    def run(self):
+        """ Runs the data reduction algorithm. The result is in self.dataout.
+            NI steps a NIMO so multiple outputs; they have to return a list
+            of data objects.
+        """
+        # Log the value of sample parameter
+        self.log.debug("Sample Parameter = %.2f" % self.getarg('sampar'))
+        # Return empty list
+        self.dataout = []
+
     def execfiles(self, inputfiles):
         """ Runs the step without an input file
         """
-        self.datain = PipeData(config = self.config)
+        #self.datain = DataParent(config = self.config)
         # Call start - run and call end
-        self.runstart(self.datain,self.arglist)
+        #self.runstart(self.datain,self.arglist)
+        self.runstart(None, self.arglist)
         self.run()
         self.runend(self.dataout)
         # Write output file
