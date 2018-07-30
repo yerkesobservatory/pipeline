@@ -39,16 +39,15 @@ class StepLoadInput(StepNIParent):
         # Set default parameters
         self.paramlist.append(['filelocation', '/*/*/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/bias/bias*.fits',
             'Filename for input file(s). Can contain * and ? ' +
-            'wildcards to match multiple files to be selected using fitkeys ' +
-            '(default = %sfolder/*.fits)' % 'bias'])
-        self.paramlist.append(['includeheadvals','OBSERVAT',
-            'List of header keywords to determine if loaded (unused if '', | separated)'])
+            'wildcards to match multiple files to be selected using fitkeys '])
+        self.paramlist.append(['includeheadvals','OBSERVAT=StoneEdge',
+            "List of header keywords to determine if loaded (unused if '', | separated)"])
         self.paramlist.append(['excludeheadvals','',
-            'List of header keywords to determine if loaded (unused if '', | separated)'])
+            "List of header keywords to determine if loaded (unused if '', | separated)"])
         self.paramlist.append(['fileinclude','',
-            'List of strings which filename must contain to be loaded (unused if '', | separated)'])
+            "List of strings which filename must contain to be loaded (unused if '', | separated)"])
         self.paramlist.append(['fileexclude','MBIAS',
-            'List of strings which filename must not contain to be loaded (unused if '' | separated)'])
+            "List of strings which filename must not contain to be loaded (unused if '' | separated)"])
 
     def run(self, inpar = '', data = None, multi = False):
         # need os.expandvars like line 110 of steploadaux
@@ -87,40 +86,37 @@ class StepLoadInput(StepNIParent):
             count +=1
         self.log.debug('File(s) excluded by filename: %s' % inexclude)
         indatafinal = list(set(ininclude)-set(inexclude))
-        inheadlist = []
+        headlist = []
         for innam in indatafinal:
-            inheadlist.append(DataParent(config = self.config).loadhead(innam))
-        inkeys = self.getarg('includekeys').split('|')
-        inkeysmatch = self.getarg('includevalues').split('|')
-        inheadinclude=[]
-        if inkeys[0] != '' and inkeysmatch[0] != '':
-            for i in inheadlist:
-                count = 0
-                for f in inkeys:
-                    if str(i.getheadval(inkeys[count]))==str(inkeysmatch[count]):
-                        if i not in inheadinclude:
-                            inheadinclude.append(i)
-                    count+=1
+            headlist.append(DataParent(config = self.config).loadhead(innam))
+        includelist = self.getarg('includeheadvals').split('|')
+        keysinclude = []
+        inheadinclude = []
+        if includelist[0] != '':
+            for f in headlist:
+                for i in includelist:
+                    keysinclude = i.split('=')
+                    if str(f.getheadval(keysinclude[0]))==str(keysinclude[1]):
+                        if f not in inheadinclude:
+                            inheadinclude.append(f)
         else:
-            inheadinclude=inheadlist
+            inheadinclude=headlist
         inheadexclude = []
-        exkeys = self.getarg('excludekeys').split('|')
-        exkeysmatch = self.getarg('excludevalues').split('|')
-        if exkeys[0] != '' and exkeysmatch[0] != '':
-            for i in inheadinclude:
-                count = 0
-                for f in exkeys:
-                    if str(i.getheadval(exkeys[count]))==str(exkeysmatch[count]):
-                        if i not in inheadexclude:
-                            inheadexclude.append(i)
-                    count+=1
-        inheadlistfinal = list(set(inheadinclude)-(set(inheadexclude)))
+        excludelist = self.getarg('excludeheadvals').split('|')
+        if excludelist[0] != '':
+            for f in headlist:
+                for i in excludelist:
+                    keysexclude = i.split('=')
+                    if str(f.getheadval(keysexclude[0]))==str(keysexclude[1]):
+                        if f not in inheadexclude:
+                            inheadexclude.append(f)
+        headlistfinal = list(set(inheadinclude)-(set(inheadexclude)))
         finalfiles = []
-        for files in inheadlistfinal:
+        for files in headlistfinal:
             finalfiles.append(files.filename)
         self.dataout=[]
         for f in finalfiles:
-            self.dataout.append(DataParent(config = self.config).loadhead(f))
+            self.dataout.append(DataParent(config = self.config).load(f))
     
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.

@@ -1,16 +1,22 @@
 #!/usr/bin/env python
-""" PIPE STEP MASTER BIAS - Version 1.1.0
+""" PIPE STEP MASTER BIAS - Version 1.0.0
 
     Code for StepMasterBias in pipeline: does the following
     
     !!!!!!!1 Add what the step needs as inputs, what it does and how, what the outputs are !!!!!!!!
 
-    @author: Matt Merz, et al
+    @author: Matt Merz
 """
-
-from drp.pipedata import PipeData # pipeline data object
-from drp.stepmiparent import StepMIParent # pipe step parent object
-from drp.datafits import DataFits # Data Fits object
+import os # os library
+import sys # sys library
+import numpy # numpy library
+import logging # logging object library
+import astropy
+import ccdproc # package for reducing optical CCD telescope data 
+import matplotlib.pyplot as plt
+from astropy.io import fits #package to recognize FITS files
+from drp.stepmiparent import StepMIParent
+from drp.datafits import DataFits
 
 class StepMasterBias(StepMIParent):
     """ Stone Edge Pipeline Step Master Bias Object
@@ -18,16 +24,6 @@ class StepMasterBias(StepMIParent):
         (file or object) when it runs.
     """
     stepver = '0.1' # pipe step version
-
-    def __init__(self):
-        """ Constructor: Initialize data objects and variables
-        """
-        # call superclass constructor (calls setup)
-        super(StepRGB,self).__init__()
-        # list of data
-        self.datalist = [] # used in run() for every new input data file
-        # set configuration
-        self.log.debug('Init: done')
     
     def setup(self):
         """ ### Names and Parameters need to be Set Here ###
@@ -49,41 +45,45 @@ class StepMasterBias(StepMIParent):
         self.name='masterbias'
         # Shortcut for pipeline reduction step and identifier for
         # saved file names.
-        self.procname = 'MBIAS'
+        self.procname = 'mbias'
         # Set Logger for this pipe step
-        self.log = logging.getLogger('stoneedge.pipe.step.%s' % self.name)
+        self.log = logging.getLogger('pipe.step.%s' % self.name)
         ### Set Parameter list
         # Clear Parameter list
         self.paramlist = []
         # Append parameters !!!! WHAT PARAMETERS ARE NEEDED ????? !!!!!
-        self.paramlist.append(['minpercent', 0.05, 
-                               'Specifies the percentile for the minimum scaling'])
-        self.paramlist.append(['maxpercent', 0.999,
-                               'Specifies the percentile for the maximum scaling'])
-        self.paramlist.append(['reductionmethod','normal',
-                               'Specifies how the data should be reduced options are bla, bla, bla'])
+        self.paramlist.append(['combinemethod','median',
+                               'Specifies how the files should be combined - options are median, average, sum'])
+        self.paramlist.append(['outputfolder','',
+                               'Output directory location - default is the folder of the input files'])
 
     def run(self):
         """ Runs the combining algorithm. The self.datain is run
             through the code, the result is in self.dataout.
         """
-        # List all filesnames of input files
+        namelist=[]
         for fin in self.datain:
             self.log.debug("Input filename = %s" % fin.filename)
+            namelist.append(fin.filename)
         # Make a dummy dataout
         self.dataout = DataFits(config = self.config)
-        # OR Get dataout as copy of first datain
-        self.dataout = self.datain[0].copy()
-        # Do a bunch of stuff to commbine self.datain datasets into self.dataout
-        if self.getarg('reductionmethod') == 'normal':
-            # use normal way
-            continue
+        if len(self.datain) == 0:
+            self.log.error('Bias calibration frame not found.')
+            raise RuntimeError('No bias file loaded')
+        # self.log.debug('Creating master bias frame...')
+        #if there is just one, use it as biasfile or else combine all to make a master bias
+        filename=namelist[0].split('/')
+        if (len(namelist) == 1):
+            bias = ccdproc.CCDData.read(namelist[0], unit='adu', relax=True)
         else:
-            # use abnormal way
-            continue
-        # rename filename
-        self.dataout.filename = os.path.join(self.getarg('outputfolder'),
-                                             os.path.split(self.dataout.filename)[1])
+            bias = ccdproc.combine(namelist, method=self.getarg('combinemethod'), unit='adu', add_keyword=True)
+        self.dataout.header=self.datain[0].header
+        self.dataout.imageset(bias)
+        # rename output filename
+        if self.getarg('outputfolder')!='':
+            self.dataout.filename = os.path.join(self.getarg('outputfolder'), os.path.split(namelist[0])[1])
+        else:
+            self.dataout.filename = namelist[0]
         
         
 if __name__ == '__main__':
@@ -100,5 +100,5 @@ if __name__ == '__main__':
         
         
 """ === History ===
-    2018-??-?? New step created based on StepRGB - Emily, Matt
+    2018-07-?23 New step created based on StepRGB - Matt Merz
 """
