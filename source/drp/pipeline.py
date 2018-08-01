@@ -13,6 +13,7 @@ import configobj # Config Object library
 from drp.dataparent import DataParent # Pipeline Data object
 from drp.stepparent import StepParent # Step Parent
 from drp.stepmiparent import StepMIParent # Step Multiple Input Parent
+from drp.stepniparent import StepNIParent # Step No Input Parent
 
 class PipeLine(object):
     """ HAWC Pipeline Object
@@ -256,7 +257,7 @@ class PipeLine(object):
                                % stepname)
                 raise error
         # check if data is available
-        if len(self.reducedfiles) < 1:
+        if len(self.finals) < 1:
             self.log.warning('GetResult: no results yet')
             return 0
         # get result
@@ -283,6 +284,9 @@ class PipeLine(object):
         except TypeError, error:
             self.log.error('Add: invalid filenames type')
             raise error
+        except IndexError, error:
+            # If filenames is empty -> just move along
+            namelen = 2
         # make sure filenames is a valid list
         if namelen < 2: filenames=[filenames]
         # add the files to the list (check if each file exists)
@@ -354,7 +358,7 @@ class PipeLine(object):
         # Remove the files from openfiles
         self.openfiles = []
         ### Loop over steps:
-        if len(self.results) == 0:
+        if len(self.results) == 0 and not isinstance(self.steps[0], StepNIParent):
             self.log.error('Call: Zero files to process - quitting')
             stepi = len(self.steps)
         else:
@@ -451,6 +455,9 @@ class PipeLine(object):
                         self.inputs[stepi][n] = res
                     else:
                         self.inputs[stepi].append(res)
+                # If the step is an NI, set the correct config
+                if isinstance(self.steps[stepi], StepNIParent):
+                    self.steps[stepi].config = self.config
                 # Run the next MI step with the inputs
                 try:
                     data = self.steps[stepi](self.inputs[stepi])
@@ -567,7 +574,7 @@ class PipeLine(object):
         # Set configuration
         self.config = DataParent(config = args.config).config
         ### Reduce data
-        if len(args.inputfiles) > 0:
+        if len(args.inputfiles) > -1:
             self(args.inputfiles,pipemode=pipemode,force=force)
             self.save()
         else:

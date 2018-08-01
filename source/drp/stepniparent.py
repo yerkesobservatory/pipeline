@@ -12,6 +12,7 @@
 import logging # logging object library
 from configobj import ConfigObj
 from drp.dataparent import DataParent #pipeline data object
+from drp.datafits import DataFits
 from drp.stepmoparent import StepMOParent # pipe step parent object
 
 class StepNIParent(StepMOParent):
@@ -58,8 +59,8 @@ class StepNIParent(StepMOParent):
         # Clear Parameter list
         self.paramlist = []
         # Append parameters
-        self.paramlist.append(['sampar', 1.0,
-            'Sample Parameter - parent only - no practical use'])
+        self.paramlist.append(['filloutput', False,
+            'If TRUE the step will return one pipedata object - else an empty list is returned (default)'])
         
     def __call__(self,datain=None, **arglist):
         """ Object Call: returns reduced input data
@@ -106,10 +107,15 @@ class StepNIParent(StepMOParent):
             NI steps a NIMO so multiple outputs; they have to return a list
             of data objects.
         """
-        # Log the value of sample parameter
-        self.log.debug("Sample Parameter = %.2f" % self.getarg('sampar'))
-        # Return empty list
-        self.dataout = []
+        # Return dataout
+        if self.getarg('filloutput'):
+            # Make a datafits object and put it into output
+            dout = DataFits(config = self.config)
+            dout.filename = 'StepNIOuput.fits'
+            self.dataout = [dout]
+        else:
+            # Return empty list
+            self.dataout = []
 
     def execfiles(self, inputfiles):
         """ Runs the step without an input file
