@@ -16,8 +16,7 @@
 [data]
     # Regexp for part of the filename before the file step identifier
     # - default is '\A.+\.' for all filename before the last '.' including the '.'
-    #filenamebegin = "\A.+_[A-Za-z0-9]+\." # Stonedge: All before last '_', one more word and following '.'
-    filenamebegin = "\A.+_" # Stonedge: All before last '_' and that '_'
+    filenamebegin = "\A.+_[A-Za-z0-9]+\." # Stonedge: All before last '_', one more word and following '.'
     #filenamebegin = 'not-appl' # Uses bla.TypeID.fits
     # Regexp for part of the filename after the file step identifier
     # - default is '\.[A-Za-z0-9]+\Z' for alphanum characters after last '.'
@@ -41,6 +40,63 @@
     # list of steps
     stepslist = load, StepAddKeys, save, StepAstrometrica, save, StepBiasDarkFlat, save, StepHotpix, StepRGB
     #stepslist = load, StepAddKeys, save, StepBiasDarkFlat, StepHotpix, StepRGB
+
+[mode_masterbias]
+    stepslist = StepLoadInput, load, StepDataGroup, save
+    # BDF load step configuration
+    [loadinput]
+    # location of bdf folder(s)/file(s) to be reduced
+    filelocation = '/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/bias/bias*.fits'
+    # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
+    includeheadvals =
+    # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |
+    excludeheadvals =
+    # strings which must be present in the filename for the file to be loaded, separate with |
+    fileinclude = 
+    # strings which must not be present in the filename for the file to be loaded, separate with |
+    fileexclude = MBIAS|UNK|LOAD
+    # Data group step configuration
+    [datagroup]
+    redstepname = StepMasterBias
+    groupkeys = XBIN
+
+[mode_masterdark]
+    steplist = StepLoadInput, load, StepDataGroup, save
+    # BDF load step configuration
+    [loadinput]
+    # location of bdf folder(s)/file(s) to be reduced
+    filelocation = '/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/dark/dark*.fits'
+    # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
+    includeheadvals =
+    # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |
+    excludeheadvals =
+    # strings which must be present in the filename for the file to be loaded, separate with |
+    fileinclude = 
+    # strings which must not be present in the filename for the file to be loaded, separate with |
+    fileexclude = MDARK|UNK|LOAD
+    # Data group step configuration
+    [datagroup]
+    redstepname = StepMasterDark
+    groupkeys = XBIN|EXPTIME
+
+[mode_masterflat]
+    steplist = StepLoadInput, load, StepDataGroup, save
+    # BDF load step configuration
+    [loadinput]
+    # location of bdf folder(s)/file(s) to be reduced
+    filelocation = /data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/flat/flat*.fits'
+    # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
+    includeheadvals =
+    # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |
+    excludeheadvals =
+    # strings which must be present in the filename for the file to be loaded, separate with |
+    fileinclude = 
+    # strings which must not be present in the filename for the file to be loaded, separate with |
+    fileexclude = MFLAT|UNK|LOAD
+    # Data group step configuration
+    [datagroup]
+    redstepname = StepMasterFlat
+    groupkeys = XBIN|FILTER
 
 ### Pipe Step Section
 
@@ -90,6 +146,32 @@
     minpercent = 0.5
     # percentile value for maximum scaling
     maxpercent = 0.999
+
+# MasterDark step configuration
+[masterdark]
+    # filename that overrules the fit keys
+    biasfile = /data/images/StoneEdge/0.5meter/2018/*/bias/*MBIAS.fits
+    daterange = 0.5
+    # list of keys that need to match bias and data file
+    #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
+    biasfitkeys = XBIN, DATE-OBS
+    # list of input file datasets to flatten
+    # - Expects None or a list of image HDU 
+    #datalist = R array, T array
+
+# MasterFlat step configuration
+[masterflat]
+    # filename that overrules the fit keys
+    biasfile = /data/images/StoneEdge/0.5meter/2018/*/bias/*MBIAS.fits    
+    darkfile = /data/images/StoneEdge/0.5meter/2018/*/dark/*MDARK.fits
+    daterange = 0.5
+    # list of keys that need to match bias and data file
+    #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
+    biasfitkeys = XBIN, DATE-OBS
+    darkfitkeys = XBIN, DATE-OBS
+    # list of input file datasets to flatten
+    # - Expects None or a list of image HDU 
+    #datalist = R array, T array
 
 ### Data Handling Section
 
