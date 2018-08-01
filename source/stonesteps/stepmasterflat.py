@@ -59,6 +59,8 @@ class StepMasterFlat(StepLoadAux, StepMIParent):
                                'Specifies how the files should be combined - options are median, average, sum'])
         self.paramlist.append(['outputfolder','',
                                'Output directory location - default is the folder of the input files'])
+        # Get parameters for StepLoadAux, replace auxfile with biasfile
+        self.loadauxsetup('bias')
         # Get parameters for StepLoadAux, replace auxfile with darkfile
         self.loadauxsetup('dark')
 
@@ -67,9 +69,13 @@ class StepMasterFlat(StepLoadAux, StepMIParent):
             through the code, the result is in self.dataout.
         """
         # Find master dark to subtract from master dark
+        biaslist = self.loadauxname('bias', multi = False)
         darklist = self.loadauxname('dark', multi = False)
+        if(len(biaslist) == 0):
+            self.log.error('No bias calibration frames found.')
         if(len(darklist) == 0):
             self.log.error('No bias calibration frames found.')
+        self.bias = ccdproc.CCDData.read(biaslist, unit='adu', relax=True)
         self.dark = ccdproc.CCDData.read(darklist, unit='adu', relax=True)
         # Create empy list for filenames of loaded frames
         filelist=[]
@@ -85,13 +91,21 @@ class StepMasterFlat(StepLoadAux, StepMIParent):
         # Create master frame: if there is just one file, turn it into master bias or else combine all to make master bias
         if (len(filelist) == 1):
             self.flat = ccdproc.CCDData.read(filelist[0], unit='adu', relax=True)
+            self.flat = ccdproc.subtract_bias(self.flat, self.bias, add_keyword=False)
+            self.flat = ccdproc.subtract_dark(self.flat, self.dark, scale=True, exposure_time='EXPTIME', exposure_unit=u.second, add_keyword=False)
         else:
+            #bias and dark correct frames
+            flatlist=[]
+            for i in filelist:
+                flat =ccdproc.CCDData.read(i, unit='adu', relax=True)
+                flatsubbias = ccdproc.subtract_bias(flat, self.bias, add_keyword=False)
+                flatsubbiasdark = ccdproc.subtract_dark(flatsubbias, self.dark, scale=True, exposure_time='EXPTIME', exposure_unit=u.second, add_keyword=False)
+                flatlist.append(flatsubbiasdark)
             #scale the flat component frames to have the same mean value, 10000.0
             scaling_func = lambda arr: 10000.0/numpy.ma.median(arr)
             #combine them
-            self.flat = ccdproc.combine(filelist, method=self.getarg('combinemethod'), scale=scaling_func, unit='adu', add_keyword=False)
+            self.flat = ccdproc.combine(flatlist, method=self.getarg('combinemethod'), scale=scaling_func, unit='adu', add_keyword=False)
 #             self.flat = ccdproc.combine(filelist, method=self.getarg('combinemethod'), unit='adu', add_keyword=False)
-        self.flat = ccdproc.subtract_dark(self.flat, self.dark, scale=True, exposure_time='EXPTIME', exposure_unit=u.second, add_keyword=False)
         self.dataout.header=self.datain[0].header
         self.dataout.imageset(self.flat)
         # rename output filename

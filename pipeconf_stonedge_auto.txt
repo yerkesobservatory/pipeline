@@ -46,7 +46,7 @@
     # BDF load step configuration
     [loadinput]
     # location of bdf folder(s)/file(s) to be reduced
-    filelocation = '/*?/*?/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/bias/bias*.fits'
+    filelocation = '/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/bias/bias*.fits'
     # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
     includeheadvals =
     # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |
@@ -65,7 +65,7 @@
     # BDF load step configuration
     [loadinput]
     # location of bdf folder(s)/file(s) to be reduced
-    filelocation = '/*?/*?/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/dark/dark*.fits'
+    filelocation = '/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/dark/dark*.fits'
     # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
     includeheadvals =
     # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |
@@ -84,7 +84,7 @@
     # BDF load step configuration
     [loadinput]
     # location of bdf folder(s)/file(s) to be reduced
-    filelocation = '/*?/*?/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/flat/flat*.fits'
+    filelocation = /data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/flat/flat*.fits'
     # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
     includeheadvals =
     # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |
@@ -150,7 +150,7 @@
 # MasterDark step configuration
 [masterdark]
     # filename that overrules the fit keys
-    biasfile = /home/memerz/data/images/StoneEdge/0.5meter/2018/*/bias/*MBIAS.fits
+    biasfile = /data/images/StoneEdge/0.5meter/2018/*/bias/*MBIAS.fits
     daterange = 0.5
     # list of keys that need to match bias and data file
     #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
@@ -162,10 +162,12 @@
 # MasterFlat step configuration
 [masterflat]
     # filename that overrules the fit keys
-    darkfile = /home/memerz/data/images/StoneEdge/0.5meter/2018/*/dark/*MDARK.fits
+    biasfile = /data/images/StoneEdge/0.5meter/2018/*/bias/*MBIAS.fits    
+    darkfile = /data/images/StoneEdge/0.5meter/2018/*/dark/*MDARK.fits
     daterange = 0.5
     # list of keys that need to match bias and data file
     #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
+    biasfitkeys = XBIN, DATE-OBS
     darkfitkeys = XBIN, DATE-OBS
     # list of input file datasets to flatten
     # - Expects None or a list of image HDU 

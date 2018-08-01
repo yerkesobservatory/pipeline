@@ -69,7 +69,7 @@ class StepMasterDark(StepLoadAux, StepMIParent):
         biaslist = self.loadauxname('bias', multi = False)
         if(len(biaslist) == 0):
             self.log.error('No bias calibration frames found.')
-        self.bias = ccdproc.CCDData.read(biaslist, unit='adu', relax=True)
+          
         # Create empy list for filenames of loaded frames
         filelist=[]
         for fin in self.datain:
@@ -84,9 +84,14 @@ class StepMasterDark(StepLoadAux, StepMIParent):
         # Create master frame: if there is just one file, turn it into master bias or else combine all to make master bias
         if (len(filelist) == 1):
             self.dark = ccdproc.CCDData.read(filelist[0], unit='adu', relax=True)
+            self.dark = ccdproc.subtract_bias(self.dark, self.bias, add_keyword=False)
         else:
-            self.dark = ccdproc.combine(filelist, method=self.getarg('combinemethod'), unit='adu', add_keyword=True)
-        self.dark = ccdproc.subtract_bias(self.dark, self.bias, add_keyword=False)
+            darklist=[]
+            for i in filelist:
+                dark =ccdproc.CCDData.read(i, unit='adu', relax=True)
+                darksubbias = ccdproc.subtract_bias(dark, self.bias, add_keyword=False)
+                darklist.append(darksubbias)
+            self.dark = ccdproc.combine(darklist, method=self.getarg('combinemethod'), unit='adu', add_keyword=True)
         self.dataout.header=self.datain[0].header
         self.dataout.imageset(self.dark)
         # rename output filename
