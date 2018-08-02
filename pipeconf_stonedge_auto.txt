@@ -12,6 +12,11 @@
     # list of steps for unknown instrument mode
     stepslist = StepLoadStoneedge, StepDemod
 
+# Environment Variables
+[envars]
+    # Master Bias, Dark, Flat Folder
+    MASTER_BDF_FOLDER = /
+
 # Data Section: information on data objects and file names
 [data]
     # Regexp for part of the filename before the file step identifier
@@ -44,7 +49,7 @@
 [mode_masterbias]
     stepslist = StepLoadInput, load, StepDataGroup, save
     # BDF load step configuration
-    [loadinput]
+    [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
         filelocation = '/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/bias/bias*.fits'
         # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
@@ -55,15 +60,15 @@
         fileinclude = 
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MBIAS|UNK|LOAD
-        # Data group step configuration
-        [datagroup]
+    # Data group step configuration
+    [[datagroup]]
         redstepname = StepMasterBias
         groupkeys = XBIN
 
 [mode_masterdark]
     steplist = StepLoadInput, load, StepDataGroup, save
     # BDF load step configuration
-    [loadinput]
+    [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
         filelocation = '/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/dark/dark*.fits'
         # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
@@ -74,15 +79,15 @@
         fileinclude = 
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MDARK|UNK|LOAD
-        # Data group step configuration
-        [datagroup]
+    # Data group step configuration
+    [[datagroup]]
         redstepname = StepMasterDark
         groupkeys = XBIN|EXPTIME
 
 [mode_masterflat]
     steplist = StepLoadInput, load, StepDataGroup, save
     # BDF load step configuration
-    [loadinput]
+    [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
         filelocation = /data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/flat/flat*.fits'
         # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
@@ -93,8 +98,8 @@
         fileinclude = 
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MFLAT|UNK|LOAD
-        # Data group step configuration
-        [datagroup]
+    # Data group step configuration
+    [[datagroup]]
         redstepname = StepMasterFlat
         groupkeys = XBIN|FILTER
 
