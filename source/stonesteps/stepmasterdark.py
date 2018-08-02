@@ -69,7 +69,7 @@ class StepMasterDark(StepLoadAux, StepMIParent):
         biaslist = self.loadauxname('bias', multi = False)
         if(len(biaslist) == 0):
             self.log.error('No bias calibration frames found.')
-          
+        self.bias = ccdproc.CCDData.read(biaslist, unit='adu', relax=True)
         # Create empy list for filenames of loaded frames
         filelist=[]
         for fin in self.datain:
