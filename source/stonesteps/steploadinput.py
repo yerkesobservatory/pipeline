@@ -117,6 +117,18 @@ class StepLoadInput(StepNIParent):
         self.dataout=[]
         for f in finalfiles:
             self.dataout.append(DataParent(config = self.config).load(f))
+
+    def runend(self,data):
+        """ Method to call at the end of pipe the pipe step call
+           - Sends final log messages
+        """
+        # update header (status and history)
+        #for d in data:
+        #    self.updateheader(d)
+        # clear input arguments
+        self.arglist = {}
+        self.log.info('Finished Reduction: Pipe Step %s' % self.name)
+
     
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
