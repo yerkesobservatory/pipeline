@@ -67,7 +67,6 @@ class StepLoadInput(StepNIParent):
         infile = self.getarg('filelocation')
         inglob = (datetime.strftime(datetime.now(), infile))
         indata = glob.glob(inglob)
-        indata = sorted(indata)
         self.log.debug('Files found: %s' % indata)
         infilenameinclude = self.getarg('fileinclude').split('|')
         ininclude=[]
@@ -132,9 +131,11 @@ class StepLoadInput(StepNIParent):
         finalfiles = []
         for files in headlistfinal:
             finalfiles.append(files.filename)
+        # Sorts final output files
+        finalsorted=sorted(finalfiles)
         self.dataout=[]
         # Appends final list of loaded files to dataout
-        for f in finalfiles:
+        for f in finalsorted:
             self.dataout.append(DataParent(config = self.config).load(f))
     
 if __name__ == '__main__':
