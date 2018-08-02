@@ -169,7 +169,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         """
         #master bias frame
         #Search for bias and load it into data object
-        namelist = self.loadauxname('bias', multi = True)
+        namelist = self.loadauxname('bias', multi = False)
         if(len(namelist) == 0):
             self.log.error('Bias calibration frame not found.')
             raise RuntimeError('No bias file loaded')
@@ -196,7 +196,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         #master dark frame
         dark_is_bias_corrected = False
         dark_bias = None
-        namelist = self.loadauxname('dark', multi = True)
+        namelist = self.loadauxname('dark', multi = False)
         if(len(namelist) == 0):
             self.log.error('Dark calibration frame(s) not found.')
             raise RuntimeError('No dark file loaded')
@@ -246,7 +246,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         flat_is_dark_corrected = False
         flat_dark = None
         flat_ave_exptime = 0
-        namelist = self.loadauxname('flat', multi = True)
+        namelist = self.loadauxname('flat', multi = False)
         if(len(namelist) == 0):
             self.log.error('Flat calibration frame not found.')
             raise RuntimeError('No flat file loaded')
