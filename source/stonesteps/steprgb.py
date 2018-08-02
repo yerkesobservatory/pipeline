@@ -193,28 +193,28 @@ class StepRGB(StepMIParent):
     # Create variable containing all the scaled image data
     imgcolor = Image.fromarray(self.dataout.image, mode='RGB')
     # Save colored image as a .tif file (without the labels)
-	imgcolortif = imgcube.copy()
-	imgcolortif.astype('uint16')
-	### tiff.imsave('%s.tif' % self.dataout.filenamebase, imgcolortif)
-	''' End of combining function '''
+    imgcolortif = imgcube.copy()
+    imgcolortif.astype('uint16')
+    ### tiff.imsave('%s.tif' % self.dataout.filenamebase, imgcolortif)
+    ''' End of combining function '''
 	
-	''' Add a Label to the Image '''
-	draw = ImageDraw.Draw(imgcolor)
-	# Use a variable to make the positions and size of text relative
-	imgwidth = img.shape[1]
-	imgheight = img.shape[0]
+    ''' Add a Label to the Image '''
+    draw = ImageDraw.Draw(imgcolor)
+    # Use a variable to make the positions and size of text relative
+    imgwidth = img.shape[1]
+    imgheight = img.shape[0]
 	# Open Sans-Serif Font with a size relative to the picture size
+    try:
+        # This should work on Linux
+        font = ImageFont.truetype('/usr/share/fonts/liberation/LiberationSans-Regular.ttf',imgheight/41)
+    except:
         try:
-            # This should work on Linux
-	    font = ImageFont.truetype('/usr/share/fonts/liberation/LiberationSans-Regular.ttf',imgheight/41)
+            # This should work on Mac
+            font = ImageFont.truetype('/Library/Fonts/arial.ttf',imgheight/41)
         except:
-            try:
-                # This should work on Mac
-                font = ImageFont.truetype('/Library/Fonts/arial.ttf',imgheight/41)
-            except:
-                # This should work on Windows
-                font = ImageFont.truetype('C:\\Windows\\Fonts\\arial.ttf',imgheight/41)
-                # If this still doesn't work - then add more code to make it run on YOUR system
+            # This should work on Windows
+            font = ImageFont.truetype('C:\\Windows\\Fonts\\arial.ttf',imgheight/41)
+            # If this still doesn't work - then add more code to make it run on YOUR system
 	# Use the beginning of the FITS filename as the object name
 	filename = os.path.split(self.dataout.filename)[-1]
 	objectname = filename.split('_')[0]
