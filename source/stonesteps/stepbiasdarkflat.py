@@ -341,4 +341,5 @@ if __name__ == '__main__':
     
 '''HISTORY:
 07/28/2017 - Script created by Atreyo Pal
+2018-08-02 - Bias/Dark correction of darks/flats moved to stepmasterbias/dark/flat - Matt Merz
 '''
