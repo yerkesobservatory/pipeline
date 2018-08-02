@@ -1,4 +1,4 @@
-# HAWC Pipeline Configuration Validation File - General (public) version
+# Stoneedge Pipeline Configuration File - For Automatic Data Reduction
 #
 # 2008-11-3 Marc Berthoud Version 0.1: Configuration file for Pipeline Testing
 # 2012 Marc Berthoud: Numerous updates
@@ -12,6 +12,11 @@
     # list of steps for unknown instrument mode
     stepslist = StepLoadStoneedge, StepDemod
 
+# Environment Variables
+[envars]
+    # Master Bias, Dark, Flat Folder
+    MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2018/Masters 
+
 # Data Section: information on data objects and file names
 [data]
     # Regexp for part of the filename before the file step identifier
@@ -22,7 +27,7 @@
     # - default is '\.[A-Za-z0-9]+\Z' for alphanum characters after last '.'
     filenameend = '\.fits(\.gz)?\Z' # .fits with optional .gz
     #filenameend = 'not-applicable-use-fallback' # Uses .f* as filenameend
-    dataobjects = DataFits, DataText #, DataCsv
+    dataobjects = DataFits, DataText
     filenum = ''
 
 # Pipeline Section: Configuration of the pipeline
@@ -44,57 +49,42 @@
 [mode_masterbias]
     stepslist = StepLoadInput, load, StepDataGroup, save
     # BDF load step configuration
-    [loadinput]
+    [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        filelocation = '/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/bias/bias*.fits'
-        # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
-        includeheadvals =
-        # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |
-        excludeheadvals =
-        # strings which must be present in the filename for the file to be loaded, separate with |
-        fileinclude = 
+        filelocation = '/data/images/StoneEdge/0.5meter/2018/2018-07-05/bias/bias*.fits'
+        #filelocation = '/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/bias/bias*.fits' # for current date
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MBIAS|UNK|LOAD
-        # Data group step configuration
-        [datagroup]
+    # Data group step configuration
+    [[datagroup]]
         redstepname = StepMasterBias
         groupkeys = XBIN
 
 [mode_masterdark]
     steplist = StepLoadInput, load, StepDataGroup, save
     # BDF load step configuration
-    [loadinput]
+    [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        filelocation = '/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/dark/dark*.fits'
-        # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
-        includeheadvals =
-        # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |
-        excludeheadvals =
-        # strings which must be present in the filename for the file to be loaded, separate with |
-        fileinclude = 
+        filelocation = '/data/images/StoneEdge/0.5meter/2018/2018-07-05/dark/dark*.fits'
+        #filelocation = '/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/dark/dark*.fits' # for current date
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MDARK|UNK|LOAD
-        # Data group step configuration
-        [datagroup]
+    # Data group step configuration
+    [[datagroup]]
         redstepname = StepMasterDark
         groupkeys = XBIN|EXPTIME
 
 [mode_masterflat]
     steplist = StepLoadInput, load, StepDataGroup, save
     # BDF load step configuration
-    [loadinput]
+    [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        filelocation = /data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/flat/flat*.fits'
-        # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
-        includeheadvals =
-        # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |
-        excludeheadvals =
-        # strings which must be present in the filename for the file to be loaded, separate with |
-        fileinclude = 
+        filelocation = /data/images/StoneEdge/0.5meter/2018/2018-07-05/flat/flat*.fits'
+        #filelocation = /data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/flat/flat*.fits' # for current date
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MFLAT|UNK|LOAD
-        # Data group step configuration
-        [datagroup]
+    # Data group step configuration
+    [[datagroup]]
         redstepname = StepMasterFlat
         groupkeys = XBIN|FILTER
 
@@ -147,6 +137,13 @@
     # percentile value for maximum scaling
     maxpercent = 0.999
 
+# MasterBias step configuration
+[masterbias]
+    # Combination method: Specifies how the files should be combined - options are median, average, sum
+    combinationmethod = median
+    # Outputfolder: Output directory location - default is the folder of the input files
+    outputfolder = /data/images/StoneEdge/0.5meter/2018/Masters
+
 # MasterDark step configuration
 [masterdark]
     # filename that overrules the fit keys
@@ -158,6 +155,8 @@
     # list of input file datasets to flatten
     # - Expects None or a list of image HDU 
     #datalist = R array, T array
+    # Outputfolder: Output directory location - default is the folder of the input files
+    outputfolder = /data/images/StoneEdge/0.5meter/2018/Masters
 
 # MasterFlat step configuration
 [masterflat]
@@ -172,6 +171,22 @@
     # list of input file datasets to flatten
     # - Expects None or a list of image HDU 
     #datalist = R array, T array
+    # Outputfolder: Output directory location - default is the folder of the input files
+    outputfolder = /data/images/StoneEdge/0.5meter/2018/Masters
+    
+# Loadinput step configuration
+[loadinput]
+    # location of bdf folder(s)/file(s) to be reduced
+    filelocation = /data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/flat/flat*.fits' # for current date
+    # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
+    includeheadvals =
+    # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |
+    excludeheadvals =
+    # strings which must be present in the filename for the file to be loaded, separate with |
+    fileinclude = 
+    # strings which must not be present in the filename for the file to be loaded, separate with |
+    fileexclude = MFLAT|UNK|LOAD
+
 
 ### Data Handling Section
 
