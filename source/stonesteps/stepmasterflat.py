@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-""" PIPE STEP MASTER BIAS - Version 1.0.0
+""" PIPE STEP MASTER FLAT - Version 1.0.0
 
-    Code for StepMasterBias in pipeline: does the following
-    
-    !!!!!!!1 Add what the step needs as inputs, what it does and how, what the outputs are !!!!!!!!
+    This module creates master flat frames from inputs.
+    Should be run with like data inputs (same binning, etc).
+    Bias subtracts with matched master bias frames (from LoadAux).
+    Dark subtracts with matched master dark frames (from LoadAux).
 
     @author: Matt Merz
 """
@@ -105,7 +106,7 @@ class StepMasterFlat(StepLoadAux, StepMIParent):
             scaling_func = lambda arr: 10000.0/numpy.ma.median(arr)
             #combine them
             self.flat = ccdproc.combine(flatlist, method=self.getarg('combinemethod'), scale=scaling_func, unit='adu', add_keyword=False)
-#             self.flat = ccdproc.combine(filelist, method=self.getarg('combinemethod'), unit='adu', add_keyword=False)
+        # set output header, put image into output
         self.dataout.header=self.datain[0].header
         self.dataout.imageset(self.flat)
         # rename output filename
@@ -129,5 +130,6 @@ if __name__ == '__main__':
         
         
 """ === History ===
-    2018-07-?23 New step created based on StepRGB - Matt Merz
+    2018-07-23 New step created based on StepRGB - Matt Merz
+    2018-08-02 Updates to documentation, step functionality - Matt Merz
 """

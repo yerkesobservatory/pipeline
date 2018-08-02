@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 """ PIPE STEP LOAD INPUT FILES - Version 1.0.0
 
-    This module provides a pipe step with a simple mechanism to blah blah blah
+    This module provides a pipe step with a simple mechanism to load input files for data reduction.
+    Requires only a valid config file to run. Any other inputs are unused.
     
     @author: Matt Merz
     
@@ -23,7 +24,19 @@ class StepLoadInput(StepNIParent):
     """
 
     def setup(self):
-        """
+        """ ### Names and Parameters need to be Set Here ###
+            Sets the internal names for the function and for saved files.
+            Defines the input parameters for the current pipe step.
+            Setup() is called at the end of __init__
+            The parameters are stored in a list containing the following
+            information:
+            - name: The name for the parameter. This name is used when
+                    calling the pipe step from command line or python shell.
+                    It is also used to identify the parameter in the pipeline
+                    configuration file.
+            - default: A default value for the parameter. If nothing, set
+                       '' for strings, 0 for integers and 0.0 for floats
+            - help: A short description of the parameter.
         """
         ### Set names
         # Name of pipeline reduction step
@@ -50,7 +63,7 @@ class StepLoadInput(StepNIParent):
             "List of strings which filename must not contain to be loaded (unused if '' | separated)"])
 
     def run(self, inpar = '', data = None, multi = False):
-        # need os.expandvars like line 110 of steploadaux
+        # Loads all files base on glob, parameter 'filelocation'
         infile = self.getarg('filelocation')
         inglob = (datetime.strftime(datetime.now(), infile))
         indata = glob.glob(inglob)
@@ -58,6 +71,7 @@ class StepLoadInput(StepNIParent):
         infilenameinclude = self.getarg('fileinclude').split('|')
         ininclude=[]
         innamelist = []
+        # From all loaded inputs, includes files in final list which have certain strings in the filename
         if infilenameinclude[0] !='':
             for i in indata:
                 split = i.split('/')[len(i.split('/'))-1]
@@ -74,6 +88,7 @@ class StepLoadInput(StepNIParent):
         infilenameexclude = self.getarg('fileexclude').split('|')
         inexclude=[]
         exnamelist = []
+        # From all loaded inputs, excludes files from final list which have certain strings in the filename
         for i in indata:
             split = i.split('/')[len(i.split('/'))-1]
             exnamelist.append(split)
@@ -92,6 +107,7 @@ class StepLoadInput(StepNIParent):
         includelist = self.getarg('includeheadvals').split('|')
         keysinclude = []
         inheadinclude = []
+        # From all loaded inputs, includes files in final list which have certain keywords in the fits header
         if includelist[0] != '':
             for f in headlist:
                 for i in includelist:
@@ -102,6 +118,7 @@ class StepLoadInput(StepNIParent):
         else:
             inheadinclude=headlist
         inheadexclude = []
+        # From all loaded inputs, includes files in final list which have certain keywords in the fits header
         excludelist = self.getarg('excludeheadvals').split('|')
         if excludelist[0] != '':
             for f in headlist:
@@ -115,6 +132,7 @@ class StepLoadInput(StepNIParent):
         for files in headlistfinal:
             finalfiles.append(files.filename)
         self.dataout=[]
+        # Appends final list of loaded files to dataout
         for f in finalfiles:
             self.dataout.append(DataParent(config = self.config).load(f))
 
@@ -143,5 +161,6 @@ if __name__ == '__main__':
     StepLoadInput().execute()
 
 """ === History ===
-
+    2018-07-20 New step created based on other StepParent child objects - Matt Merz
+    2018-08-02 Updates to documentation, step functionality - Matt Merz
 """
