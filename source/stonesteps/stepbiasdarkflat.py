@@ -179,7 +179,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         self.bias = ccdproc.CCDData.read(namelist, unit='adu', relax=True)
         # Finish up
         self.biasloaded = True
-        self.biasname = namelist[0]
+        self.biasname = namelist
         self.log.debug('LoadBias: done')
         
     def loaddark(self):
@@ -223,7 +223,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         #     self.log.debug('Master dark frame is *already* bias corrected (%s).' % dark_bias) 
         # Finish up 
         self.darkloaded = True 
-        self.darkname = namelist[0]
+        self.darkname = namelist
         self.log.debug('LoadDark: done')
             
     def loadflat(self):
@@ -301,7 +301,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         self.flat = ccdproc.CCDData.read(namelist, unit='adu', relax=True)    
         # Finish up
         self.flatloaded = True  
-        self.flatname = namelist[0] 
+        self.flatname = namelist 
         self.log.debug('LoadFlat: done')
             
     def reset(self):
