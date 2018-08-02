@@ -170,15 +170,13 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         #master bias frame
         #Search for bias and load it into data object
         namelist = self.loadauxname('bias', multi = False)
+        self.log.info('File loaded: %s' % namelist)
         if(len(namelist) == 0):
             self.log.error('Bias calibration frame not found.')
             raise RuntimeError('No bias file loaded')
         self.log.debug('Creating master bias frame...')
         #if there is just one, use it as biasfile or else combine all to make a master bias
-        if (len(namelist) == 1):
-            self.bias = ccdproc.CCDData.read(namelist[0], unit='adu', relax=True)
-        else:
-            self.bias = ccdproc.combine(namelist, method='median', unit='adu', add_keyword=False)
+        self.bias = ccdproc.CCDData.read(namelist, unit='adu', relax=True)
         # Finish up
         self.biasloaded = True
         self.biasname = namelist[0]
@@ -216,10 +214,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         #         darks = name
         self.log.debug('Creating master dark frame...')
         #if there is just one, use it as darkfile or else combine all to make a master dark
-        if (len(namelist) == 1):
-            self.dark = ccdproc.CCDData.read(namelist[0], unit='adu', relax=True)
-        else:
-            self.dark = ccdproc.combine(namelist, method='median', unit='adu', add_keyword=False, **{'verify': 'ignore'})
+        self.dark = ccdproc.CCDData.read(namelist, unit='adu', relax=True)
         #bias correct, if necessary
         # if(not dark_is_bias_corrected):
         #     #Subtracting master bias frame from master dark frame
@@ -303,13 +298,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         #     self.log.info("Average exposure time for flats is %f"%flat_ave_exptime)
         self.log.debug('Creating master flat frame...')
         #if there is just one, use it as flatfile or else combine all to make a master flat
-        if (len(namelist) == 1):
-            self.flat = ccdproc.CCDData.read(namelist[0], unit='adu', relax=True)    
-        else:
-            #scale the flat component frames to have the same mean value, 10000.0
-            scaling_func = lambda arr: 10000.0/numpy.ma.median(arr)
-            #combine them
-            self.flat = ccdproc.combine(namelist, method='median', scale=scaling_func, unit='adu', add_keyword=False)
+        self.flat = ccdproc.CCDData.read(namelist, unit='adu', relax=True)    
         # Finish up
         self.flatloaded = True  
         self.flatname = namelist[0] 
