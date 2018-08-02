@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 """ PIPE STEP MASTER BIAS - Version 1.0.0
 
-    Code for StepMasterBias in pipeline: does the following
-    
-    !!!!!!!1 Add what the step needs as inputs, what it does and how, what the outputs are !!!!!!!!
+    This module creates master bias frames from inputs.
+    Should be run with like data inputs (same binning, etc).
 
     @author: Matt Merz
 """
@@ -71,11 +70,12 @@ class StepMasterBias(StepMIParent):
             self.log.error('Bias calibration frame not found.')
             raise RuntimeError('No bias file(s) loaded')
         # self.log.debug('Creating master bias frame...')
-        #if there is just one, use it as biasfile or else combine all to make a master bias
+        # if there is just one, use it as biasfile or else combine all to make a master bias
         if (len(filelist) == 1):
             self.bias = ccdproc.CCDData.read(filelist[0], unit='adu', relax=True)
         else:
             self.bias = ccdproc.combine(filelist, method=self.getarg('combinemethod'), unit='adu', add_keyword=True)
+        # set output header, put image into output
         self.dataout.header=self.datain[0].header
         self.dataout.imageset(self.bias)
         # rename output filename

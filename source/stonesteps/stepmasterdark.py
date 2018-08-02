@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-""" PIPE STEP MASTER BIAS - Version 1.0.0
+""" PIPE STEP MASTER DARK - Version 1.0.0
 
-    Code for StepMasterBias in pipeline: does the following
-    
-    !!!!!!!1 Add what the step needs as inputs, what it does and how, what the outputs are !!!!!!!!
+    This module creates master dark frames from inputs.
+    Should be run with like data inputs (same binning, etc).
+    Bias subtracts with matched master bias frames (from LoadAux).
 
     @author: Matt Merz
 """
@@ -92,6 +92,7 @@ class StepMasterDark(StepLoadAux, StepMIParent):
                 darksubbias = ccdproc.subtract_bias(dark, self.bias, add_keyword=False)
                 darklist.append(darksubbias)
             self.dark = ccdproc.combine(darklist, method=self.getarg('combinemethod'), unit='adu', add_keyword=True)
+        # set output header, put image into output
         self.dataout.header=self.datain[0].header
         self.dataout.imageset(self.dark)
         # rename output filename
