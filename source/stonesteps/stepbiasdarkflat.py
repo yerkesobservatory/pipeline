@@ -201,19 +201,19 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             self.log.error('Dark calibration frame(s) not found.')
             raise RuntimeError('No dark file loaded')
         darks = None
-        for name in namelist:
-            #is (any) dark file bias corrected?
-            header = fits.getheader(name)
-            if(header.get('BIAS') != None):
-                dark_is_bias_corrected = True
-                dark_bias = header.get('BIAS')
-            elif(header.get('BIASCORR') != None):
-                dark_is_bias_corrected = True
-                dark_bias = header.get('BIASCORR')
-            if(darks):
-                darks += ','+name
-            else:
-                darks = name
+        # for name in namelist:
+        #     #is (any) dark file bias corrected?
+        #     header = fits.getheader(name)
+        #     if(header.get('BIAS') != None):
+        #         dark_is_bias_corrected = True
+        #         dark_bias = header.get('BIAS')
+        #     elif(header.get('BIASCORR') != None):
+        #         dark_is_bias_corrected = True
+        #         dark_bias = header.get('BIASCORR')
+        #     if(darks):
+        #         darks += ','+name
+        #     else:
+        #         darks = name
         self.log.debug('Creating master dark frame...')
         #if there is just one, use it as darkfile or else combine all to make a master dark
         if (len(namelist) == 1):
@@ -221,11 +221,11 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         else:
             self.dark = ccdproc.combine(darks, method='median', unit='adu', add_keyword=False, **{'verify': 'ignore'})
         #bias correct, if necessary
-        if(not dark_is_bias_corrected):
-            #Subtracting master bias frame from master dark frame
-            self.dark = ccdproc.subtract_bias(self.dark, self.bias, add_keyword=False)
-        else:
-            self.log.debug('Master dark frame is *already* bias corrected (%s).' % dark_bias) 
+        # if(not dark_is_bias_corrected):
+        #     #Subtracting master bias frame from master dark frame
+        #     self.dark = ccdproc.subtract_bias(self.dark, self.bias, add_keyword=False)
+        # else:
+        #     self.log.debug('Master dark frame is *already* bias corrected (%s).' % dark_bias) 
         # Finish up 
         self.darkloaded = True 
         self.darkname = namelist[0]
@@ -254,53 +254,53 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         datalist = []
         flat_corrected = None
         #check a few things in these flat component frames
-        for name in namelist:
-            header = fits.getheader(name)
+        # for name in namelist:
+            # header = fits.getheader(name)
             #is this flat bias corrected?
-            if(header.get('BIAS') != None):
-                flat_is_bias_corrected = True
-                flat_bias = header.get('BIAS')
-            elif(header.get('BIASCORR') != None):
-                flat_is_bias_corrected = True
-                flat_bias = header.get('BIASCORR')
-            #is this flat dark corrected?
-            if(header.get('DARK') != None):
-                flat_is_dark_corrected = True
-                flat_dark = header.get('DARK')
-            elif(header.get('DARKCORR') != None):
-                flat_is_dark_corrected = True
-                flat_dark = header.get('DARKCORR')
-            flat_corrected = "%s"%(name.rsplit('.',1)[0])+".corrected"	
-            shutil.copy(name, flat_corrected)
-            self.log.debug('Copying %s to %s' % (name, flat_corrected))
-            self.flat = ccdproc.CCDData.read(flat_corrected, unit='adu', relax=True)
-            #bias correct, if necessary
-            if(not flat_is_bias_corrected):
-                self.log.debug('Subtracting master bias frame from flat frame...')
-                self.flat = ccdproc.subtract_bias(self.flat, self.bias, add_keyword=False)
-            else:
-                self.log.debug('Flat frame (%s) is *already* bias corrected.'%flat_bias)
-            #dark correct, if necessary
-            if(not flat_is_dark_corrected):
-                self.log.debug('Subtracting master dark frame from flat frame...')
-                self.flat = ccdproc.subtract_dark(self.flat, self.dark, scale=True, exposure_time='EXPTIME', exposure_unit=u.second, add_keyword=False)
-            else:
-                self.log.debug('Flat frame (%s) is *already* dark corrected.'%flat_dark)      
-            #create CCD Data object list with corrected flat files
-            datalist.append(self.flat)
-            #calc average exposure time for potential dark correction
-            if(header.get('EXPTIME') != None):
-                try:
-                    exptime = float(header.get('EXPTIME'))
-                    flat_ave_exptime += exptime
-                except ValueError:
-                    self.log.error('Exposure time (EXPTIME) is not a float (%s).'%(header.get('EXPTIME')))
-                count += 1
-        #calc average exposure time
-        if(count > 0):
-            flat_ave_exptime = flat_ave_exptime/count
-            self.flat.header['EXPTIME'] = flat_ave_exptime
-            self.log.info("Average exposure time for flats is %f"%flat_ave_exptime)
+            # if(header.get('BIAS') != None):
+            #     flat_is_bias_corrected = True
+            #     flat_bias = header.get('BIAS')
+            # elif(header.get('BIASCORR') != None):
+            #     flat_is_bias_corrected = True
+            #     flat_bias = header.get('BIASCORR')
+            # #is this flat dark corrected?
+            # if(header.get('DARK') != None):
+            #     flat_is_dark_corrected = True
+            #     flat_dark = header.get('DARK')
+            # elif(header.get('DARKCORR') != None):
+            #     flat_is_dark_corrected = True
+            #     flat_dark = header.get('DARKCORR')
+            # flat_corrected = "%s"%(name.rsplit('.',1)[0])+".corrected"	
+            # shutil.copy(name, flat_corrected)
+            # self.log.debug('Copying %s to %s' % (name, flat_corrected))
+            # self.flat = ccdproc.CCDData.read(flat_corrected, unit='adu', relax=True)
+            # #bias correct, if necessary
+            # if(not flat_is_bias_corrected):
+            #     self.log.debug('Subtracting master bias frame from flat frame...')
+            #     self.flat = ccdproc.subtract_bias(self.flat, self.bias, add_keyword=False)
+            # else:
+            #     self.log.debug('Flat frame (%s) is *already* bias corrected.'%flat_bias)
+            # #dark correct, if necessary
+            # if(not flat_is_dark_corrected):
+            #     self.log.debug('Subtracting master dark frame from flat frame...')
+            #     self.flat = ccdproc.subtract_dark(self.flat, self.dark, scale=True, exposure_time='EXPTIME', exposure_unit=u.second, add_keyword=False)
+            # else:
+            #     self.log.debug('Flat frame (%s) is *already* dark corrected.'%flat_dark)      
+            # #create CCD Data object list with corrected flat files
+            # datalist.append(self.flat)
+            # #calc average exposure time for potential dark correction
+        #     if(header.get('EXPTIME') != None):
+        #         try:
+        #             exptime = float(header.get('EXPTIME'))
+        #             flat_ave_exptime += exptime
+        #         except ValueError:
+        #             self.log.error('Exposure time (EXPTIME) is not a float (%s).'%(header.get('EXPTIME')))
+        #         count += 1
+        # #calc average exposure time
+        # if(count > 0):
+        #     flat_ave_exptime = flat_ave_exptime/count
+        #     self.flat.header['EXPTIME'] = flat_ave_exptime
+        #     self.log.info("Average exposure time for flats is %f"%flat_ave_exptime)
         self.log.debug('Creating master flat frame...')
         #if there is just one, use it as flatfile or else combine all to make a master flat
         if (len(namelist) == 1):
@@ -309,7 +309,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             #scale the flat component frames to have the same mean value, 10000.0
             scaling_func = lambda arr: 10000.0/numpy.ma.median(arr)
             #combine them
-            self.flat = ccdproc.combine(datalist, method='median', scale=scaling_func, unit='adu', add_keyword=False)
+            self.flat = ccdproc.combine(namelist, method='median', scale=scaling_func, unit='adu', add_keyword=False)
         # Finish up
         self.flatloaded = True  
         self.flatname = namelist[0] 

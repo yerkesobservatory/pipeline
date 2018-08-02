@@ -149,5 +149,6 @@ if __name__ == '__main__':
     StepLoadInput().execute()
 
 """ === History ===
-
+    2018-07-20 New step created based on other StepParent child objects - Matt Merz
+    2018-08-02 Updates to documentation, step functionality - Matt Merz
 """

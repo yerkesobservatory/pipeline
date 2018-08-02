@@ -99,5 +99,6 @@ if __name__ == '__main__':
         
         
 """ === History ===
-    2018-07-?23 New step created based on StepRGB - Matt Merz
+    2018-07-23 New step created based on StepRGB - Matt Merz
+    2018-08-02 Updates to documentation, step functionality - Matt Merz
 """
