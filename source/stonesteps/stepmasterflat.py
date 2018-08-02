@@ -110,8 +110,10 @@ class StepMasterFlat(StepLoadAux, StepMIParent):
         self.dataout.header=self.datain[0].header
         self.dataout.imageset(self.flat)
         # rename output filename
-        if self.getarg('outputfolder')!='':
-            self.dataout.filename = os.path.join(self.getarg('outputfolder'), os.path.split(filelist[0])[1])
+        outputfolder = self.getarg('outputfolder')
+        if outputfolder != '':
+            outputfolder = os.path.expandvars(outputfolder)
+            self.dataout.filename = os.path.join(outputfolder, os.path.split(filelist[0])[1])
         else:
             self.dataout.filename = filelist[0]
         
