@@ -30,7 +30,7 @@ class DataParent(object):
         as a single image (numpy array).
     """
     # General variables: These are valid for all pipeline and all pipesteps
-    pipever = '1.1.1' # Pipeline version
+    pipever = '1.3.0beta3' # Pipeline version
 
     #testconf = 'config/pipeconf_master.txt' # Test configuration
     testconf = 'config/pipeconf_mgb.txt' # Test configuration
@@ -219,6 +219,12 @@ class DataParent(object):
                         self.log.error('SetConfig: Invalid configuration file in list = %s' % conf)
                         raise ValueError('Invalid configuration file in list = %s' % conf)
             retmsg  = 'config list with %d files' % len(config)
+        # Set environment variables from [envars]
+        if not self.config is None:
+            if self.config.has_key('envars'):
+                for var in self.config['envars']:
+                    os.environ[var] = str( self.config['envars'][var] )
+        # Return
         self.log.debug('SetConfig: done ('+retmsg+')')
         return self.config
 
@@ -530,23 +536,36 @@ class DataParent(object):
 
     def getheadval(self, key, errmsg=True):
         """ Get Header Value: Returns the value of the requested key from
-            the header. If the keyword is present in the [Header] section
-            of the configuration that value is returned instead. In case that
-            value from the configuration file is itself a header key, the value
-            stored under that key is returned. If the key can not be found an
-            KeyError is produced and a warning is issued.
+            the header. If the key is present in the [Header] section
+            of the configuration that value is returned instead, the following
+            entries are possible in the configuration file:
+              * KEY = VALUE * VALUE is returned, the system checks if value is an
+                              int or a float, else a string is returned.
+              * KEY = NEWKEY * The VALUE under header[NEWKEY] is returned.
+              * KEY = ?_ALTKEY * If the keyword KEY is present, header[KEY] is
+                                 returned, else header[ALTKEY] is returned.
+            If the key can not be found an KeyError is produced and a warning is
+            issued (unless key is present in the [Header] section of the
+            configuration).
 
             errmsg: Flag indicating if a log error message should be
                     issued if the keyword is not found. This can be disabled
                     (set it to False) if getheadval is used to probe a dataset.
         """
-        val=None
+        val = None
+        inkey = key # retain key which was input in case key changes
         # Look in the config
         try:
             # get the value
             val = self.config['header'][key]
+            # Check if it's optional header replacement i.e. starts with '?_'
+            if val[:2] in ['?_', '? ', '?-']:
+                # if key is not in the header -> use key name under value instead
+                if not key in self.header:
+                    key = val[2:].upper()
+                val = None
             # Check if it's a Header replacement (but not T/F)
-            if val[0].isalpha() and val[:2] not in ['T ', 'F '] and val not in ['T', 'F']:
+            elif val[0].isalpha() and val[:2] not in ['T ', 'F '] and val not in ['T', 'F']:
                 self.log.info('Getheadval: Using %s value for %s' %
                               (val.upper(), key ))
                 key = val.upper()
@@ -601,9 +620,9 @@ class DataParent(object):
 
         # Debug message (only first line if multi-line value)
         if '\n' in str(val):
-            self.log.debug('GetHeadval: done (%s=%s ...)' % (key, str(val[0])))
+            self.log.debug('GetHeadval: done (%s=%s ...)' % (inkey, str(val[0])))
         else:
-            self.log.debug('GetHeadVal: done (%s=%s)' % (key,str(val)))
+            self.log.debug('GetHeadVal: done (%s=%s)' % (inkey,str(val)))
         return val
 
     def setheadval(self, key, value, comment = ''):
