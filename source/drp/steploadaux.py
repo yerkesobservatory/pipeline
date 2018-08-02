@@ -108,6 +108,7 @@ class StepLoadAux(StepParent):
             auxpar = self.auxpar
         # Get parameters
         auxfile = os.path.expandvars(self.getarg(auxpar + 'file'))
+        self.log.debug("Looking for files under %s" % auxfile)
         fitkeys  = self.getarg(auxpar + 'fitkeys')
         if len(fitkeys) == 1 and len(fitkeys[0]) == 0:
             fitkeys = []
