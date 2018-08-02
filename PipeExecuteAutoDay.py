@@ -108,20 +108,23 @@ def execute():
         # It will do this for every entry in objectlist (i.e. for every object)
         pipe.reset()
         # Run the pipeline (return with error message)
+        #result = pipe(imagelist)
         try:
+            #pass
             result = pipe(imagelist)
         except Exception, e:
             log.warning("Pipeline for object = %s returned Error" % entry)
             log.warning('Found Error = %s' % repr(e))
+            print('Found Error = %s' % repr(e))
             trb = traceback.format_exc().split('\n').reverse()
             for tr in trb:
                 log.warning(tr)
 
 # Run the setup code in an error with reporting traceback
-execute()
+#execute()
 try:
-    pass
-    #execute()
+    #pass
+    execute()
 except Exception, e:
     log.error('Found Error = %s' % repr(e))
     trb = traceback.format_exc().split('\n').reverse()
