@@ -190,9 +190,9 @@ class StepRGB(StepMIParent):
     imgcube[:,:,1] = 255 * img_scale.sqrt(datause[1].image, scale_min= gminsv, scale_max= maxsv)
     imgcube[:,:,2] = 255 * img_scale.sqrt(datause[2].image, scale_min= bminsv, scale_max= maxsv)
     self.dataout.image = imgcube
-	# Create variable containing all the scaled image data
-	imgcolor = Image.fromarray(self.dataout.image, mode='RGB')
-	# Save colored image as a .tif file (without the labels)
+    # Create variable containing all the scaled image data
+    imgcolor = Image.fromarray(self.dataout.image, mode='RGB')
+    # Save colored image as a .tif file (without the labels)
 	imgcolortif = imgcube.copy()
 	imgcolortif.astype('uint16')
 	### tiff.imsave('%s.tif' % self.dataout.filenamebase, imgcolortif)

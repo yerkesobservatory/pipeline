@@ -51,7 +51,7 @@
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        filelocation = '/data/images/StoneEdge/0.5meter/2018/2018-07-05/bias/bias*.fits'
+        filelocation = '/data/images/StoneEdge/0.5meter/2018/2018-07-07/bias/bias*.fits'
         #filelocation = '/data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/bias/bias*.fits' # for current date
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MBIAS|UNK|LOAD
@@ -75,11 +75,11 @@
         groupkeys = XBIN|EXPTIME
 
 [mode_masterflat]
-    steplist = StepLoadInput, load, StepDataGroup, save
+    stepslist = StepLoadInput, StepDataGroup, save
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        filelocation = /data/images/StoneEdge/0.5meter/2018/2018-07-05/flat/flat*.fits'
+        filelocation = '/data/images/StoneEdge/0.5meter/2018/2018-07-05/flat/flat*.fits'
         #filelocation = /data/images/StoneEdge/0.5meter/2018/%Y-%m-%d/flat/flat*.fits' # for current date
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MFLAT|UNK|LOAD
@@ -147,7 +147,8 @@
 # MasterDark step configuration
 [masterdark]
     # filename that overrules the fit keys
-    biasfile = /data/images/StoneEdge/0.5meter/2018/Masters/Bias/*MBIAS.fits
+    biasfile = '${MASTER_BDF_FOLDER}/Bias/*MBIAS.fits'
+    #biasfile = /data/images/StoneEdge/0.5meter/2018/Masters/Bias/*MBIAS.fits
     daterange = 0.5
     # list of keys that need to match bias and data file
     #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
@@ -156,13 +157,14 @@
     # - Expects None or a list of image HDU 
     #datalist = R array, T array
     # Outputfolder: Output directory location - default is the folder of the input files
-    outputfolder = /data/images/StoneEdge/0.5meter/2018/Masters/Dark
+    outputfolder = $MASTER_BDF_FOLDER/Dark
+    #outputfolder = /data/images/StoneEdge/0.5meter/2018/Masters/Dark
 
 # MasterFlat step configuration
 [masterflat]
     # filename that overrules the fit keys
-    biasfile = /data/images/StoneEdge/0.5meter/2018/*/bias/*MBIAS.fits    
-    darkfile = /data/images/StoneEdge/0.5meter/2018/*/dark/*MDARK.fits
+    biasfile = /data/images/StoneEdge/0.5meter/2018/Masters/Bias/*MBIAS.fits    
+    darkfile = /data/images/StoneEdge/0.5meter/2018/Masters/Dark/*MDARK.fits
     daterange = 0.5
     # list of keys that need to match bias and data file
     #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge

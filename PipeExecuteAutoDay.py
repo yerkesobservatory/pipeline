@@ -90,11 +90,11 @@ def execute():
             num = image[-14:-5]
             # Makes sure the images collected are FITS images
             # i.e. end with "seo.fits" not KEYS or WCS other reduction product
-	        if not image[-8:] in ['seo.fits', 'RAW.fits']: # if file ends with "seo.fits" - regular SEO data
+            if not image[-8:] in ['seo.fits', 'RAW.fits']: # if file ends with "seo.fits" - regular SEO data
                                                            # if file ends with "RAW.fits" - raw data
 	            if not '_0.fits' in image[-7:]: # check if file ends with "0.fits" - queue data
 	                if not 'seo%s.fits' % num in image[-17:]: # check if file ends with "seoNUMBER.fits"
-                        continue
+                            continue
             # Ignore dark, flat or bias images
             if 'dark' in image or 'flat' in image or 'bias' in image:
                 continue
@@ -110,12 +110,18 @@ def execute():
         # Run the pipeline (return with error message)
         try:
             result = pipe(imagelist)
-        except:
+        except Exception, e:
             log.warning("Pipeline for object = %s returned Error" % entry)
+            log.warning('Found Error = %s' % repr(e))
+            trb = traceback.format_exc().split('\n').reverse()
+            for tr in trb:
+                log.warning(tr)
 
 # Run the setup code in an error with reporting traceback
+execute()
 try:
-    execute()
+    pass
+    #execute()
 except Exception, e:
     log.error('Found Error = %s' % repr(e))
     trb = traceback.format_exc().split('\n').reverse()
