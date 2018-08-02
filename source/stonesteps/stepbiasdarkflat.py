@@ -200,7 +200,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         if(len(namelist) == 0):
             self.log.error('Dark calibration frame(s) not found.')
             raise RuntimeError('No dark file loaded')
-        darks = None
+        # darks = None
         # for name in namelist:
         #     #is (any) dark file bias corrected?
         #     header = fits.getheader(name)
@@ -219,7 +219,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         if (len(namelist) == 1):
             self.dark = ccdproc.CCDData.read(namelist[0], unit='adu', relax=True)
         else:
-            self.dark = ccdproc.combine(darks, method='median', unit='adu', add_keyword=False, **{'verify': 'ignore'})
+            self.dark = ccdproc.combine(namelist, method='median', unit='adu', add_keyword=False, **{'verify': 'ignore'})
         #bias correct, if necessary
         # if(not dark_is_bias_corrected):
         #     #Subtracting master bias frame from master dark frame
