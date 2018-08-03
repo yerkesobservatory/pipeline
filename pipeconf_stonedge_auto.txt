@@ -16,7 +16,8 @@
 [envars]
     # Master Bias, Dark, Flat Folder
     MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2018/Masters 
-    BDF_DATE = 2018-07-19
+    # Date for reducing BDF files from a certain day
+    BDF_DATE = 2018-07-31
 
 # Data Section: information on data objects and file names
 [data]
