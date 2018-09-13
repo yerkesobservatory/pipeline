@@ -85,8 +85,9 @@ class StepMasterBias(StepMIParent):
             self.dataout.filename = os.path.join(outputfolder, os.path.split(filelist[0])[1])
         else:
             self.dataout.filename = filelist[0]
-        
-        
+        # Add history
+        self.dataout.setheadval('HISTORY','MasterBias: %d files used' % len(filelist))
+
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
         Command:
