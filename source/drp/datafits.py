@@ -1333,7 +1333,7 @@ class DataFits(DataParent):
         # Set value into hdr
         if comment != None: hdr[key] = (value,comment)
         else: hdr[key] = value
-        self.log.debug('SetHeadVal: done')
+        self.log.debug('SetHeadVal: done (%s=%s)' % (key, repr(value)))
 
     def delheadval(self, key, dataname = None):
         """ Delete one or more FITS keyword in specified header, which defaults
