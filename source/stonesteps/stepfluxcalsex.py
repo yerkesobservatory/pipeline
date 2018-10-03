@@ -166,6 +166,9 @@ class StepFluxCalSex(StepParent):
         self.dataout.setheadval('PHOTZPER', 0.0, 'Uncertainty of the photometric zeropoint')
         # Add Bzero and Bscale
         bzero = np.nanpercentile(self.dataout.image,self.getarg('zeropercent'))
+        #-- Alternative bzero idea:
+        #-mask = image_array < np.percentile(image,90)
+        #-bzero = np.median(image_array[mask])
         bscale = 3631. * 10 ** (b_ml/2.5)
         self.dataout.image = bscale * (self.dataout.image - bzero)
         #print(bzero,bscale)
