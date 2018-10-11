@@ -75,7 +75,7 @@ class StepFluxCalSex(StepParent):
         self.paramlist.append(['sxcmd', 'sex %s',
                                'Command to call source extractor, should contain ' +
                                '1 string placeholder for intput filepathname'])
-        self.paramlist.append(['sxoptions','-c psf.sex',
+        self.paramlist.append(['sxoptions','-c psf.sex --CATALOG_NAME test.cat --CATALOG_TYPE',
                                'command line options for source extractor'])
         self.paramlist.append(['verbose',False,
                                'log full source extrator output at DEBUG level'])

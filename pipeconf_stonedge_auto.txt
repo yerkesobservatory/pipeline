@@ -209,6 +209,11 @@
     # Header keyword to re-identify files to avoid re-reducing the same groups
     #     (default is '' indicating all data has to be re-reduced)
     fileidkey = ''
+    
+# FluxCalSex step configuration
+[fluxcalsex]
+    #sxoptions = '-c /usr/local/share/sextractor/default.sex -CATALOG_NAME test.cat -CATALOG_TYPE FITS_LDAC -PARAMETERS_NAME default.param'
+    sxoptions = '-c /usr/local/share/sextractor/default.sex -CATALOG_NAME test.cat -CATALOG_TYPE FITS_LDAC -PARAMETERS_NAME default.param -BACKPHOTO_TYPE GLOBAL -MASK_TYPE CORRECT -DETECT_MINAREA 5'
 
 ### Data Handling Section
 
