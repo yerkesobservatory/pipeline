@@ -152,6 +152,7 @@ class StepParent(object):
 
     def updateheader(self,data):
         """ Update the header for a single PipeData object
+            - Updates filename with self.procname
             - Sets the PROCSTAT and PROCLEVL keywords in the data header
             - Adds a history entry to the data header
         """
@@ -311,7 +312,8 @@ class StepParent(object):
         ### Read Arguments
         # Set up argument parser - Generic parameters
         self.parser = argparse.ArgumentParser(description="Pipeline Step %s" % self.name,
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+            epilog = 'Multipe --config entries are possible; config files are merged.')
         self.parser.add_argument('inputfiles', type=str, default='', nargs='*',
                             help='input files pathname',)
         self.parser.add_argument('-t','--test', action='store_true',
@@ -322,8 +324,8 @@ class StepParent(object):
                             help='log level')
         self.parser.add_argument('--logfile', default=None, type=str,
                             help='logging file')
-        self.parser.add_argument('--config', default=None, type=str,
-                            help='pipeline configuration file')
+        self.parser.add_argument('-c', '--config', default=[], type=str,
+                            action='append', help='pipeline configuration file(s)')
         # Add step-specific parameters from parlist
         for param in self.paramlist:
             # Comment: default = None because getarg gets default value from
@@ -352,9 +354,8 @@ class StepParent(object):
             fhand.setFormatter(logging.Formatter(fmt))
             logging.getLogger().addHandler(fhand)
         # Set configuration (load if specified)
-        if args.config is not None:
-            datain = DataParent(config = args.config)
-            self.config = datain.config
+        if len(args.config) > 0:
+            self.config = DataParent(config = args.config).config
         elif not args.test: # Set config unless test is requested
             self.config = ConfigObj()
             self.config[self.name]={}
@@ -371,7 +372,7 @@ class StepParent(object):
             This function is overwritten in MISO and MIMO steps
         """
 
-        if len(self.arglist['inputfiles']) > 0:
+        if len(inputfiles) > 0:
             for filename in inputfiles:
                 # Read input file: make dataparent, get child from load() ##-
                 datain = DataParent(config = self.config)
