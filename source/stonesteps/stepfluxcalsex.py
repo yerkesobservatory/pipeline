@@ -107,7 +107,7 @@ class StepFluxCalSex(StepParent):
             self.datain.save()
         # Make catalog filename
         catfilename = self.datain.filenamebegin
-        if catfilename[-1] in '._-': catfilename += 'cat.fits'
+        if catfilename[-1] in '._-': catfilename += 'sex_cat.fits'
         else: catfilename += '.cat.fits'
         self.log.debug('Sextractor catalog filename = %s' % catfilename)
         # Make command string
@@ -135,6 +135,9 @@ class StepFluxCalSex(StepParent):
         seo_SN = ((seo_catalog['FLUX_AUTO']/seo_catalog['FLUXERR_AUTO'])>10)
         seo_SN = (seo_SN) & (elongation) & ((seo_catalog['FLUX_AUTO']/seo_catalog['FLUXERR_AUTO'])<1000)
         self.log.debug('Selected %d stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
+        # Delete source extractor catalog is needed
+        if self.getarg('delete_cat'):
+            os.remove(catfilename)
         ### Querry and extract data from Guide Star Catalog
         # Get RA / Dec
         ra_center =  self.datain.getheadval('RA' ).split(':')
