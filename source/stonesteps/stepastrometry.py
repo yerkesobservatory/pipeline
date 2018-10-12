@@ -59,7 +59,7 @@ class StepAstrometry(StepParent):
         self.paramlist.append(['downsample', [8, 4, 2],
                                'List of downsample factors to try'])
         self.paramlist.append(['timeout', 600,
-                               'Timeout for running astrometry in seconds'])
+                               'Timeout for running astrometry (seconds)'])
         # confirm end of setup
         self.log.debug('Setup: done')
 
