@@ -10,6 +10,7 @@ import logging # logging object library
 import tempfile # temporary file library
 import os # library for operating system calls
 import time # library to manage delay and timeout
+import string # library to join text
 import subprocess # library to run subprocesses
 from drp.pipedata import PipeData
 from drp.stepparent import StepParent
@@ -74,6 +75,10 @@ class StepAstrometry(StepParent):
         # crash sometimes
         outname = os.path.split(fp.name)[1]
         fp.close()
+        # Add input file path to ouput file and make new name
+        outpath = os.path.split(self.datain.filename)[0]
+        outnewname = os.path.join(outpath, outname.replace('.fits','.new') )
+        outwcsname = os.path.join(outpath, outname.replace('.fits','.wcs') )
         # Make sure input data exists as file
         if not os.path.exists(self.datain.filename) :
             self.datain.save()
@@ -98,17 +103,21 @@ class StepAstrometry(StepParent):
                 time.sleep(1)
             poll = process.poll()
             self.log.debug('command returns %d' % poll)
-            if poll == 0:
+            if poll == 0 and os.path.exists(outnewname):
+                self.log.debug('output file valid -> astrometry successful')
                 break
-        output = process.stdout.read()
-        if self.getarg('verbose'):
+            else:
+                self.log.debug('output file missing -> astrometry failed')
+        # Print the output (cut if necessary)
+        if self.getarg('verbose') and poll == 0:
+            output = process.stdout.read()
+            if len(output) > 1000:
+                outlines = output.split('\n')
+                output = outlines[:10]+['...','...']+outlines[-7:]
+                output = string.join(output,'\n')
             self.log.debug(output)
 
         ### Post processing
-        # Add input file path to ouput file and make new name
-        outpath = os.path.split(self.datain.filename)[0]
-        outnewname = os.path.join(outpath, outname.replace('.fits','.new') )
-        outwcsname = os.path.join(outpath, outname.replace('.fits','.wcs') )
         # Read output file
         self.dataout = PipeData(config=self.config)
         self.log.debug('Opening Astrometrica output file %s' % outnewname)
@@ -119,6 +128,8 @@ class StepAstrometry(StepParent):
             self.log.error("Unable to open Astrometrica output file = %s"
                            % outname)
             raise error
+        histmsg = 'Astrometry.Net: At downsample = %d, search took %d seconds' % (downsample, time.time() - timeout + 300)
+        self.dataout.setheadval('HISTORY', histmsg)
         # Delete temporary filess
         if self.getarg('delete_temp'):
             os.remove(outnewname)

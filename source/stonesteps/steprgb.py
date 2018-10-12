@@ -220,7 +220,7 @@ class StepRGB(StepMIParent):
         try:
             objectname = filename.split('_')[0]
             objectname = objectname[0].upper()+objectname[1:]
-        except e:
+        except Exception, e:
             objectname = 'Unknown.'
         objectname = 'Object:  %s' % objectname
         # Read labels at their respective position (kept relative to image size)
