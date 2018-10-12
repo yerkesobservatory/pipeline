@@ -93,6 +93,10 @@ class StepAstrometry(StepParent):
             while time.time() < timeout and process.poll() == None:
                 time.sleep(1)
             poll = process.poll()
+            if poll == None:
+                process.kill()
+                time.sleep(1)
+            poll = process.poll()
             self.log.debug('command returns %d' % poll)
             if poll == 0:
                 break
@@ -131,7 +135,7 @@ if __name__ == '__main__':
           --loglevel=LEVEL : configures the logging output for a particular level
           -h, --help : Returns a list of 
     """
-    StepAstrometrica().execute()
+    StepAstrometry().execute()
 
 """ === History ===
 2016-10-15 First version
