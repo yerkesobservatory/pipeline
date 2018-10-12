@@ -3,9 +3,6 @@
 # Below is the "default" python path, the one above is necessary on stars.
 #!/usr/bin/env python
 
-# this file was created from PipeExecuteAutoDay b/c there's no write permission
-# on that file. - mgb 160805
-
 ''' This is a version of a script that executes the Data Reduction Pipeline
     from a folder one level above the images. The final goal is to have a script 
     connected to Yerkes' File Manager server that will automatically execute 
@@ -116,9 +113,14 @@ def execute():
             log.warning("Pipeline for object = %s returned Error" % entry)
             log.warning('Found Error = %s' % repr(e))
             print('Found Error = %s' % repr(e))
-            trb = traceback.format_exc().split('\n').reverse()
-            for tr in trb:
-                log.warning(tr)
+            try:
+                trb = traceback.format_exc().split('\n').reverse()
+                for tr in trb:
+                    log.warning(tr)
+            except Exception, f:
+                log.warning('Unable to print traceback')
+                print(traceback.format_exc(),trb)
+
 
 # Run the setup code in an error with reporting traceback
 #execute()
@@ -127,9 +129,13 @@ try:
     execute()
 except Exception, e:
     log.error('Found Error = %s' % repr(e))
-    trb = traceback.format_exc().split('\n').reverse()
-    for tr in trb:
-        log.error(tr)
+    try:
+        trb = traceback.format_exc().split('\n').reverse()
+        for tr in trb:
+            log.error(tr)
+    except Exception, f:
+        log.warning('Unable to print traceback')
+        print(traceback.format_exc(),trb)
     raise e
 
 ''' 

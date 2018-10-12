@@ -140,7 +140,7 @@ for source_folder in source_folders:
         #df.loadhead(f)
         #expt = int(df.getheadval('EXPTIME'))
         #rname = os.path.split(f)[1].replace('.fits', '_%ds.RAW.fits' % expt )
-        rname = os.path.split(f)[1].replace('.fits', '.RAW.fits' )
+        rname = os.path.split(f)[1].replace('.fits', '_RAW.fits' )
         log.debug('Copy %s to %s/%s' % (os.path.split(f)[1], rpath, rname) )
         shutil.copy(f, os.path.join(rpath, rname) )
         os.system('chmod 664 %s' % os.path.join(rpath,rname) )

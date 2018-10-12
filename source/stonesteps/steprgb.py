@@ -217,8 +217,11 @@ class StepRGB(StepMIParent):
                 # If this still doesn't work - then add more code to make it run on YOUR system
         # Use the beginning of the FITS filename as the object name
         filename = os.path.split(self.dataout.filename)[-1]
-        objectname = filename.split('_')[0]
-        objectname = objectname[0].upper()+objectname[1:]
+        try:
+            objectname = filename.split('_')[0]
+            objectname = objectname[0].upper()+objectname[1:]
+        except e:
+            objectname = 'Unknown.'
         objectname = 'Object:  %s' % objectname
         # Read labels at their respective position (kept relative to image size)
         # Left corner: object, observer, observatory
@@ -240,8 +243,12 @@ class StepRGB(StepMIParent):
         if 'FILTER' in datause[2].header:
             blue = 'B:  %s' % datause[2].getheadval('FILTER')
             draw.text((imgwidth/1.15,imgheight/1.035),blue, (255,255,255), font=font)
+        # Make image name
+        imgname = self.dataout.filenamebegin
+        if imgname[-1] in '_-,.': imgname=imgname[:-1]
+        imgname +='.jpg'
         # Save the completed image
-        imgcolor.save('%sjpg' % self.dataout.filenamebegin)
+        imgcolor.save(imgname)
         self.log.info('Saving file %sjpg' %self.dataout.filenamebegin)
         ''' End of Label Code '''
         # Set complete flag
