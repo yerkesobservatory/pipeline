@@ -14,15 +14,6 @@
     
     export PYTHONPATH=/Users/berthoud/edu/outreach/Telescopes/pipeline/source
     
-    2DO:
-    - Init
-    - Setup - determine parameters
-    - Run:
-      - sextractor
-      - get database
-      - fit
-      - add keywords
-      - put results in table (optional)
 """
 import os # os library
 import sys # sys library
