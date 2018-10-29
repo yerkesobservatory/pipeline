@@ -182,7 +182,7 @@ class PipeLine(object):
             for stepi in range(len(self.stepnames)):
                 stepname = self.stepnames[stepi]
                 # Add step to steps
-                if stepname in 'load save':
+                if stepname in 'load save' or stepname[:5] == 'load_':
                     self.steps.append(stepname)
                 else:
                     # Use PipeData.getobject to get step object
@@ -257,7 +257,7 @@ class PipeLine(object):
                                % stepname)
                 raise error
         # check if data is available
-        if len(self.finals) < 1:
+        if len(self.reducedfiles) < 1:
             self.log.warning('GetResult: no results yet')
             return 0
         # get result
@@ -386,19 +386,30 @@ class PipeLine(object):
                     data = self.results[filei]
                     # catch special steps (load/save)
                     if self.stepnames[stepi] == 'load':
+                        # Load File
                         data.load()
                         if not self.memFlag:
                             self.outputs[stepi] = data
                     elif self.stepnames[stepi] == 'save':
+                        # Save File
                         # Check to make sure pipemode is in history
                         msg = "PipeMode = " + self.pipemode
                         found = False
-                        for h in data.header['HISTORY']:
-                            if msg in h: found = True
+                        if 'HISTORY' in data.header:
+                            for h in data.header['HISTORY']:
+                                if msg in h: found = True
                         if not found: data.header['HISTORY'] = msg
                         # Save the file
                         data.save()
                         self.outfiles.append(data.filename)
+                        if not self.memFlag:
+                            self.outputs[stepi] = data
+                    elif self.stepnames[stepi][:5] == 'load_':
+                        # Load particular process result (has to be saved first)
+                        procname = self.stepnames[stepi][5:].upper()
+                        self.log.debug('Loading %s process result' % procname)
+                        newfname = data.filenamebegin + procname + data.filenameend
+                        data.load(newfname)
                         if not self.memFlag:
                             self.outputs[stepi] = data
                     # run step[stepi]
@@ -534,9 +545,10 @@ class PipeLine(object):
         """
         ### Read Arguments
         # Set up argument parser - Generic parameters
-        parser = argparse.ArgumentParser(description="Pipe Line")
-        parser.add_argument('config', default = 'pipeconf.txt', type=str, nargs='?',
-                            help='pipeline configuration file (default = pipeconf.txt)')
+        parser = argparse.ArgumentParser(description="Pipe Line",
+            epilog = 'Delta config files specified by --config are merged with baseconfig.')
+        parser.add_argument('baseconfig', default = 'pipeconf.txt', type=str, nargs='?',
+                            help='pipeline configuration file (required, default = pipeconf.txt)')
         parser.add_argument('inputfiles', type=str, default='', nargs='*',
                             help='input files pathname',)
         parser.add_argument('-t','--test', action='store_true',
@@ -549,6 +561,8 @@ class PipeLine(object):
                             help='logging file (default = none)')
         parser.add_argument('--pipemode', default='', type=str,
                             help='pipeline mode (default = none)')
+        parser.add_argument('-c', '--config', default=[], type=str,
+                            action='append', help='Delta configuration file(s) (optional)')
         # Get arguments - store dict in arglist
         args = parser.parse_args()
         self.arglist=vars(args)
@@ -572,7 +586,8 @@ class PipeLine(object):
             pipemode = args.pipemode
             force = True
         # Set configuration
-        self.config = DataParent(config = args.config).config
+        config = [args.baseconfig] + args.config
+        self.config = DataParent(config = config).config
         ### Reduce data
         if len(args.inputfiles) > -1:
             self(args.inputfiles,pipemode=pipemode,force=force)

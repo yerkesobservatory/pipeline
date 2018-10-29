@@ -14,15 +14,18 @@
     
     export PYTHONPATH=/Users/berthoud/edu/outreach/Telescopes/pipeline/source
     
-    2DO:
-    - Init
-    - Setup - determine parameters
-    - Run:
-      - sextractor
-      - get database
-      - fit
-      - add keywords
-      - put results in table (optional)
+    Tasks:
+    G: have plot and table with data for checking fit
+    2: - Parameters: option for plot (yes/no)
+       ./ Decide which data to put into plot (format) - RA (deg), Dec (deg), imgsum (counts), imgmag (mag), catmag (mag)
+       ./ Make table - look at Nichola's code on making nice tables
+       ./ save table
+       - set up plot - look at fabio's final code
+       - make plot - use jupython notebook
+       - save plot - as FCAL.FitPlot.png 
+       - test all
+       - transfer to stars (pull / push)
+    
 """
 import os # os library
 import sys # sys library
@@ -33,8 +36,12 @@ import logging # logging object library
 import subprocess # running a subprocess library
 import requests # http request library
 import astropy.table # Read astropy tables
+from astropy.io import fits
 from astropy.coordinates import SkyCoord # To make RA/Dec as float
 from astropy import units as u # To help with SkyCoord
+import matplotlib # to make plots
+matplotlib.use('Agg') # Set pixel image
+import pylab as plt # pylab library for plotting
 from lmfit import minimize, Parameters # For brightness correction fit
 from drp.pipedata import PipeData # pipeline data object
 from drp.stepparent import StepParent # pipestep stepparent object
@@ -92,6 +99,8 @@ class StepFluxCalSex(StepParent):
                                'source extractor'])
         self.paramlist.append(['zeropercent', 30.0,
                                'Percentile for BZERO value'])
+        self.paramlist.append(['fitplot',False,
+                               'Flag for making png plot of the fit'])
         # confirm end of setup
         self.log.debug('Setup: done')
    
@@ -169,15 +178,26 @@ class StepFluxCalSex(StepParent):
         GSC_catalog = SkyCoord(ra=GSC_RA*u.deg, dec=GSC_DEC*u.deg)
         idx, d2d, d3d = GSC_catalog.match_to_catalog_sky(seo_catalog[seo_SN])
         # only select objects less than 0.025 away in distance, get distance value
-        mask = d2d[d2d.value<0.025]
         dist_value = 1*0.76*binning/3600. #Maximum distance is 1 pixel
+        mask = d2d.value<dist_value
         self.log.debug('Distance_Value = %f' % dist_value)
         ### Calculate the fit correction between the guide star and the extracted values
         nll = lambda *args: -residual(*args)
-        eps_data = np.sqrt(GSC_MagErr[d2d.value<dist_value]**2+seo_MagErr[seo_SN][idx][d2d.value<dist_value]**2)
-        result = scipy.optimize.minimize(nll, [1, -2], args=(GSC_Mag[d2d.value<dist_value], seo_Mag[seo_SN][idx][d2d.value<dist_value], eps_data))
+        eps_data = np.sqrt(GSC_MagErr[mask]**2+seo_MagErr[seo_SN][idx][mask]**2)
+        result = scipy.optimize.minimize(nll, [1, -2],
+                                         args=(GSC_Mag[mask], seo_Mag[seo_SN][idx][mask], eps_data))
         m_ml, b_ml = result["x"]
         self.log.info('Fitted offset is %f mag' % b_ml)
+        ### Make table with data which was fit
+        # Collect data columns
+        cols = []
+        cols.append(fits.Column(name='RA', format='D', array=GSC_RA[mask], unit='deg'))
+        cols.append(fits.Column(name='Dec', format='D', array=GSC_DEC[mask], unit='deg'))
+        cols.append(fits.Column(name='GSC_Mag', format='D', array=GSC_Mag[mask], unit='magnitude'))
+        cols.append(fits.Column(name='Img_Mag', format='D', array=seo_Mag[seo_SN][idx][mask], unit='magnitude'))
+        # Make table
+        c = fits.ColDefs(cols)
+        tbhdu = fits.BinTableHDU.from_columns(c)
         ### Make output data 
         # Copy data from datain
         self.dataout = self.datain
@@ -191,11 +211,25 @@ class StepFluxCalSex(StepParent):
         #-bzero = np.median(image_array[mask])
         bscale = 3631. * 10 ** (b_ml/2.5)
         self.dataout.image = bscale * (self.dataout.image - bzero)
-        #print(bzero,bscale)
-        #print(self.dataout.header['BZERO'])
-        #self.dataout.setheadval('BZERO', bzero, 'Zero flux level - added by fluxcalsex')
-        #self.dataout.setheadval('BSCALE', bscale, 'Scale from counts to Jy - added by fluxcalsex')
-        #print(self.dataout.header['BZERO'])
+        # Add data table
+        self.dataout.tableset(tbhdu.data,'Magnitude Data',tbhdu.header)
+        ### If requested make a plot of the fit and save as png
+        if self.getarg('fitplot'):
+            # Set up plot
+            plt.figure(figsize=(10,7))
+            # Plot the datapoints
+            plt.errorbar(GSC_Mag[d2d.value<dist_value],seo_Mag[seo_SN][idx][d2d.value<dist_value],yerr=np.sqrt(eps_data**2),fmt='o',linestyle='none')
+            plt.plot(GSC_Mag[d2d.value<dist_value],m_ml*GSC_Mag[d2d.value<dist_value]+b_ml)
+            #plt.plot(GSC_Mag[d2d.value<dist_value],m_ml*GSC_Mag[d2d.value<dist_value]+zeropoint_fit[1])
+            plt.legend(['LM-fit','Data'])
+            plt.ylabel('Source extrator magnitude')
+            plt.xlabel('Star catalog magnitude')
+            plt.title('Calibration Fit for file\n' + os.path.split(self.dataout.filename)[1])
+            # Plot the fit
+            # Axis and labels
+            # Save the image
+            pngname = self.dataout.filenamebegin + 'FCALplot.png'
+            plt.savefig(pngname)
         
 def residual(params, x, data, errors):
     """ Fitting function for lmfit

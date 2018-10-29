@@ -3,6 +3,7 @@
 
     This pipe step calls the external program astrometry.net to add
     WCS information to the data.
+    
     @author: Prechelt / Berthoud
 """
 
@@ -149,5 +150,8 @@ if __name__ == '__main__':
     StepAstrometry().execute()
 
 """ === History ===
+2018-10-12 MGB: - Add code to try different --downsample factors
+                - Add timeout for running astrometry.net
+                - Renamed StepAstrometry from StepAstrometrica
 2016-10-15 First version
 """
