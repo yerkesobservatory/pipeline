@@ -108,7 +108,7 @@ class StepFluxCalSex(StepParent):
         # Make catalog filename
         catfilename = self.datain.filenamebegin
         if catfilename[-1] in '._-': catfilename += 'sex_cat.fits'
-        else: catfilename += '.cat.fits'
+        else: catfilename += '.sex_cat.fits'
         self.log.debug('Sextractor catalog filename = %s' % catfilename)
         # Make command string
         command = self.getarg('sx_cmd') % (self.datain.filename)
