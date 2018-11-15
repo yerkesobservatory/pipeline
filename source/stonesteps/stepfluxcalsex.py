@@ -14,18 +14,6 @@
     
     export PYTHONPATH=/Users/berthoud/edu/outreach/Telescopes/pipeline/source
     
-    Tasks:
-    G: have plot and table with data for checking fit
-    2: - Parameters: option for plot (yes/no)
-       ./ Decide which data to put into plot (format) - RA (deg), Dec (deg), imgsum (counts), imgmag (mag), catmag (mag)
-       ./ Make table - look at Nichola's code on making nice tables
-       ./ save table
-       - set up plot - look at fabio's final code
-       - make plot - use jupython notebook
-       - save plot - as FCAL.FitPlot.png 
-       - test all
-       - transfer to stars (pull / push)
-    
 """
 import os # os library
 import sys # sys library
@@ -117,16 +105,11 @@ class StepFluxCalSex(StepParent):
         # Make catalog filename
         catfilename = self.datain.filenamebegin
         if catfilename[-1] in '._-': catfilename += 'sex_cat.fits'
-<<<<<<< HEAD
-        else: catfilename += '.cat.fits'
-        
+        else: catfilename += '.sex_cat.fits'
+        # Make background filename
         bkgdfilename = self.datain.filenamebegin
         if bkgdfilename[-1] in '._-': bkgdfilename += 'sex_bkgd.fits'
         else: bkgdfilename += '.bkgd.fits'
-        
-=======
-        else: catfilename += '.sex_cat.fits'
->>>>>>> b5d011d6e3c3edf3b6b2dc5ed624b3dc8a99a78b
         self.log.debug('Sextractor catalog filename = %s' % catfilename)
         # Make command string
         command = self.getarg('sx_cmd') % (self.datain.filename)
