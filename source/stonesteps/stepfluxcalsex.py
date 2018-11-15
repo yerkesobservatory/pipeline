@@ -100,6 +100,11 @@ class StepFluxCalSex(StepParent):
         catfilename = self.datain.filenamebegin
         if catfilename[-1] in '._-': catfilename += 'sex_cat.fits'
         else: catfilename += '.cat.fits'
+        
+        bkgdfilename = self.datain.filenamebegin
+        if bkgdfilename[-1] in '._-': bkgdfilename += 'sex_bkgd.fits'
+        else: bkgdfilename += '.bkgd.fits'
+        
         self.log.debug('Sextractor catalog filename = %s' % catfilename)
         # Make command string
         command = self.getarg('sx_cmd') % (self.datain.filename)
@@ -108,6 +113,8 @@ class StepFluxCalSex(StepParent):
         command += ' -CATALOG_NAME ' + catfilename
         command += ' -PARAMETERS_NAME ' + os.path.expandvars(self.getarg('sx_paramfilename'))
         command += ' -FILTER_NAME ' + os.path.expandvars(self.getarg('sx_filterfilename'))
+        command += ' -CHECKIMAGE_TYPE BACKGROUND'
+        command += ' -CHECKIMAGE_NAME ' + bkgdfilename
         # Call process
         self.log.debug('running command = %s' % command)
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
@@ -176,7 +183,9 @@ class StepFluxCalSex(StepParent):
         self.dataout.setheadval('PHOTZP', -b_ml, 'Photometric zeropoint MAG=-2.5*log(data)+PHOTZP')
         self.dataout.setheadval('PHOTZPER', 0.0, 'Uncertainty of the photometric zeropoint')
         # Add Bzero and Bscale
-        bzero = np.nanpercentile(self.dataout.image,self.getarg('zeropercent'))
+        image_background = fits.open(bkgdfilename)[0].data
+        #bzero = np.nanpercentile(self.dataout.image,self.getarg('zeropercent'))
+        bzero = image_background
         #-- Alternative bzero idea:
         #-mask = image_array < np.percentile(image,90)
         #-bzero = np.median(image_array[mask])
