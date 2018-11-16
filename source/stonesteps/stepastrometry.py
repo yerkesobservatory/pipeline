@@ -13,6 +13,9 @@ import os # library for operating system calls
 import time # library to manage delay and timeout
 import string # library to join text
 import subprocess # library to run subprocesses
+from astropy import wcs # to get WCS coordinates
+from astropy.coordinates import Angle
+import astropy.units as u
 from drp.pipedata import PipeData
 from drp.stepparent import StepParent
 
@@ -129,8 +132,20 @@ class StepAstrometry(StepParent):
             self.log.error("Unable to open Astrometrica output file = %s"
                            % outname)
             raise error
+        # Add history message
         histmsg = 'Astrometry.Net: At downsample = %d, search took %d seconds' % (downsample, time.time() - timeout + 300)
         self.dataout.setheadval('HISTORY', histmsg)
+        # Add RA from astrometry
+        w = wcs.WCS(self.dataout.header)
+        n1 = float( self.dataout.header['NAXIS1']/2 )
+        n2 = float( self.dataout.header['NAXIS2']/2 )
+        ra, dec = w.all_pix2world(n1, n2, 1)
+        self.dataout.header['CRPIX1']=n1
+        self.dataout.header['CRPIX2']=n2
+        self.dataout.header['CRVAL1']=float(ra)
+        self.dataout.header['CRVAL2']=float(dec)
+        self.dataout.header['RA'] = Angle(ra,  u.deg).to_string(sep=':')
+        self.dataout.header['Dec']= Angle(dec, u.deg).to_string(sep=':')
         # Delete temporary filess
         if self.getarg('delete_temp'):
             os.remove(outnewname)
