@@ -89,7 +89,8 @@ class StepAstrometry(StepParent):
         # Make command string
         rawcommand = self.getarg('astrocmd') % (self.datain.filename, outname)
 
-        ### Run Astrometrica
+        ### Run Astrometry:
+        #   This loop tries the downsample options until the fit is successful
         for downsample in self.getarg('downsample'):
             # Add downsample to command
             command = rawcommand + ' --downsample %d' % downsample
@@ -112,7 +113,7 @@ class StepAstrometry(StepParent):
                 break
             else:
                 self.log.debug('output file missing -> astrometry failed')
-        # Print the output (cut if necessary)
+        # Print the output from astrometry (cut if necessary)
         if self.getarg('verbose') and poll == 0:
             output = process.stdout.read()
             if len(output) > 1000:
@@ -146,7 +147,7 @@ class StepAstrometry(StepParent):
         self.dataout.header['CRVAL2']=float(dec)
         self.dataout.header['RA'] = Angle(ra,  u.deg).to_string(sep=':')
         self.dataout.header['Dec']= Angle(dec, u.deg).to_string(sep=':')
-        # Delete temporary filess
+        # Delete temporary files
         if self.getarg('delete_temp'):
             os.remove(outnewname)
             os.remove(outwcsname)
