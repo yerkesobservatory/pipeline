@@ -145,8 +145,8 @@ class StepAstrometry(StepParent):
         self.dataout.header['CRPIX2']=n2
         self.dataout.header['CRVAL1']=float(ra)
         self.dataout.header['CRVAL2']=float(dec)
-        self.dataout.header['RA'] = Angle(ra,  u.deg).to_string(sep=':')
-        self.dataout.header['Dec']= Angle(dec, u.deg).to_string(unit=u.hour, sep=':')
+        self.dataout.header['RA'] = Angle(ra,  u.deg).to_string(unit=u.hour, sep=':')
+        self.dataout.header['Dec']= Angle(dec, u.deg).to_string(sep=':')
         # Delete temporary files
         if self.getarg('delete_temp'):
             os.remove(outnewname)
