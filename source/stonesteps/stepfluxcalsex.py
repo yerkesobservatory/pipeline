@@ -183,7 +183,10 @@ class StepFluxCalSex(StepParent):
         # Make estimate for intercept to give as initial guess
         b_ml0 = np.median(seo_Mag[seo_SN][idx][mask]-GSC_Mag[mask])
         self.log.debug('Offset guess is %f mag' % b_ml0)
-        # Solve
+        # Calculate distance from that guess and get StdDev of distances
+        guessdist = numpy.std( b_ml0 - ( seo_Mag[seo_SN][idx][mask] - GSC_Mag[mask] ) )
+        # Update mask to ignore values with large STDEVS
+        # Solve linear equation
         result = scipy.optimize.minimize(nll, [1, b_ml0],
                                          args=(GSC_Mag[mask], seo_Mag[seo_SN][idx][mask], eps_data))
         m_ml, b_ml = result["x"]
@@ -224,12 +227,13 @@ class StepFluxCalSex(StepParent):
             # Plot 5sigma error range
             gmin = min(GSC_Mag[mask])
             gmax = max(GSC_Mag[mask])
-            #plt.fill()
+            plt.fill([gmin,gmin,gmax,gmax][gmin+b_ml0-guessdist, gmin+b_ml0+guessdist,
+                                           gmax+b_ml0+guessdist, gmax+b_ml0-guessdist])
             # Plot fits
-            plt.plot(GSC_Mag[d2d.value<dist_value],m_ml*GSC_Mag[d2d.value<dist_value]+b_ml)
-            plt.plot(GSC_Mag[d2d.value<dist_value],GSC_Mag[d2d.value<dist_value]+b_ml0)
+            plt.plot(GSC_Mag[mask],m_ml*GSC_Mag[mask]+b_ml)
+            plt.plot(GSC_Mag[mask],GSC_Mag[mask]+b_ml0)
             # Plot the datapoints
-            plt.errorbar(GSC_Mag[d2d.value<dist_value],seo_Mag[seo_SN][idx][d2d.value<dist_value],yerr=np.sqrt(eps_data**2),fmt='o',linestyle='none')
+            plt.errorbar(GSC_Mag[mask],seo_Mag[seo_SN][idx][mask],yerr=np.sqrt(eps_data**2),fmt='o',linestyle='none')
             #plt.plot(GSC_Mag[d2d.value<dist_value],m_ml*GSC_Mag[d2d.value<dist_value]+zeropoint_fit[1])
             plt.legend(['LM-fit','Fit-Guess','Data'])
             plt.ylabel('Source extrator magnitude')
