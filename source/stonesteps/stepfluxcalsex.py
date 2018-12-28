@@ -108,8 +108,8 @@ class StepFluxCalSex(StepParent):
         else: catfilename += '.sex_cat.fits'
         # Make background filename
         bkgdfilename = self.datain.filenamebegin
-        if bkgdfilename[-1] in '._-': bkgdfilename += 'sex_bkgd.fits'
-        else: bkgdfilename += '.bkgd.fits'
+        if bkgdfilename[-1] in '._-': bkgdfilename += 'SxBkgd.fits'
+        else: bkgdfilename += '_SxBkgd.fits'
         self.log.debug('Sextractor catalog filename = %s' % catfilename)
         # Make command string
         command = self.getarg('sx_cmd') % (self.datain.filename)
@@ -176,9 +176,15 @@ class StepFluxCalSex(StepParent):
         mask = d2d.value<dist_value
         self.log.debug('Distance_Value = %f' % dist_value)
         ### Calculate the fit correction between the guide star and the extracted values
+        # Make lambda function to be minimized
         nll = lambda *args: -residual(*args)
+        # Get errors
         eps_data = np.sqrt(GSC_MagErr[mask]**2+seo_MagErr[seo_SN][idx][mask]**2)
-        result = scipy.optimize.minimize(nll, [1, -2],
+        # Make estimate for intercept to give as initial guess
+        b_ml0 = np.median(seo_Mag[seo_SN][idx][mask]-GSC_Mag[mask])
+        self.log.debug('Offset guess is %f mag' % b_ml0)
+        # Solve
+        result = scipy.optimize.minimize(nll, [1, b_ml0],
                                          args=(GSC_Mag[mask], seo_Mag[seo_SN][idx][mask], eps_data))
         m_ml, b_ml = result["x"]
         self.log.info('Fitted offset is %f mag' % b_ml)
@@ -187,8 +193,10 @@ class StepFluxCalSex(StepParent):
         cols = []
         cols.append(fits.Column(name='RA', format='D', array=GSC_RA[mask], unit='deg'))
         cols.append(fits.Column(name='Dec', format='D', array=GSC_DEC[mask], unit='deg'))
+        cols.append(fits.Column(name='Diff_Deg', format='D', array=d2d[mask], unit='deg'))
         cols.append(fits.Column(name='GSC_Mag', format='D', array=GSC_Mag[mask], unit='magnitude'))
         cols.append(fits.Column(name='Img_Mag', format='D', array=seo_Mag[seo_SN][idx][mask], unit='magnitude'))
+        cols.append(fits.Column(name='Error', format='D', array=eps_data, unit='magnitude'))
         # Make table
         c = fits.ColDefs(cols)
         tbhdu = fits.BinTableHDU.from_columns(c)
@@ -213,11 +221,17 @@ class StepFluxCalSex(StepParent):
         if self.getarg('fitplot'):
             # Set up plot
             plt.figure(figsize=(10,7))
+            # Plot 5sigma error range
+            gmin = min(GSC_Mag[mask])
+            gmax = max(GSC_Mag[mask])
+            #plt.fill()
+            # Plot fits
+            plt.plot(GSC_Mag[d2d.value<dist_value],m_ml*GSC_Mag[d2d.value<dist_value]+b_ml)
+            plt.plot(GSC_Mag[d2d.value<dist_value],GSC_Mag[d2d.value<dist_value]+b_ml0)
             # Plot the datapoints
             plt.errorbar(GSC_Mag[d2d.value<dist_value],seo_Mag[seo_SN][idx][d2d.value<dist_value],yerr=np.sqrt(eps_data**2),fmt='o',linestyle='none')
-            plt.plot(GSC_Mag[d2d.value<dist_value],m_ml*GSC_Mag[d2d.value<dist_value]+b_ml)
             #plt.plot(GSC_Mag[d2d.value<dist_value],m_ml*GSC_Mag[d2d.value<dist_value]+zeropoint_fit[1])
-            plt.legend(['LM-fit','Data'])
+            plt.legend(['LM-fit','Fit-Guess','Data'])
             plt.ylabel('Source extrator magnitude')
             plt.xlabel('Star catalog magnitude')
             plt.title('Calibration Fit for file\n' + os.path.split(self.dataout.filename)[1])
@@ -230,9 +244,10 @@ class StepFluxCalSex(StepParent):
 def residual(params, x, data, errors):
     """ Fitting function for lmfit
     """
-    m,c = params
+    m, c = params
     model = m*x+c
     inv_sigma2 = 1.0/(errors**2)
+    #print(m,c,-0.5*(np.sum(((data-model)**2)*inv_sigma2)))
     return -0.5*(np.sum(((data-model)**2)*inv_sigma2))
 
 
