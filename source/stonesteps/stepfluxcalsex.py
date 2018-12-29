@@ -174,21 +174,27 @@ class StepFluxCalSex(StepParent):
         # only select objects less than 0.025 away in distance, get distance value
         dist_value = 1*0.76*binning/3600. #Maximum distance is 1 pixel
         mask = d2d.value<dist_value
-        self.log.debug('Distance_Value = %f' % dist_value)
+        self.log.debug('Distance_Value = %f, Mask length = %d' % 
+                       ( dist_value, np.sum(mask) ) )
         ### Calculate the fit correction between the guide star and the extracted values
         # Make lambda function to be minimized
         nll = lambda *args: -residual(*args)
         # Get errors
-        eps_data = np.sqrt(GSC_MagErr[mask]**2+seo_MagErr[seo_SN][idx][mask]**2)
+        eps_data = np.sqrt(GSC_MagErr**2+seo_MagErr[seo_SN][idx]**2)
         # Make estimate for intercept to give as initial guess
         b_ml0 = np.median(seo_Mag[seo_SN][idx][mask]-GSC_Mag[mask])
         self.log.debug('Offset guess is %f mag' % b_ml0)
         # Calculate distance from that guess and get StdDev of distances
-        guessdist = numpy.std( b_ml0 - ( seo_Mag[seo_SN][idx][mask] - GSC_Mag[mask] ) )
+        guessdistances = np.abs( b_ml0 - ( seo_Mag[seo_SN][idx] - GSC_Mag ) )
+        guessdistmed = np.median(guessdistances[mask])
         # Update mask to ignore values with large STDEVS
+        mask = np.logical_and( d2d.value < dist_value, guessdistances < 5 * guessdistmed )
+        self.log.debug('Median of distance to guess = %f, Mask length = %d' % 
+                       ( guessdistmed, np.sum(mask) ) )
         # Solve linear equation
         result = scipy.optimize.minimize(nll, [1, b_ml0],
-                                         args=(GSC_Mag[mask], seo_Mag[seo_SN][idx][mask], eps_data))
+                                         args=(GSC_Mag[mask], seo_Mag[seo_SN][idx][mask],
+                                               eps_data[mask]))
         m_ml, b_ml = result["x"]
         self.log.info('Fitted offset is %f mag' % b_ml)
         ### Make table with data which was fit
@@ -199,7 +205,7 @@ class StepFluxCalSex(StepParent):
         cols.append(fits.Column(name='Diff_Deg', format='D', array=d2d[mask], unit='deg'))
         cols.append(fits.Column(name='GSC_Mag', format='D', array=GSC_Mag[mask], unit='magnitude'))
         cols.append(fits.Column(name='Img_Mag', format='D', array=seo_Mag[seo_SN][idx][mask], unit='magnitude'))
-        cols.append(fits.Column(name='Error', format='D', array=eps_data, unit='magnitude'))
+        cols.append(fits.Column(name='Error', format='D', array=eps_data[mask], unit='magnitude'))
         # Make table
         c = fits.ColDefs(cols)
         tbhdu = fits.BinTableHDU.from_columns(c)
@@ -227,15 +233,18 @@ class StepFluxCalSex(StepParent):
             # Plot 5sigma error range
             gmin = min(GSC_Mag[mask])
             gmax = max(GSC_Mag[mask])
-            plt.fill([gmin,gmin,gmax,gmax][gmin+b_ml0-guessdist, gmin+b_ml0+guessdist,
-                                           gmax+b_ml0+guessdist, gmax+b_ml0-guessdist])
+            plt.fill([gmin,gmin,gmax,gmax],[gmin+b_ml0-guessdistmed, gmin+b_ml0+guessdistmed,
+                                            gmax+b_ml0+guessdistmed, gmax+b_ml0-guessdistmed],'c')
             # Plot fits
             plt.plot(GSC_Mag[mask],m_ml*GSC_Mag[mask]+b_ml)
             plt.plot(GSC_Mag[mask],GSC_Mag[mask]+b_ml0)
             # Plot the datapoints
-            plt.errorbar(GSC_Mag[mask],seo_Mag[seo_SN][idx][mask],yerr=np.sqrt(eps_data**2),fmt='o',linestyle='none')
+            plt.errorbar(GSC_Mag[d2d.value<dist_value],seo_Mag[seo_SN][idx][d2d.value<dist_value],
+                         yerr=np.sqrt(eps_data[d2d.value<dist_value]**2),fmt='o',linestyle='none')
+            plt.errorbar(GSC_Mag[mask],seo_Mag[seo_SN][idx][mask],
+                         yerr=np.sqrt(eps_data[mask]**2),fmt='o',linestyle='none')
             #plt.plot(GSC_Mag[d2d.value<dist_value],m_ml*GSC_Mag[d2d.value<dist_value]+zeropoint_fit[1])
-            plt.legend(['LM-fit','Fit-Guess','Data'])
+            plt.legend(['LM-fit','Fit-Guess','GuessDistMed Range','d<distval Data','Good Data'])
             plt.ylabel('Source extrator magnitude')
             plt.xlabel('Star catalog magnitude')
             plt.title('Calibration Fit for file\n' + os.path.split(self.dataout.filename)[1])
