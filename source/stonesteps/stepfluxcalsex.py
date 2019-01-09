@@ -25,6 +25,7 @@ import subprocess # running a subprocess library
 import requests # http request library
 import astropy.table # Read astropy tables
 from astropy.io import fits
+from astropy.io import ascii
 from astropy.coordinates import SkyCoord # To make RA/Dec as float
 from astropy import units as u # To help with SkyCoord
 import matplotlib # to make plots
@@ -89,6 +90,8 @@ class StepFluxCalSex(StepParent):
                                'Percentile for BZERO value'])
         self.paramlist.append(['fitplot',False,
                                'Flag for making png plot of the fit'])
+        self.paramlist.append(['sourcetable',False,
+                               'Flag for making txt table of all sources'])
         # confirm end of setup
         self.log.debug('Setup: done')
    
@@ -168,9 +171,9 @@ class StepFluxCalSex(StepParent):
         self.log.debug('Received %d entries from Guide Star Catalog' % len(GSC_RA))
         ### Mach Guide Star Catalog data with data from Source Extractor
         # Do the matching
-        seo_catalog = SkyCoord(ra=seo_catalog['ALPHA_J2000'], dec=seo_catalog['DELTA_J2000'])
-        GSC_catalog = SkyCoord(ra=GSC_RA*u.deg, dec=GSC_DEC*u.deg)
-        idx, d2d, d3d = GSC_catalog.match_to_catalog_sky(seo_catalog[seo_SN])
+        seo_radec = SkyCoord(ra=seo_catalog['ALPHA_J2000'], dec=seo_catalog['DELTA_J2000'])
+        GSC_radec = SkyCoord(ra=GSC_RA*u.deg, dec=GSC_DEC*u.deg)
+        idx, d2d, d3d = GSC_radec.match_to_catalog_sky(seo_radec[seo_SN])
         # only select objects less than 0.025 away in distance, get distance value
         dist_value = 1*0.76*binning/3600. #Maximum distance is 1 pixel
         mask = d2d.value<dist_value
@@ -197,6 +200,20 @@ class StepFluxCalSex(StepParent):
                                                eps_data[mask]))
         m_ml, b_ml = result["x"]
         self.log.info('Fitted offset is %f mag' % b_ml)
+        ### Make table with all data from source extractor
+        # Collect data columns
+        cols = []
+        cols.append(fits.Column(name='RA', format='D', 
+                                array=seo_catalog['ALPHA_J2000'][seo_SN], unit='deg'))
+        cols.append(fits.Column(name='Dec', format='D',
+                                array=seo_catalog['DELTA_J2000'][seo_SN], unit='deg'))
+        cols.append(fits.Column(name='Magnitude', format='D',
+                                array=seo_Mag[seo_SN]-b_ml, unit='magnitude'))
+        cols.append(fits.Column(name='Magnitude_Err', format='D',
+                                array=seo_MagErr[seo_SN], unit='magnitude'))
+        # Make table
+        c = fits.ColDefs(cols)
+        sources_table = fits.BinTableHDU.from_columns(c)
         ### Make table with data which was fit
         # Collect data columns
         cols = []
@@ -208,7 +225,7 @@ class StepFluxCalSex(StepParent):
         cols.append(fits.Column(name='Error', format='D', array=eps_data[mask], unit='magnitude'))
         # Make table
         c = fits.ColDefs(cols)
-        tbhdu = fits.BinTableHDU.from_columns(c)
+        fitdata_table = fits.BinTableHDU.from_columns(c)
         ### Make output data 
         # Copy data from datain
         self.dataout = self.datain
@@ -224,8 +241,9 @@ class StepFluxCalSex(StepParent):
         #-bzero = np.median(image_array[mask])
         bscale = 3631. * 10 ** (b_ml/2.5)
         self.dataout.image = bscale * (self.dataout.image - bzero)
-        # Add data table
-        self.dataout.tableset(tbhdu.data,'Magnitude Data',tbhdu.header)
+        # Add sources and fitdata table
+        self.dataout.tableset(sources_table.data,'Sources',sources_table.header)
+        self.dataout.tableset(fitdata_table.data,'Fit Data',fitdata_table.header)
         ### If requested make a plot of the fit and save as png
         if self.getarg('fitplot'):
             # Set up plot
@@ -253,6 +271,13 @@ class StepFluxCalSex(StepParent):
             # Save the image
             pngname = self.dataout.filenamebegin + 'FCALplot.png'
             plt.savefig(pngname)
+            self.log.debug('Saved fit plot under %s' % pngname)
+        ### If requested make a text file with the sources list
+        if self.getarg('sourcetable'):
+            # Save the table
+            txtname = self.dataout.filenamebegin + 'FCALsources.txt'
+            ascii.write(self.dataout.tableget('Sources'),txtname)
+            self.log.debug('Saved sources table under %s' % txtname)
         
 def residual(params, x, data, errors):
     """ Fitting function for lmfit
