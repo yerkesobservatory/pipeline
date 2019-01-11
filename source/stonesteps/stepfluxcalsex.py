@@ -92,6 +92,8 @@ class StepFluxCalSex(StepParent):
                                'Flag for making png plot of the fit'])
         self.paramlist.append(['sourcetable',False,
                                'Flag for making txt table of all sources'])
+        self.paramlist.append(['sourcetableformat','csv',
+                               'txt table format (see astropy.io.ascii for options)'])
         # confirm end of setup
         self.log.debug('Setup: done')
    
@@ -276,7 +278,8 @@ class StepFluxCalSex(StepParent):
         if self.getarg('sourcetable'):
             # Save the table
             txtname = self.dataout.filenamebegin + 'FCALsources.txt'
-            ascii.write(self.dataout.tableget('Sources'),txtname)
+            ascii.write(self.dataout.tableget('Sources'),txtname,
+                        format = self.getarg('sourcetableformat'))
             self.log.debug('Saved sources table under %s' % txtname)
         
 def residual(params, x, data, errors):
