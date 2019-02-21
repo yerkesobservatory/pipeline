@@ -94,6 +94,8 @@ class StepFluxCalSex(StepParent):
                                'Flag for making txt table of all sources'])
         self.paramlist.append(['sourcetableformat','csv',
                                'txt table format (see astropy.io.ascii for options)'])
+        self.paramlist.append(['savebackground',False,
+                               'Flag for saving a background image'])        
         # confirm end of setup
         self.log.debug('Setup: done')
    
@@ -111,7 +113,7 @@ class StepFluxCalSex(StepParent):
         catfilename = self.datain.filenamebegin
         if catfilename[-1] in '._-': catfilename += 'sex_cat.fits'
         else: catfilename += '.sex_cat.fits'
-        # Make background filename
+        # Make background filename (may not be used - see below)
         bkgdfilename = self.datain.filenamebegin
         if bkgdfilename[-1] in '._-': bkgdfilename += 'SxBkgd.fits'
         else: bkgdfilename += '_SxBkgd.fits'
@@ -123,8 +125,9 @@ class StepFluxCalSex(StepParent):
         command += ' -CATALOG_NAME ' + catfilename
         command += ' -PARAMETERS_NAME ' + os.path.expandvars(self.getarg('sx_paramfilename'))
         command += ' -FILTER_NAME ' + os.path.expandvars(self.getarg('sx_filterfilename'))
-        command += ' -CHECKIMAGE_TYPE BACKGROUND'
-        command += ' -CHECKIMAGE_NAME ' + bkgdfilename
+        if self.getarg('savebackground'):
+            command += ' -CHECKIMAGE_TYPE BACKGROUND'
+            command += ' -CHECKIMAGE_NAME ' + bkgdfilename
         # Call process
         self.log.debug('running command = %s' % command)
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
