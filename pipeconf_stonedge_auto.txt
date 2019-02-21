@@ -243,6 +243,8 @@
 	sourcetable = True
 	# Format for text table of all sources (see astropy.io.ascii for options)
 	sourcetableformat = csv
+	# Flag for saving a background image
+	savebackground = False
 
 ### Data Handling Section
 
