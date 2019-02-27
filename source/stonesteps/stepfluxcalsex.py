@@ -186,6 +186,8 @@ class StepFluxCalSex(StepParent):
                        ( dist_value, np.sum(mask) ) )
         ### Calculate the fit correction between the guide star and the extracted values
         # Make lambda function to be minimized
+        # The fit finds m_ml and b_ml where
+        #     seo_Mag = b_ml + m_ml * GSC_Mag
         nll = lambda *args: -residual(*args)
         # Get errors
         eps_data = np.sqrt(GSC_MagErr**2+seo_MagErr[seo_SN][idx]**2)
@@ -204,7 +206,9 @@ class StepFluxCalSex(StepParent):
                                          args=(GSC_Mag[mask], seo_Mag[seo_SN][idx][mask],
                                                eps_data[mask]))
         m_ml, b_ml = result["x"]
-        self.log.info('Fitted offset is %f mag' % b_ml)
+        self.log.info('Fitted offset is %f mag, fitted slope is %f' % (b_ml, m_ml) )
+        b_ml_corr = b_ml + (1-m_ml) * np.median(GSC_Mag[mask])
+        self.log.info('Corrected offset is %f mag' % b_ml_corr)
         ### Make table with all data from source extractor
         # Collect data columns
         cols = []
@@ -213,7 +217,7 @@ class StepFluxCalSex(StepParent):
         cols.append(fits.Column(name='Dec', format='D',
                                 array=seo_catalog['DELTA_J2000'][seo_SN], unit='deg'))
         cols.append(fits.Column(name='Magnitude', format='D',
-                                array=seo_Mag[seo_SN]-b_ml, unit='magnitude'))
+                                array=seo_Mag[seo_SN]-b_ml_corr, unit='magnitude'))
         cols.append(fits.Column(name='Magnitude_Err', format='D',
                                 array=seo_MagErr[seo_SN], unit='magnitude'))
         # Make table
@@ -235,7 +239,7 @@ class StepFluxCalSex(StepParent):
         # Copy data from datain
         self.dataout = self.datain
         # Add Photometric Zero point magnitude
-        self.dataout.setheadval('PHOTZP', -b_ml, 'Photometric zeropoint MAG=-2.5*log(data)+PHOTZP')
+        self.dataout.setheadval('PHOTZP', -b_ml_corr, 'Photometric zeropoint MAG=-2.5*log(data)+PHOTZP')
         self.dataout.setheadval('PHOTZPER', 0.0, 'Uncertainty of the photometric zeropoint')
         # Add Bzero and Bscale
         image_background = fits.open(bkgdfilename)[0].data
@@ -244,7 +248,7 @@ class StepFluxCalSex(StepParent):
         #-- Alternative bzero idea:
         #-mask = image_array < np.percentile(image,90)
         #-bzero = np.median(image_array[mask])
-        bscale = 3631. * 10 ** (b_ml/2.5)
+        bscale = 3631. * 10 ** (b_ml_corr/2.5)
         self.dataout.image = bscale * (self.dataout.image - bzero)
         # Add sources and fitdata table
         self.dataout.tableset(sources_table.data,'Sources',sources_table.header)
