@@ -15,9 +15,9 @@
 # Environment Variables
 [envars]
     # Master Bias, Dark, Flat Folder
-    MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2019/Masters 
+    MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2018/Masters 
     # Date for reducing BDF files from a certain day
-    BDF_DATE = 2018-07-31
+    BDF_DATE = 2019-01-02
     # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
     SEO_AUXFOLDER = /data/scripts/DataReduction/auxfiles
 

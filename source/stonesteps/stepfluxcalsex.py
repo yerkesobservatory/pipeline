@@ -125,9 +125,9 @@ class StepFluxCalSex(StepParent):
         command += ' -CATALOG_NAME ' + catfilename
         command += ' -PARAMETERS_NAME ' + os.path.expandvars(self.getarg('sx_paramfilename'))
         command += ' -FILTER_NAME ' + os.path.expandvars(self.getarg('sx_filterfilename'))
-        if self.getarg('savebackground'):
-            command += ' -CHECKIMAGE_TYPE BACKGROUND'
-            command += ' -CHECKIMAGE_NAME ' + bkgdfilename
+        # Still make backgroundimage so you can subtract it below
+        command += ' -CHECKIMAGE_TYPE BACKGROUND'
+        command += ' -CHECKIMAGE_NAME ' + bkgdfilename
         # Call process
         self.log.debug('running command = %s' % command)
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
@@ -253,6 +253,9 @@ class StepFluxCalSex(StepParent):
         # Add sources and fitdata table
         self.dataout.tableset(sources_table.data,'Sources',sources_table.header)
         self.dataout.tableset(fitdata_table.data,'Fit Data',fitdata_table.header)
+        # Remove background file if it's not needed
+        if not self.getarg('savebackground'):
+            os.remove(bkgdfilename)
         ### If requested make a plot of the fit and save as png
         if self.getarg('fitplot'):
             # Set up plot

@@ -15,8 +15,8 @@
     Usage:
       queuecopy.py source_folders
  
-      source_folders: folders where the data to copy is (current folder if omitted)
-                      multiple entries are possible
+      source_folders: folders where the data to copy is (todays folder if omitted)
+                      multiple entries (or globs) are possible
 
 """
 

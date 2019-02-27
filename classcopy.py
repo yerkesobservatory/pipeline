@@ -54,13 +54,18 @@ log.addHandler(logging.StreamHandler())
 # Get input folders
 if len(sys.argv) > 1:
     input_folder = sys.argv[1] 
+else:
+    print("""Usage: python classcopy.py input_folder
+          where input_folder is the user folder
+          ex: /images/astroclass/Berthoud""")
+    exit()
 log.info('Starting up with folder %s' % input_folder)
 # Get observer name (last part of input_folder)
 obsname = os.path.split(input_folder)[1]
 log.debug('Observer Name = %s' % obsname)
 
 ### Get all observation folders 
-#   Also collect milplaced files
+#   Also make list of misplaced files
 obslist = []
 missfiles = []
 rawlist = os.listdir(input_folder)
@@ -71,6 +76,7 @@ for fname in rawlist:
         missfiles.append(fname)
 
 ### Loop through observation folders
+folderfail = []
 for obsfolder in obslist:
     log.debug('Start observation folder %s' % obsfolder)
     obspath = os.path.join(input_folder, obsfolder)
@@ -98,8 +104,14 @@ for obsfolder in obslist:
     # copy folder and files to correct date
     tarfolder = os.path.join(databasefolder,dat[:4],dat,obsfolder)
     log.debug('Copying %s -> %s' % (obspath, tarfolder))
-    shutil.copytree(obspath,tarfolder)
+    try:
+        shutil.copytree(obspath,tarfolder)
+    except:
+        log.warn('Unable to copy %s to %s' % (obspath, tarfolder) )
+        folderfail.append(obspath)
 
 # Output Missing Files
 for f in missfiles:
     log.warn('File %s is missplaced and not found in subfolders' % f)
+for f in folderfail:
+    log.warn('Folder %s can not be copied' % f)
