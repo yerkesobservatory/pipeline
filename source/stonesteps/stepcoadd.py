@@ -115,8 +115,9 @@ class StepCoadd(StepMIParent):
         
         #creates output fits file from drizzle output
         self.dataout = DataFits(config = self.config)
-        self.dataout.header=self.datain[0].header
+        self.dataout.header=self.datain[0].header ### Need to update WCS in this header
         self.dataout.imageset(self.bias)
+        self.dataout.imageset(driz.outwht,'OutWeight',#fullwcs changed into a header for this image)
         self.dataout.filename = self.datain[0].filename
         
         # Add history
