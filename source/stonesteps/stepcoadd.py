@@ -1,18 +1,18 @@
+#!/usr/bin/env python
 """ PIPE STEP COADD - Version 1.0.0
 
     This module combines images and creates mosaics from input images.
-    Should be run with like data inputs (same binning, etc.) with high quality WCS headers (like from astrometry.net)
+    Should be run with like data inputs (same binning, etc.) with high quality WCS (e.x. from astrometry.net)
 
     @author: Matt Merz
 """
-
 import os # os library
 import sys # sys library
-import numpy # numpy library
+import numpy as np# numpy library
 import logging # logging object library
-from astropy.wcs import WCS
+from astropy.io import fits
+from astropy import wcs as wcs
 from drizzle import drizzle as drz
-from grizli.utils import make_wcsheader #function for making north-up WCS header and object
 from drp.stepmiparent import StepMIParent
 from drp.datafits import DataFits
 
@@ -21,7 +21,7 @@ class StepCoadd(StepMIParent):
         The object is callable. It requires a valid configuration input
         (file or object) when it runs.
     """
-    stepver = '1.0' # pipe step version
+    stepver = '1.1' # pipe step version
     
     def setup(self):
         """ ### Names and Parameters need to be Set Here ###
@@ -52,79 +52,111 @@ class StepCoadd(StepMIParent):
         # Append parameters
         self.paramlist.append(['kernel','square',
                                'Specifies the kernel used to determine spreading of input pixels onto output pixels \
-                               - options are square, point, gaussian, smoothing, tophat - default is square'])
+                               - options are square, point, gaussian, smoothing, tophat'])
         self.paramlist.append(['pixfrac', 1.,
-                               'The fraction of an output pixel(s) that an input pixels flux is confined to - default is 1.'])
+                               'The fraction of an output pixel(s) that an input pixel\'s flux is confined to'])
         self.paramlist.append(['resolution', 1.,
-                               'Plate-scale divisor for output image (higher gives more resolution, lower gives less) \
-                               - default is 1.'])
+                               'Pixel scale divisor for output image (higher gives more resolution, lower gives less)'])
         self.paramlist.append(['pad', 0,
-                               'Extra padding outside maximum extent of inputs - default is 0'])
-        self.paramlist.append(['fillval', '0.',
-                               'Value for filling in the area(s) in the output where there is no input data - default is 0.'])
-        self.paramlist.append(['drizzleweights','uniform',
+                               'Extra padding outside maximum extent of inputs'])
+        self.paramlist.append(['fillval', '0',
+                               'Value for filling in the area(s) in the output where there is no input data'])
+        self.paramlist.append(['drizzleweights','exptime',
                                'How each input image should be weighted when added to the output \
-                               - options are exptime, expsq and uniform - default is uniform'])
+                               - options are exptime, expsq and uniform'])
+        self.paramlist.append(['outputangle', 0,
+                               'angular deviation from north-up in degrees (currently broken - do not vary)'])
 
     def run(self):
         """ Runs the mosaicing algorithm. The self.datain is run
         through the code, the result is in self.dataout.
         """
-        #get all parameters
-        if self.getarg('kernel') == 'smoothing':
-            kernel = 'lanczos3'
-        else:
-            kernel = self.getarg('kernel')
-        pixfrac = self.getarg('pixfrac')
-        resolution = self.getarge('resolution')
-        pad = self.getarg('pad')
-        fillval = self.getarg('fillval')
-        if self.getarg('drizzleweights') == 'uniform':
-            driz_wt = ''
-        else:
-            driz_wt = self.getarg('drizzleweights')
-        
-        #set up lists of data and wcs from self.datain
-        im_list = []
-        wcs_list = []
-        for file in self.datain:
-            im_list.append(file.data)
-            wcs_list.append(WCS(file.header))
-            
         #calculate platescale of first input image
-        det = np.linalg.det(wcs_list[0].wcs.cd)
-        pscale = np.sqrt(np.abs(det))*3600.
+        det = np.linalg.det(wcs.WCS(self.datain[0].header).wcs.cd)
+        pscale = np.sqrt(np.abs(det))*3600./self.getarg('resolution')
         
-        #creates north-up wcs which spans the needed area to contain all input images
+        #calculations necessary for updating wcs information
         px = []
         py = []
-        for wcs in wcs_list:
-            px.extend(wcs.calc_footprint()[:,0])
-            py.extend(wcs.calc_footprint()[:,1])
+        
+        for f in self.datain:
+            px.extend(wcs.WCS(f.header).calc_footprint()[:,0])
+            py.extend(wcs.WCS(f.header).calc_footprint()[:,1])
         x0 = (max(px)+min(px))/2.
         y0 = (max(py)+min(py))/2.
-        sx = (max(px)-min(px))*np.cos(y0/180*np.pi)*3600 # arcsec
-        sy = (max(py)-min(py))*3600 # arcsec
-        fullwcs = grizli.utils.make_wcsheader(ra=x0, dec=y0, size=(sx+pad*2, sy+pad*2), pixscale=pixel_scale/resolution, get_hdu=False, theta=0)[1]
+        sx = (max(px)-min(px))*np.cos(y0/180*np.pi) # arcsec
+        sy = (max(py)-min(py)) # arcsec
+        size = (sx*3600+self.getarg('pad')*2, sy*3600+self.getarg('pad')*2)
+        xpix = size[0]//pscale
+        ypix = size[1]//pscale
+        cdelt = [pscale/3600.]*2
         
+        #create self.dataout and give it a copy of an input's header
+        self.dataout = DataFits(config = self.config)
+        self.dataout.header = self.datain[0].header.copy()
+        
+        #update header wcs information
+        self.log.info('Creating new WCS header')
+        
+        self.dataout.header['CRPIX1'] = xpix/2
+        self.dataout.header['CRPIX2'] = ypix/2
+        self.dataout.header['CRVAL1'] = x0
+        self.dataout.header['CRVAL2'] = y0
+        self.dataout.header['CD1_1'] = -cdelt[0]
+        self.dataout.header['CD1_2'] = self.dataout.header['CD2_1'] = 0.
+        self.dataout.header['CD2_2'] = cdelt[1]
+        self.dataout.header['NAXIS1'] = int(xpix)
+        self.dataout.header['NAXIS2'] = int(ypix)
+        self.dataout.header['CTYPE1'] = 'RA---TAN-SIP'
+        self.dataout.header['CTYPE2'] = 'DEC--TAN-SIP'
+        self.dataout.header['RADESYS'] = 'ICRS'
+        self.dataout.header['EQUINOX'] = 2000
+        self.dataout.header['LATPOLE'] = self.datain[0].header['CRVAL2']
+        self.dataout.header['LONPOLE'] = 180
+        self.dataout.header['PIXASEC'] = pscale
+        
+        theta_rad = np.deg2rad(self.getarg('outputangle'))
+        rot_matrix = np.array([[np.cos(theta_rad), -np.sin(theta_rad)], 
+                        [np.sin(theta_rad),  np.cos(theta_rad)]])
+        rot_cd = np.dot(rot_matrix, np.array([[self.dataout.header['CD1_1'], 0.],[0., self.dataout.header['CD2_2']]]))
+        for i in [0,1]:
+            for j in [0,1]:
+                self.dataout.header['CD{0:d}_{1:d}'.format(i+1, j+1)] = rot_cd[i,j]
+        
+        #check drizzle arguments
+        if self.getarg('kernel') == 'smoothing':
+            kernel = 'lanczos3'
+        elif self.getarg('kernel') in ['square', 'point', 'gaussian', 'tophat']:
+            kernel = self.getarg('kernel')
+        else:
+            self.log.error('Kernel name not recognized, using default')
+            kernel = 'square'
+        if self.getarg('drizzleweights') == 'uniform':
+            driz_wt = ''
+        elif self.getarg('drizzleweights') in ['exptime', 'expsq']:
+            driz_wt = self.getarg('drizzleweights')
+        else:
+            self.log.error('Drizzle weighting not recognized, using default')
+            driz_wt = ''
+                        
         #create drizzle object and add input images
-        
-        driz = drz.Drizzle(outwcs = fullwcs, pixfrac=pixfrac, kernel=kernel, fillval = fillval, wt_scl = driz_wt)
-        for i in range(len(im_list)):
-            driz.add_image(im_list[i], wcs_list[i])
+        fullwcs = wcs.WCS(self.dataout.header)
+        self.log.info('Starting drizzle')
+        driz = drz.Drizzle(outwcs = fullwcs, pixfrac=self.getarg('pixfrac'), \
+                           kernel=kernel, fillval=self.getarg('fillval'), wt_scl=driz_wt)
+        for f in self.datain:
+            self.log.info('Adding %s to drizzle stack' % f.filename)
+            driz.add_image(f.imgdata[0], wcs.WCS(f.header))
         
         #creates output fits file from drizzle output
-        self.dataout = DataFits(config = self.config)
-        self.dataout.header=self.datain[0].header ### Need to update WCS in this header
-        self.dataout.imageset(self.bias)
-        self.dataout.imageset(driz.outwht,'OutWeight',#fullwcs changed into a header for this image)
+        self.dataout.imageset(driz.outsci)
+        self.dataout.imageset(driz.outwht,'OutWeight', self.dataout.header)
         self.dataout.filename = self.datain[0].filename
-        
-        # Add history
-        self.dataout.setheadval('HISTORY','Coadd: %d files combined with %s kernel, pixfrac %f at %f times resolution' % \
-            (len(filelist), kernel, pixfrac, resolution))
 
-        
+        #add history
+        self.dataout.setheadval('HISTORY','Coadd: %d files combined with %s kernel, pixfrac %f at %f times resolution' \
+                                % (len(self.datain), kernel, self.getarg('pixfrac'), self.getarg('resolution')))
+
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
         Command:
@@ -135,8 +167,9 @@ if __name__ == '__main__':
           --loglevel=LEVEL : configures the logging output for a particular level
           -h, --help : Returns a list of 
     """
-    StepCoadd().execute()  
-    
+    StepCoadd().execute()
+  
 """ === History ===
-    2019-05-2 New step created for mosaicing and combining images - Matt Merz
+    2019-05-22 New step created for mosaicing and combining images - Matt Merz
+    2019-05-24 Minor changes, notably no longer utilizing Grizli for making expanded WCS - Matt Merz
 """
