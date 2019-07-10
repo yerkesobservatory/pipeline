@@ -64,8 +64,8 @@ class StepCoadd(StepMIParent):
         self.paramlist.append(['drizzleweights','exptime',
                                'How each input image should be weighted when added to the output \
                                - options are exptime, expsq and uniform'])
-        self.paramlist.append(['outputangle', 0,
-                               'angular deviation from north-up in degrees (currently broken - do not vary)'])
+        self.paramlist.append(['outangle',0.,
+                              'Output angle of drizzled image (currently not functional)'])
 
     def run(self):
         """ Runs the mosaicing algorithm. The self.datain is run
@@ -75,6 +75,18 @@ class StepCoadd(StepMIParent):
         det = np.linalg.det(wcs.WCS(self.datain[0].header).wcs.cd)
         pscale = np.sqrt(np.abs(det))*3600./self.getarg('resolution')
         
+        #filtering out images which are too far away from the others
+        #passing images added to a list of (image, WCS) tuples
+        '''
+        image_centers = []
+        for f in self.datain:
+            image_centers.append((f.header['CRVAL1'], f.header['CRVAL2']))
+        filtered_datain = []
+        dist_list = [[[0]*(len(image_centers)-1)]*len(image_centers)]
+        for i in range(len(image_centers)):
+            for j in range(len(image_centers)-1):
+                 dist_list[i][j+1] = np.sqrt((image_)**2+()**2)
+        '''
         #calculations necessary for updating wcs information
         px = []
         py = []
@@ -115,7 +127,7 @@ class StepCoadd(StepMIParent):
         self.dataout.header['LONPOLE'] = 180
         self.dataout.header['PIXASEC'] = pscale
         
-        theta_rad = np.deg2rad(self.getarg('outputangle'))
+        theta_rad = np.deg2rad(self.getarg('outangle'))
         rot_matrix = np.array([[np.cos(theta_rad), -np.sin(theta_rad)], 
                         [np.sin(theta_rad),  np.cos(theta_rad)]])
         rot_cd = np.dot(rot_matrix, np.array([[self.dataout.header['CD1_1'], 0.],[0., self.dataout.header['CD2_2']]]))
@@ -168,8 +180,9 @@ if __name__ == '__main__':
           -h, --help : Returns a list of 
     """
     StepCoadd().execute()
-  
+    
 """ === History ===
     2019-05-22 New step created for mosaicing and combining images - Matt Merz
     2019-05-24 Minor changes, notably no longer utilizing Grizli for making expanded WCS - Matt Merz
+    2019-06-0 More changes - basic angle inplementation, disallowing frames too far away from the rest - Matt Merz
 """
