@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" PIPE STEP COADD - Version 1.0.0
+""" PIPE STEP COADD - Version 1.2.0
 
     This module combines images and creates mosaics from input images.
     Should be run with like data inputs (same binning, etc.) with high quality WCS (e.x. from astrometry.net)
@@ -21,7 +21,7 @@ class StepCoadd(StepMIParent):
         The object is callable. It requires a valid configuration input
         (file or object) when it runs.
     """
-    stepver = '1.1' # pipe step version
+    stepver = '1.2' # pipe step version
     
     def setup(self):
         """ ### Names and Parameters need to be Set Here ###
@@ -72,9 +72,15 @@ class StepCoadd(StepMIParent):
         through the code, the result is in self.dataout.
         """
         #calculate platescale of first input image
-        det = np.linalg.det(wcs.WCS(self.datain[0].header).wcs.cd)
-        pscale = np.sqrt(np.abs(det))*3600./self.getarg('resolution')
-        
+        try:
+            det = linalg.det(wcs.WCS(self.datain[0].header).wcs.cd)
+            pscale = np.sqrt(np.abs(det))*3600.
+        except:
+            try:
+                det = linalg.det(wcs.WCS(self.datain[0].header).wcs.pc)
+                pscale = np.sqrt(np.abs(det))*3600.
+            except:
+                pscale = self.datain[0].header['PIXSCAL']
         #filtering out images which are too far away from the others
         #passing images added to a list of (image, WCS) tuples
         '''
