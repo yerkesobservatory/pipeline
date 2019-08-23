@@ -15,6 +15,7 @@ import re # regexp
 import gc # garbage collect
 from astropy.io import fits # fits libary
 from dataparent import DataParent # Pipe Data Parent
+from __builtin__ import True
 
 class DataFits(DataParent):
     """ Pipeline Data FITS Object
@@ -1245,13 +1246,22 @@ class DataFits(DataParent):
             stored under that key is returned. If the key can not be found an
             KeyError is produced and a warning is issued.
         """
-        val=None
+        val = None
+        inkey = key # retain key which was input in case key changes
         # Look in the config
         try:
             # get the value
             val = self.config['header'][key.upper()]
+            # Check if it's optional header replacement i.e. starts with '?_'
+            if val[:2] in ['?_', '? ', '?-']:
+                # if key is not in the header -> use key name under value instead
+                if key not in self.header:
+                    self.log.info('Getheadval: Using %s keyword for %s' %
+                                  (val[2:].upper(), key))
+                    key = val[2:].upper()
+                val = None
             # Check if it's a Header replacement (but not T/F)
-            if val[0].isupper() and val[:2] not in ['T ', 'F ']:
+            elif val[0].isupper() and val[:2] not in ['T ', 'F ']:
                 self.log.info('Getheadval: Using %s value for %s' %
                               (val.upper(), key ))
                 key = val.upper()
@@ -1259,7 +1269,7 @@ class DataFits(DataParent):
             else:
                 # make it a pyfits.Card then get value and comment
                 card = fits.Card()
-                card = card.fromstring(key.upper() + '= ' + val)
+                card = card.fromstring(key.upper() + ' = ' + val)
                 # Following code is unused because non-string values
                 #   don't get converted correctly. However the new code
                 #   may not work with all version of pyfits - tbd - nlc 2013
@@ -1301,9 +1311,9 @@ class DataFits(DataParent):
             val = ''
         # Debug message (only first line if multi-line value)
         if '\n' in str(val):
-            self.log.debug('GetHeadval: done (%s=%s ...)' % (key, str(val[0])))
+            self.log.debug('GetHeadval: done (%s=%s ...)' % (inkey, str(val[0])))
         else:
-            self.log.debug('GetHeadVal: done (%s=%s)' % (key,str(val)))
+            self.log.debug('GetHeadVal: done (%s=%s)' % (inkey,str(val)))
         return val
 
     def setheadval(self, key, value, comment=None, dataname = ''):
@@ -1333,7 +1343,7 @@ class DataFits(DataParent):
         # Set value into hdr
         if comment != None: hdr[key] = (value,comment)
         else: hdr[key] = value
-        self.log.debug('SetHeadVal: done (%s=%s)' % (key, repr(value)))
+        self.log.debug('SetHeadVal: done')
 
     def delheadval(self, key, dataname = None):
         """ Delete one or more FITS keyword in specified header, which defaults
