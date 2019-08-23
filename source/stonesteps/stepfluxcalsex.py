@@ -207,7 +207,7 @@ class StepFluxCalSex(StepParent):
                                                eps_data[mask]))
         m_ml, b_ml = result["x"]
         self.log.info('Fitted offset is %f mag, fitted slope is %f' % (b_ml, m_ml) )
-        b_ml_corr = b_ml + (1-m_ml) * np.median(GSC_Mag[mask])
+        b_ml_corr = b_ml + (m_ml-1) * np.median(GSC_Mag[mask])
         self.log.info('Corrected offset is %f mag' % b_ml_corr)
         ### Make table with all data from source extractor
         # Collect data columns
