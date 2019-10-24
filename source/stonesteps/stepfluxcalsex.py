@@ -212,8 +212,7 @@ class StepFluxCalSex(StepParent):
         ### Make table with all data from source extractor
         # Collect data columns
         cols = []
-        num = np.empty(len(seo_catalog['ALPHA_J2000'][seo_SN]))
-        for i in range(len(seo_catalog['ALPHA_J2000'][seo_SN])): num[i]=int(i+1)
+        num = np.arange(1, len(seo_catalog['ALPHA_J2000'][seo_SN]) + 1 )
         cols.append(fits.Column(name='ID', format='D',
                                 array=num))
         cols.append(fits.Column(name='RA', format='D',
