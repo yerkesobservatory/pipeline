@@ -1,19 +1,19 @@
 #!/usr/bin/env python
-""" 
+"""
     Pipestep FluxCalSex
 
     This module defines the pipeline step to flux calibrate data files.
     The pipe step runs sextractor on the data and compares itentified
     sources with values from the StSci guide star catalog.
-    
+
     Requirements: This step requires the source extractor program see
         https://www.astromatic.net/software/sextractor
       for details.
-    
+
     Author: Amanda Pagul / Marc Berthoud
-    
+
     export PYTHONPATH=/Users/berthoud/edu/outreach/Telescopes/pipeline/source
-    
+
 """
 import os # os library
 import sys # sys library
@@ -38,10 +38,10 @@ from drp.stepparent import StepParent # pipestep stepparent object
 class StepFluxCalSex(StepParent):
     """ Pipeline Step Object to calibrate Bias/Dark/Flat files
     """
-    
+
     stepver = '0.1' # pipe step version
-    
-        
+
+
     def setup(self):
         """ ### Names and Parameters need to be Set Here ###
             Sets the internal names for the function and for saved files.
@@ -73,7 +73,7 @@ class StepFluxCalSex(StepParent):
                                '1 string placeholder for intput filepathname'])
         self.paramlist.append(['sx_options','',
                                'Command line options for source extractor ' +
-                               '(This step overwrites the -c CATALOG_NAME PARAMETERS_NAME and ' + 
+                               '(This step overwrites the -c CATALOG_NAME PARAMETERS_NAME and ' +
                                'FILTER_NAME )'])
         self.paramlist.append(['sx_confilename','psf.sex',
                                'Filepathname for SourceExtractor configuration file'])
@@ -95,10 +95,10 @@ class StepFluxCalSex(StepParent):
         self.paramlist.append(['sourcetableformat','csv',
                                'txt table format (see astropy.io.ascii for options)'])
         self.paramlist.append(['savebackground',False,
-                               'Flag for saving a background image'])        
+                               'Flag for saving a background image'])
         # confirm end of setup
         self.log.debug('Setup: done')
-   
+
     def run(self):
         """ Runs the calibrating algorithm. The calibrated data is
             returned in self.dataout
@@ -137,19 +137,19 @@ class StepFluxCalSex(StepParent):
             self.log.debug(output)
         #subprocess.check_call(command)
         ### Extract catalog from source extractor and clean up dataset
-        # Use catalog from sourse extrator (test.cat) 
+        # Use catalog from sourse extrator (test.cat)
         seo_catalog = astropy.table.Table.read(catfilename, format="fits", hdu='LDAC_OBJECTS')
         seo_Mag = -2.5*np.log10(seo_catalog['FLUX_AUTO'])
         seo_MagErr = (2.5/np.log(10)*seo_catalog['FLUXERR_AUTO']/seo_catalog['FLUX_AUTO'])
         # Select only the stars in the image: circular image and S/N > 10
-        elongation = (seo_catalog['FLUX_APER']-seo_catalog['FLUX_AUTO'])<250 
+        elongation = (seo_catalog['FLUX_APER']-seo_catalog['FLUX_AUTO'])<250
         seo_SN = ((seo_catalog['FLUX_AUTO']/seo_catalog['FLUXERR_AUTO'])>10)
         seo_SN = (seo_SN) & (elongation) & ((seo_catalog['FLUX_AUTO']/seo_catalog['FLUXERR_AUTO'])<1000)
         self.log.debug('Selected %d stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
         # Delete source extractor catalog is needed
         if self.getarg('delete_cat'):
             os.remove(catfilename)
-        ### Querry and extract data from Guide Star Catalog
+        ### Query and extract data from Guide Star Catalog
         # Get RA / Dec
         ra_center =  self.datain.getheadval('RA' ).split(':')
         dec_center = self.datain.getheadval('DEC').split(':')
@@ -157,7 +157,7 @@ class StepFluxCalSex(StepParent):
         dec_cent = string.join([str(s) for s in dec_center], ' ')
         center_coordinates = SkyCoord(ra_cent + ' ' + dec_cent, unit=(u.hourangle, u.deg) )
         self.log.debug('Using RA/Dec = %s / %s' % (center_coordinates.ra, center_coordinates.dec) )
-        # Querry guide star catalog2 with center coordinates 
+        # Querry guide star catalog2 with center coordinates
         gsc2_query = 'http://gsss.stsci.edu/webservices/vo/CatalogSearch.aspx?'
         gsc2_query += 'RA='+str(center_coordinates.ra.value)
         gsc2_query += '&DEC='+str(center_coordinates.dec.value)
@@ -182,7 +182,7 @@ class StepFluxCalSex(StepParent):
         # only select objects less than 0.025 away in distance, get distance value
         dist_value = 1*0.76*binning/3600. #Maximum distance is 1 pixel
         mask = d2d.value<dist_value
-        self.log.debug('Distance_Value = %f, Mask length = %d' % 
+        self.log.debug('Distance_Value = %f, Mask length = %d' %
                        ( dist_value, np.sum(mask) ) )
         ### Calculate the fit correction between the guide star and the extracted values
         # Make lambda function to be minimized
@@ -199,7 +199,7 @@ class StepFluxCalSex(StepParent):
         guessdistmed = np.median(guessdistances[mask])
         # Update mask to ignore values with large STDEVS
         mask = np.logical_and( d2d.value < dist_value, guessdistances < 5 * guessdistmed )
-        self.log.debug('Median of distance to guess = %f, Mask length = %d' % 
+        self.log.debug('Median of distance to guess = %f, Mask length = %d' %
                        ( guessdistmed, np.sum(mask) ) )
         # Solve linear equation
         result = scipy.optimize.minimize(nll, [1, b_ml0],
@@ -212,7 +212,10 @@ class StepFluxCalSex(StepParent):
         ### Make table with all data from source extractor
         # Collect data columns
         cols = []
-        cols.append(fits.Column(name='RA', format='D', 
+        num = np.arange(1, len(seo_catalog['ALPHA_J2000'][seo_SN]) + 1 )
+        cols.append(fits.Column(name='ID', format='D',
+                                array=num))
+        cols.append(fits.Column(name='RA', format='D',
                                 array=seo_catalog['ALPHA_J2000'][seo_SN], unit='deg'))
         cols.append(fits.Column(name='Dec', format='D',
                                 array=seo_catalog['DELTA_J2000'][seo_SN], unit='deg'))
@@ -235,7 +238,7 @@ class StepFluxCalSex(StepParent):
         # Make table
         c = fits.ColDefs(cols)
         fitdata_table = fits.BinTableHDU.from_columns(c)
-        ### Make output data 
+        ### Make output data
         # Copy data from datain
         self.dataout = self.datain
         # Add Photometric Zero point magnitude
@@ -286,12 +289,23 @@ class StepFluxCalSex(StepParent):
             self.log.debug('Saved fit plot under %s' % pngname)
         ### If requested make a text file with the sources list
         if self.getarg('sourcetable'):
+
+            # Save region file
+
+            filename = self.dataout.filenamebegin + 'FCALsources.reg'
+            with open(filename, 'w+') as f:
+                f.write("# Region file format: DS9 version 4.1\n")
+                f.write("""global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 image\n""")
+                for i in range(len(seo_catalog['ALPHA_J2000'][seo_SN])):
+                    f.write("circle(%.7f,%.7f,0.005) # text={%i}\n"%(seo_catalog['ALPHA_J2000'][seo_SN][i],seo_catalog['DELTA_J2000'][seo_SN][i],num[i]))
+
             # Save the table
             txtname = self.dataout.filenamebegin + 'FCALsources.txt'
             ascii.write(self.dataout.tableget('Sources'),txtname,
                         format = self.getarg('sourcetableformat'))
             self.log.debug('Saved sources table under %s' % txtname)
-        
+
+
 def residual(params, x, data, errors):
     """ Fitting function for lmfit
     """
@@ -312,7 +326,7 @@ if __name__ == '__main__':
         --loglevel=LEVEL : configures the logging output for a particular level
     """
     StepFluxCalSex().execute()
-    
+
 '''HISTORY:
 2018-09-019 - Started based on Amanda's code. - Marc Berthoud
 '''
