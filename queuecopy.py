@@ -26,8 +26,8 @@
 inpath = '/data/public/queue/*/*%s*'
 # bias dark flat folder: folder below which yyyy-mm-dd/flat folders are
 bdfpath = '/data/images/StoneEdge/0.5meter/2018' 
-# raw path: folder below which User/Observation_YYMMDD/rawfile.RAW.fits are copied
-rawpath = '/data/images/astroclass'
+# output path: folder below which User/Observation_YYMMDD/rawfile.RAW.fits are copied
+outpath = '/data/images/astroclass'
 # piperunpath: folder for the piperun files
 piperunpath = '/data/images/astroclass/A_Test/piperuns'
 # pythonpath
@@ -128,7 +128,7 @@ for source_folder in source_folders:
     df.loadhead(sfiles[0])
     expt = int(df.getheadval('EXPTIME'))
     # Make raw folder for files
-    rpath = os.path.join(rawpath, suser)
+    rpath = os.path.join(outpath, suser)
     if not os.path.exists(rpath): os.makedirs(rpath)
     #opath = "%s_%ds_%s" % (sobject, expt, time.strftime('%y%m%d',sdate) ) # Taken out as we go back to queue names
     opath = spart # new version, just take path from above
@@ -140,10 +140,17 @@ for source_folder in source_folders:
         #df.loadhead(f)
         #expt = int(df.getheadval('EXPTIME'))
         #rname = os.path.split(f)[1].replace('.fits', '_%ds.RAW.fits' % expt )
+        # Change output name to _RAW.fits
         rname = os.path.split(f)[1].replace('.fits', '_RAW.fits' )
+        # Copy the file
         log.debug('Copy %s to %s/%s' % (os.path.split(f)[1], rpath, rname) )
         shutil.copy(f, os.path.join(rpath, rname) )
         os.system('chmod 664 %s' % os.path.join(rpath,rname) )
+        # Change the Observer name in the output file
+        df.load(rname)
+        if 'rechelt' in df.getheadval('OBSERVER') and not 'rechelt' in suser:
+            df.setheadval('OBSERVER',suser)
+            df.save(rname)
 
     ### Make PipeRun file
     #sdate = time.strftime('%y%m%d', sdate) # change sdate to YYMMDD
