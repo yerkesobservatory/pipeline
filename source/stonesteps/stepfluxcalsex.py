@@ -242,9 +242,11 @@ class StepFluxCalSex(StepParent):
         # Copy data from datain
         self.dataout = self.datain
         # Add Photometric Zero point magnitude
-        self.dataout.setheadval('PHOTZP', -b_ml_corr, 'Photometric zeropoint MAG=-2.5*log(data)+PHOTZP')
-        self.dataout.setheadval('PHOTZPER', 0.0, 'Uncertainty of the photometric zeropoint')
-        # Add Bzero and Bscale
+        self.dataout.setheadval('PHTZPRAW', -b_ml_corr, 'Photometric zeropoint for RAW data')
+        self.dataout.setheadval('PTZRAWER', 0.0, 'Uncertainty of the RAW photometric zeropoint')
+        self.dataout.setheadval('PHOTZP', 8.9,  'Photometric zeropoint MAG=-2.5*log(data)+PHOTZP')
+        self.dataout.setheadval('BUNIT', 'Jy/pixel', 'Units for the data')
+        # Scale the image using calculated b_ml_corr
         image_background = fits.open(bkgdfilename)[0].data
         #bzero = np.nanpercentile(self.dataout.image,self.getarg('zeropercent'))
         bzero = image_background
