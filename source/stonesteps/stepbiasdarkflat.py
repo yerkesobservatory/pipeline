@@ -198,6 +198,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         if(len(namelist) == 0):
             self.log.error('Dark calibration frame(s) not found.')
             raise RuntimeError('No dark file loaded')
+        # This has been commented out as it is now in StepMasterDark
         # darks = None
         # for name in namelist:
         #     #is (any) dark file bias corrected?
@@ -248,6 +249,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         count = 0
         datalist = []
         flat_corrected = None
+        # This has been commented out as it is now in StepMasterFlat
         #check a few things in these flat component frames
         # for name in namelist:
             # header = fits.getheader(name)
