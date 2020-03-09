@@ -15,6 +15,7 @@ from astropy import wcs as wcs
 from drizzle import drizzle as drz
 from drp.stepmiparent import StepMIParent
 from drp.datafits import DataFits
+import math
 
 class StepCoadd(StepMIParent):
     """ Stone Edge Pipeline Step Master Bias Object
@@ -97,6 +98,11 @@ class StepCoadd(StepMIParent):
         px = []
         py = []
         
+        #in order to avoid NaN interactions, creating weight map
+        weights=[]
+        for f in self.datain:
+            weights.append((np.where(np.isnan(f.image) == True, 0, 1)))
+        
         for f in self.datain:
             px.extend(wcs.WCS(f.header).calc_footprint()[:,0])
             py.extend(wcs.WCS(f.header).calc_footprint()[:,1])
@@ -162,9 +168,9 @@ class StepCoadd(StepMIParent):
         self.log.info('Starting drizzle')
         driz = drz.Drizzle(outwcs = fullwcs, pixfrac=self.getarg('pixfrac'), \
                            kernel=kernel, fillval=self.getarg('fillval'), wt_scl=driz_wt)
-        for f in self.datain:
+        for i,f in enumerate(self.datain):
             self.log.info('Adding %s to drizzle stack' % f.filename)
-            driz.add_image(f.imgdata[0], wcs.WCS(f.header))
+            driz.add_image(f.imgdata[0], wcs.WCS(f.header), inwht=weights[i])
         
         #creates output fits file from drizzle output
         self.dataout.imageset(driz.outsci)
