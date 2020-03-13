@@ -23,7 +23,7 @@ from matplotlib import pyplot as plt
 #from matplotlib import cm
 import matplotlib.colors as colors
 #import colorcet
-import support.lic as lic
+import lic as lic
 import aplpy
 import os
 import sys
