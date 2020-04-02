@@ -18,8 +18,8 @@ from PIL import Image # image library for saving rgb file as JPEG
 '''import tifffile as tiff # tiff library for saving data as .tif file'''
 from PIL import ImageFont # Libraries for adding a label to the color image
 from PIL import ImageDraw
-from drp.pipedata import PipeData # pipeline data object
-from drp.stepmiparent import StepMIParent # pipe step parent object
+from darepype.drp.datafits import DataFits # pipeline data object
+from darepype.drp.stepmiparent import StepMIParent # pipe step parent object
 
 class StepRGB(StepMIParent):
     """ Stone Edge Pipeline Step RGB Object
@@ -139,7 +139,7 @@ class StepRGB(StepMIParent):
                 # Case where there is only rlist
                 datause = [rlist[0], rlist[1], rlist[2]]
         self.log.debug('Files used: R = %s  G = %s  B = %s' % (datause[0].filename, datause[1].filename, datause[2].filename) )
-        self.dataout = PipeData(config = self.config)
+        self.dataout = DataFits(config = self.config)
         self.dataout.header = datause[0].header
         self.dataout.filename = datause[0].filename
         img = datause[0].image
