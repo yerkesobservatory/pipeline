@@ -32,8 +32,7 @@ import matplotlib # to make plots
 matplotlib.use('Agg') # Set pixel image
 import pylab as plt # pylab library for plotting
 from lmfit import minimize, Parameters # For brightness correction fit
-from drp.pipedata import PipeData # pipeline data object
-from drp.stepparent import StepParent # pipestep stepparent object
+from darepype.drp import StepParent # pipestep stepparent object
 
 class StepFluxCalSex(StepParent):
     """ Pipeline Step Object to calibrate Bias/Dark/Flat files

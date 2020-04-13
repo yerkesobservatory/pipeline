@@ -14,8 +14,8 @@ import astropy
 import ccdproc # package for reducing optical CCD telescope data 
 import matplotlib.pyplot as plt
 from astropy.io import fits #package to recognize FITS files
-from drp.stepmiparent import StepMIParent
-from drp.datafits import DataFits
+from darepype.drp import StepMIParent
+from darepype.drp import DataFits
 
 class StepMasterBias(StepMIParent):
     """ Stone Edge Pipeline Step Master Bias Object

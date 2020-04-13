@@ -12,11 +12,10 @@ import logging # logging object library
 import pylab # pylab library for creating rgb image
 from astropy.visualization import simple_norm
 from PIL import Image # image library for saving rgb file as JPEG
-'''import tifffile as tiff # tiff library for saving data as .tif file'''
 from PIL import ImageFont # Libraries for adding a label to the color image
 from PIL import ImageDraw
-from darepype.drp.datafits import DataFits # pipeline data object
-from darepype.drp.stepmiparent import StepMIParent # pipe step parent object
+from darepype.drp import DataFits # pipeline data object
+from darepype.drp import StepMIParent # pipe step parent object
 
 class StepRGB(StepMIParent):
     """ Stone Edge Pipeline Step RGB Object

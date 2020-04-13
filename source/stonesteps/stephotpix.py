@@ -17,8 +17,7 @@ import numpy # numpy library
 import scipy.ndimage #scipy sublibrary
 import logging # logging object library
 from scipy.ndimage import median_filter #Used to filter hot pixels
-from drp.pipedata import PipeData # pipeline data object
-from drp.stepparent import StepParent # pipe step parent object
+from darepype.drp import StepParent # pipe step parent object
 
 class StepHotpix(StepParent):
     """ HAWC Pipeline Step Parent Object

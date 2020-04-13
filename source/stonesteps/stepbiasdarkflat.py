@@ -18,8 +18,8 @@ import shutil # library to provide operations on collections of files
 from astropy import units as u
 import ccdproc # package for reducing optical CCD telescope data 
 from astropy.io import fits #package to recognize FITS files
-from drp.pipedata import PipeData # pipeline data object
-from drp.stepparent import StepParent # pipestep stepparent object
+from darepype.drp import DataFits # pipeline data object
+from darepype.drp import StepParent # pipestep stepparent object
 from drp.steploadaux import StepLoadAux # pipestep steploadaux object
 
 class StepBiasDarkFlat(StepLoadAux, StepParent):
@@ -36,7 +36,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         # bias values
         self.biasloaded = False # indicates if bias has been loaded
         self.bias = None # CCD data object containing arrays with bias values
-        self.biasdata = PipeData() # Pipedata object containing the bias file
+        self.biasdata = DataFits() # Pipedata object containing the bias file
         # bias file info and header keywords to fit
         self.biasname = '' # name of selected bias file
         self.biasfitkeys = [] # FITS keywords that are present in bias      
@@ -44,7 +44,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         # dark values
         self.darkloaded = False # indicates if dark has been loaded
         self.dark = None # CCD data object containing arrays with dark values
-        self.darkdata = PipeData() # Pipedata object containing the dark file
+        self.darkdata = DataFits() # Pipedata object containing the dark file
         # dark file info and header keywords to fit
         self.darkname = '' # name of selected dark file
         self.darkfitkeys = [] # FITS keywords that have to fit for dark     
@@ -52,7 +52,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         # flat values
         self.flatloaded = False # indicates if flat has been loaded
         self.flat = None # CCD data object containing arrays with flat values
-        self.flatdata = PipeData() # Pipedata object containing the flat file
+        self.flatdata = DataFits() # Pipedata object containing the flat file
         # flat file info and header keywords to fit
         self.flatname = '' # name of selected flat file
         self.flatfitkeys = [] # FITS keywords that have to fit for flat
@@ -147,7 +147,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         #apply flat correction to image
         image = ccdproc.flat_correct(image, self.flat, add_keyword=False)
         # copy calibrated image into self.dataout - make sure self.dataout is a pipedata object
-        self.dataout = PipeData(config=self.datain.config)
+        self.dataout = DataFits(config=self.datain.config)
         self.dataout.image = image.data
         self.dataout.header = image.header
         self.dataout.filename = self.datain.filename

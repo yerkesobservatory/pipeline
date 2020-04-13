@@ -11,7 +11,7 @@
 """
 
 import logging # logging object library
-from drp.stepparent import StepParent
+from darepype.drp import StepParent
 
 class blah(StepParent):
     """ HAWC Pipeline Step Parent Object

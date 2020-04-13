@@ -10,7 +10,7 @@
 import re
 import logging # logging object library
 import os
-from drp.stepparent import StepParent
+from darepype.drp import StepParent
 
 class StepAddKeys(StepParent):
     """ HAWC Pipeline Step Parent Object

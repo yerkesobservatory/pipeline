@@ -13,8 +13,8 @@ import logging # logging object library
 from astropy.io import fits
 from astropy import wcs as wcs
 from drizzle import drizzle as drz
-from drp.stepmiparent import StepMIParent
-from drp.datafits import DataFits
+from darepype.drp import StepMIParent
+from darepype.drp import DataFits
 
 class StepCoadd(StepMIParent):
     """ Stone Edge Pipeline Step Master Bias Object

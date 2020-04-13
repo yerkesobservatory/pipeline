@@ -14,8 +14,8 @@ import string # for string.join
 import time # time library
 import logging
 from datetime import datetime
-from drp.dataparent import DataParent # Pipeline Data object
-from drp.stepniparent import StepNIParent # To check if we have datain or [datain, datain, ...]
+from darepype.drp import DataParent # Pipeline Data object
+from darepype.drp import StepNIParent # To check if we have datain or [datain, datain, ...]
 
 class StepLoadInput(StepNIParent):
     """ HAWC Pipeline Step Parent Object

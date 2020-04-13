@@ -15,8 +15,8 @@ import numpy # numpy library
 import logging # logging object library
 import pyfits # pyfits library (for accessing header data) @UnresolvedImport
 import scipy # scipy library
-from drp.pipedata import PipeData # pipeline data object
-from drp.stepparent import StepParent # pipe step parent object
+from darepype.drp import DataFits # pipeline data object
+from darepype.drp import StepParent # pipe step parent object
 
 class StepDark(StepParent):
     """ HAWC Pipeline Step Parent Object
@@ -182,9 +182,9 @@ class StepDark(StepParent):
                               % filelist[bestind] )
             self.fitkeys = fitkeys
             self.keyvalues = datakeys            
-        ### load dark data into a PipeData object
+        ### load dark data into a DataFits object
         self.darkfile = darkfile
-        darkdata = PipeData(config = self.config)
+        darkdata = DataFits(config = self.config)
         darkdata.load(self.darkfile)
         ### find dark image data arrays and store them
         # get sizes of input data

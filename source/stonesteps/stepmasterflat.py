@@ -18,8 +18,8 @@ import ccdproc # package for reducing optical CCD telescope data
 import matplotlib.pyplot as plt
 from astropy import units as u
 from astropy.io import fits #package to recognize FITS files
-from drp.stepmiparent import StepMIParent
-from drp.datafits import DataFits
+from darepype.drp import StepMIParent
+from darepype.drp import DataFits
 from drp.steploadaux import StepLoadAux
 
 class StepMasterFlat(StepLoadAux, StepMIParent):

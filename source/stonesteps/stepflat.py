@@ -34,8 +34,8 @@ import os # os library
 import numpy # numpy library
 import logging # logging object library
 from astropy.io import fits
-from drp.pipedata import PipeData # pipeline data object
-from drp.stepparent import StepParent # pipe step parent object
+from darepype.drp import DataFits # pipeline data object
+from darepype.drp import StepParent # pipe step parent object
 from drp.steploadaux import StepLoadAux
 
 class StepFlat(StepLoadAux, StepParent):
@@ -54,7 +54,7 @@ class StepFlat(StepLoadAux, StepParent):
         # flat values
         self.flatloaded = 0 # indicates if flat has been loaded
         self.flats = [] # list containing arrays with flat values
-        self.flatdata = PipeData() # Pipedata object containing the flat file
+        self.flatdata = DataFits() # Pipedata object containing the flat file
         # flat file info and header keywords to fit
         self.flatfile = '' # name of selected flat file
         self.fitkeys = [] # FITS keywords that have to fit
@@ -289,8 +289,6 @@ class StepFlat(StepLoadAux, StepParent):
             information is cleared.
         """
         # initialize input and output
-        self.datain = PipeData()
-        self.dataout = PipeData()
         self.flatloaded = 0
         self.flatvalue = numpy.zeros([1,1])
         self.flatphase = numpy.zeros([1,1])
@@ -304,11 +302,11 @@ class StepFlat(StepLoadAux, StepParent):
         self.log.info('Testing pipe step flat')
         # get testin and a configuration
         if self.config != None and len(self.config) > 2: # i.e. if real config is loaded
-            testin = PipeData(config=self.config)
+            testin = DataFits(config=self.config)
         else:
-            testin = PipeData(config=self.testconf)
+            testin = DataFits(config=self.testconf)
         # load sample data
-        datain=PipeData(config=testin.config)
+        datain=DataFits(config=testin.config)
         #infile = 'mode_chop/120207_000_00HA012.chop.dmd.fits'
         infile = 'mode_chop/120306_000_00HA006.chop.dmd.fits'
         #infile = 'mode_chop/120402_000_00HA035.chop.dmd.fits'

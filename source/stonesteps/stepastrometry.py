@@ -16,8 +16,8 @@ import subprocess # library to run subprocesses
 from astropy import wcs # to get WCS coordinates
 from astropy.coordinates import Angle
 import astropy.units as u
-from drp.pipedata import PipeData
-from drp.stepparent import StepParent
+from darepype.drp import DataFits
+from darepype.drp import StepParent
 
 class StepAstrometry(StepParent):
     """ HAWC Pipeline Step Parent Object
@@ -142,7 +142,7 @@ class StepAstrometry(StepParent):
 
         ### Post processing
         # Read output file
-        self.dataout = PipeData(config=self.config)
+        self.dataout = DataFits(config=self.config)
         self.log.debug('Opening astrometry.net output file %s' % outnewname)
         try:
             self.dataout.load(outnewname)
