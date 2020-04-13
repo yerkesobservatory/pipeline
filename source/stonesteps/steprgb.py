@@ -10,10 +10,7 @@ import os # os library
 import numpy # numpy library
 import logging # logging object library
 import pylab # pylab library for creating rgb image
-try:
-    import img_scale
-except:
-    from stonesteps import img_scale # image scaling for balancing the different filters
+from astropy.visualization import simple_norm
 from PIL import Image # image library for saving rgb file as JPEG
 '''import tifffile as tiff # tiff library for saving data as .tif file'''
 from PIL import ImageFont # Libraries for adding a label to the color image
@@ -188,10 +185,14 @@ class StepRGB(StepMIParent):
         # Make new cube with the proper data type for color images (uint8)
         # Use square root (sqrt) scaling for each filter
         # log or asinh scaling is also available
+        #astropy.vidualizations.SqrtStretch()
         imgcube = numpy.zeros((img.shape[0], img.shape[1], 3), dtype='uint8')
-        imgcube[:,:,0] = 255 * img_scale.sqrt(datause[0].image, scale_min= rminsv, scale_max= maxsv)
-        imgcube[:,:,1] = 255 * img_scale.sqrt(datause[1].image, scale_min= gminsv, scale_max= maxsv)
-        imgcube[:,:,2] = 255 * img_scale.sqrt(datause[2].image, scale_min= bminsv, scale_max= maxsv)
+        minsv = [rminsv, gminsv, bminsv]
+        for i in range(3):
+            # Make normalization function
+            norm = simple_norm(datause[i].image, 'sqrt', min_cut = minsv[i], max_cut = maxsv)
+            # Apply it
+            imgcube[:,:,i] = norm(datause[i].image) * 255.
         self.dataout.image = imgcube
         # Create variable containing all the scaled image data
         imgcolor = Image.fromarray(self.dataout.image, mode='RGB')
@@ -213,10 +214,10 @@ class StepRGB(StepMIParent):
         except:
             try:
                 # This should work on Mac
-                font = ImageFont.truetype('/Library/Fonts/arial.ttf',imgheight/41)
+                font = ImageFont.truetype('/Library/Fonts/arial.ttf',imgheight//41)
             except:
                 # This should work on Windows
-                font = ImageFont.truetype('C:\\Windows\\Fonts\\arial.ttf',imgheight/41)
+                font = ImageFont.truetype('C:\\Windows\\Fonts\\arial.ttf',imgheight//41)
                 # If this still doesn't work - then add more code to make it run on YOUR system
         # Use the beginning of the FITS filename as the object name
         filename = os.path.split(self.dataout.filename)[-1]
