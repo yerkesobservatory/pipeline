@@ -209,15 +209,19 @@ class StepRGB(StepMIParent):
         # Open Sans-Serif Font with a size relative to the picture size
         try:
             # This should work on Linux
-            font = ImageFont.truetype('/usr/share/fonts/liberation/LiberationSans-Regular.ttf',imgheight/41)
+            font = ImageFont.truetype('/usr/share/fonts/liberation/LiberationSans-Regular.ttf',imgheight//41)
         except:
             try:
                 # This should work on Mac
                 font = ImageFont.truetype('/Library/Fonts/arial.ttf',imgheight//41)
             except:
-                # This should work on Windows
-                font = ImageFont.truetype('C:\\Windows\\Fonts\\arial.ttf',imgheight//41)
-                # If this still doesn't work - then add more code to make it run on YOUR system
+                try:
+                    # This should work on Windows
+                    font = ImageFont.truetype('C:\\Windows\\Fonts\\arial.ttf',imgheight//41)
+                except:
+                    # This should work in Colab
+                    font = ImageFont.truetype('/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',imgheight//41)
+                    # If this still doesn't work - then add more code to make it run on YOUR system
         # Use the beginning of the FITS filename as the object name
         filename = os.path.split(self.dataout.filename)[-1]
         try:
