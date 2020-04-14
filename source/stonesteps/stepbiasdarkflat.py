@@ -20,7 +20,7 @@ import ccdproc # package for reducing optical CCD telescope data
 from astropy.io import fits #package to recognize FITS files
 from darepype.drp import DataFits # pipeline data object
 from darepype.drp import StepParent # pipestep stepparent object
-from drp.steploadaux import StepLoadAux # pipestep steploadaux object
+from darepype.tools.steploadaux import StepLoadAux # pipestep steploadaux object
 
 class StepBiasDarkFlat(StepLoadAux, StepParent):
     """ Pipeline Step Object to calibrate Bias/Dark/Flat files

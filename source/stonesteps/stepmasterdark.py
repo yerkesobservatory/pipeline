@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from astropy.io import fits #package to recognize FITS files
 from darepype.drp import StepMIParent
 from darepype.drp import DataFits
-from drp.steploadaux import StepLoadAux
+from darepype.tools.steploadaux import StepLoadAux # pipestep steploadaux object
 
 class StepMasterDark(StepLoadAux, StepMIParent):
     """ Stone Edge Pipeline Step Master Dark Object

@@ -152,8 +152,8 @@ class StepFluxCalSex(StepParent):
         # Get RA / Dec
         ra_center =  self.datain.getheadval('RA' ).split(':')
         dec_center = self.datain.getheadval('DEC').split(':')
-        ra_cent =  string.join([str(s) for s in ra_center],  ' ')
-        dec_cent = string.join([str(s) for s in dec_center], ' ')
+        ra_cent =  ' '.join([str(s) for s in ra_center])
+        dec_cent = ' '.join([str(s) for s in dec_center])
         center_coordinates = SkyCoord(ra_cent + ' ' + dec_cent, unit=(u.hourangle, u.deg) )
         self.log.debug('Using RA/Dec = %s / %s' % (center_coordinates.ra, center_coordinates.dec) )
         # Querry guide star catalog2 with center coordinates

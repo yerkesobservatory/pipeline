@@ -36,7 +36,7 @@ import logging # logging object library
 from astropy.io import fits
 from darepype.drp import DataFits # pipeline data object
 from darepype.drp import StepParent # pipe step parent object
-from drp.steploadaux import StepLoadAux
+from darepype.tools.steploadaux import StepLoadAux # pipestep steploadaux object
 
 class StepFlat(StepLoadAux, StepParent):
     """ HAWC Pipeline Flatfielding Step Object

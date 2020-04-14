@@ -147,7 +147,7 @@ class StepAstrometry(StepParent):
         try:
             self.dataout.load(outnewname)
             self.dataout.filename = self.datain.filename
-        except Exception, error:
+        except Exception as error:
             self.log.error("Unable to open astrometry. output file = %s"
                            % outname)
             raise error

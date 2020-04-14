@@ -70,29 +70,29 @@ class StepHotpix(StepParent):
     def run(self):
         """ Runs the hot pix removal algorithm. The self.datain is run
             through the code, the result is in self.dataout.
-	    Tolerance is the number of standard deviations used to cutoff
-	    the hot pixels.
+            Tolerance is the number of standard deviations used to cutoff
+            the hot pixels.
         """
-	# Copy input to output data
-	self.dataout = self.datain.copy()
-	img = self.datain.image
-	''' Cleaning Algorithm '''
-	#Apply a filter that creates a threshold for hotpixels
+        # Copy input to output data
+        self.dataout = self.datain.copy()
+        img = self.datain.image
+        ''' Cleaning Algorithm '''
+        #Apply a filter that creates a threshold for hotpixels
         blurred = median_filter(img, size=2)
         difference = img - blurred
         threshold = 10*numpy.std(difference)
         #Find the hotpixels
-    	hot_pixels = numpy.nonzero((numpy.abs(difference[1:-1,1:-1])>threshold))
-    	hot_pixels = numpy.array(hot_pixels) +1 #ignored the edges
-	#This is the image with the hot pixels removed
+        hot_pixels = numpy.nonzero((numpy.abs(difference[1:-1,1:-1])>threshold))
+        hot_pixels = numpy.array(hot_pixels) +1 #ignored the edges
+        #This is the image with the hot pixels removed
         for y,x in zip(hot_pixels[0],hot_pixels[1]):
             img[y,x]=blurred[y,x]
-	''' Cleaning Algorithm (end) '''
+        ''' Cleaning Algorithm (end) '''
         self.dataout.image = img
         # Set complete flag
         self.dataout.setheadval('COMPLETE',1,
                                 'Data Reduction Pipe: Complete Data Flag')
-    
+
     def reset(self):
         """ Resets the step to the same condition as it was when it was
             created. Internal variables are reset, any stored data is
