@@ -10,7 +10,10 @@ import os # os library
 import numpy # numpy library
 import logging # logging object library
 import pylab # pylab library for creating rgb image
-import img_scale # image scaling for balancing the different filters
+try:
+    import img_scale
+except:
+    from stonesteps import img_scale # image scaling for balancing the different filters
 from PIL import Image # image library for saving rgb file as JPEG
 '''import tifffile as tiff # tiff library for saving data as .tif file'''
 from PIL import ImageFont # Libraries for adding a label to the color image
@@ -220,7 +223,7 @@ class StepRGB(StepMIParent):
         try:
             objectname = filename.split('_')[0]
             objectname = objectname[0].upper()+objectname[1:]
-        except Exception, e:
+        except Exception:
             objectname = 'Unknown.'
         objectname = 'Object:  %s' % objectname
         # Read labels at their respective position (kept relative to image size)

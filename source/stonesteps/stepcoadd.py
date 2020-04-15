@@ -15,6 +15,7 @@ from astropy import wcs as wcs
 from drizzle import drizzle as drz
 from drp.stepmiparent import StepMIParent
 from drp.datafits import DataFits
+import math
 
 class StepCoadd(StepMIParent):
     """ Stone Edge Pipeline Step Master Bias Object
@@ -59,7 +60,7 @@ class StepCoadd(StepMIParent):
                                'Pixel scale divisor for output image (higher gives more resolution, lower gives less)'])
         self.paramlist.append(['pad', 0,
                                'Extra padding outside maximum extent of inputs'])
-        self.paramlist.append(['fillval', '0',
+        self.paramlist.append(['fillval', np.nan,
                                'Value for filling in the area(s) in the output where there is no input data'])
         self.paramlist.append(['drizzleweights','exptime',
                                'How each input image should be weighted when added to the output \
@@ -96,6 +97,11 @@ class StepCoadd(StepMIParent):
         #calculations necessary for updating wcs information
         px = []
         py = []
+        
+        #in order to avoid NaN interactions, creating weight map
+        weights=[]
+        for f in self.datain:
+            weights.append((np.where(np.isnan(f.image) == True, 0, 1)))
         
         for f in self.datain:
             px.extend(wcs.WCS(f.header).calc_footprint()[:,0])
@@ -161,13 +167,19 @@ class StepCoadd(StepMIParent):
         fullwcs = wcs.WCS(self.dataout.header)
         self.log.info('Starting drizzle')
         driz = drz.Drizzle(outwcs = fullwcs, pixfrac=self.getarg('pixfrac'), \
-                           kernel=kernel, fillval=self.getarg('fillval'), wt_scl=driz_wt)
-        for f in self.datain:
+                           kernel=kernel, fillval='10000', wt_scl=driz_wt)
+        for i,f in enumerate(self.datain):
             self.log.info('Adding %s to drizzle stack' % f.filename)
-            driz.add_image(f.imgdata[0], wcs.WCS(f.header))
+            driz.add_image(f.imgdata[0], wcs.WCS(f.header), inwht=weights[i])
+        
+        try:
+            fillval=float(self.getarg('fillval'))
+        except:
+            fillval=np.nan
+            self.log.error('Fillvalue not recognized or missing, using default')
         
         #creates output fits file from drizzle output
-        self.dataout.imageset(driz.outsci)
+        self.dataout.imageset(np.where(driz.outsci == 10000, fillval, driz.outsci))
         self.dataout.imageset(driz.outwht,'OutWeight', self.dataout.header)
         self.dataout.filename = self.datain[0].filename
 
