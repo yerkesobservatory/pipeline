@@ -27,9 +27,9 @@ inpath = '/data/public/queue/*/*%s*'
 # bias dark flat folder: folder below which yyyy-mm-dd/flat folders are
 bdfpath = '/data/images/StoneEdge/0.5meter/2018' 
 # output path: folder below which User/Observation_YYMMDD/rawfile.RAW.fits are copied
-outpath = '/data/images/astroclass'
+outpath = '/data/images/queue'
 # piperunpath: folder for the piperun files
-piperunpath = '/data/images/astroclass/A_Test/piperuns'
+piperunpath = '/data/images/queue/A_Test/piperuns'
 # pythonpath
 pypath = '/data/scripts/DataReduction/source'
 
@@ -143,9 +143,10 @@ for source_folder in source_folders:
         # Change output name to _RAW.fits
         rname = os.path.split(f)[1].replace('.fits', '_RAW.fits' )
         # Copy the file
-        log.debug('Copy %s to %s/%s' % (os.path.split(f)[1], rpath, rname) )
-        shutil.copy(f, os.path.join(rpath, rname) )
-        os.system('chmod 664 %s' % os.path.join(rpath,rname) )
+        rname = os.path.join(rpath, rname)
+        log.debug('Copy %s to %s' % (os.path.split(f)[1], rname) )
+        shutil.copy(f, rname )
+        os.system('chmod 664 %s' % rname )
         # Change the Observer name in the output file
         df.load(rname)
         if 'rechelt' in df.getheadval('OBSERVER') and not 'rechelt' in suser:
