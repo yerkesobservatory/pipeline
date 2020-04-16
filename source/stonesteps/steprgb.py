@@ -213,7 +213,7 @@ class StepRGB(StepMIParent):
         except:
             try:
                 # This should work on Mac
-                font = ImageFont.truetype('/Library/Fonts/arial.ttf',imgheight//41)
+                font = ImageFont.truetype('/Library/Fonts/Arial Unicode.ttf',imgheight//41)
             except:
                 try:
                     # This should work on Windows

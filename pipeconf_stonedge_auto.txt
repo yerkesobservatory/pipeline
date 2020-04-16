@@ -42,7 +42,7 @@
 
 ### Pipelines Section: configuration for individual pipeline modes
 
-# ChopNod Mode Configuration
+# Stoneedge Mode Configuration
 [mode_stoneedge]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
