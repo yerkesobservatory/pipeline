@@ -15,9 +15,9 @@
 # Environment Variables
 [envars]
     # Master Bias, Dark, Flat Folder
-    MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2019/Masters 
+    MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2020/Masters 
     # Date for reducing BDF files from a certain day
-    BDF_DATE = 2015-01-31
+    BDF_DATE = 2020-02-17
     # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
     SEO_AUXFOLDER = /data/scripts/DataReduction/auxfiles
 
@@ -56,8 +56,8 @@
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        filelocation = '/data/images/StoneEdge/0.5meter/2019/%Y-%m-%d/bias/bias*.fits' # for current date
-        #filelocation = '/data/images/StoneEdge/0.5meter/2019/$BDF_DATE/bias/bias*.fits'
+        filelocation = '/data/images/StoneEdge/0.5meter/2020/%Y-%m-%d/bias/bias*.fits' # for current date
+        #filelocation = '/data/images/StoneEdge/0.5meter/2020/$BDF_DATE/bias/bias*.fits'
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MBIAS|UNK|LOAD
     # Data group step configuration
@@ -70,8 +70,8 @@
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        #filelocation = '/data/images/StoneEdge/0.5meter/2015/$BDF_DATE/*/dark*.fits'
-        filelocation = '/data/images/StoneEdge/0.5meter/2019/%Y-%m-%d/dark/dark*.fits' # for current date
+        #filelocation = '/data/images/StoneEdge/0.5meter/2020/$BDF_DATE/*/dark*.fits'
+        filelocation = '/data/images/StoneEdge/0.5meter/2020/%Y-%m-%d/dark/dark*.fits' # for current date
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MDARK|UNK|LOAD
     # Data group step configuration
@@ -84,8 +84,8 @@
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        #filelocation = '/data/images/StoneEdge/0.5meter/2019/$BDF_DATE/flat/flat*.fits'
-        filelocation = '/data/images/StoneEdge/0.5meter/2019/%Y-%m-%d/flat/flat*.fits' # for current date
+        #filelocation = '/data/images/StoneEdge/0.5meter/2020/$BDF_DATE/flat/flat*.fits'
+        filelocation = '/data/images/StoneEdge/0.5meter/2020/%Y-%m-%d/flat/flat*.fits' # for current date
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MFLAT|UNK|LOAD
     # Data group step configuration

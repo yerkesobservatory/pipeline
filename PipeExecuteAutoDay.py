@@ -84,14 +84,15 @@ def execute():
         fullentry = os.path.join(topdirectory,entry)
         # Run this loop for each file ('image') found in the object folder ('fullentry')
         for image in os.listdir(fullentry):
-            num = image[-14:-5]
             # Makes sure the images collected are FITS images
             # i.e. end with "seo.fits" not KEYS or WCS other reduction product
             if not image[-8:] in ['seo.fits', 'RAW.fits']: # if file ends with "seo.fits" - regular SEO data
                                                            # if file ends with "RAW.fits" - raw data
 	            if not '_0.fits' in image[-7:]: # check if file ends with "0.fits" - queue data
-	                if not 'seo%s.fits' % num in image[-17:]: # check if file ends with "seoNUMBER.fits"
-                            continue
+                        # The following lines were deactivated 190830 as it would include *seo_0_SxBkgd.fits
+                        #num = image[-14:-5]
+	                #if not 'seo%s.fits' % num in image[-17:]: # check if file ends with "seoNUMBER.fits"
+                        continue
             # Ignore dark, flat or bias images
             if 'dark' in image or 'flat' in image or 'bias' in image:
                 continue
