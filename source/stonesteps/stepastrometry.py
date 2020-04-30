@@ -133,11 +133,11 @@ class StepAstrometry(StepParent):
                 self.log.debug('output file missing -> astrometry failed')
         # Print the output from astrometry (cut if necessary)
         if self.getarg('verbose') and poll == 0:
-            output = process.stdout.read()
+            output = process.stdout.read().decode()
             if len(output) > 1000:
                 outlines = output.split('\n')
                 output = outlines[:10]+['...','...']+outlines[-7:]
-                output = string.join(output,'\n')
+                output = '\n'.join(output)
             self.log.debug(output)
 
         ### Post processing
