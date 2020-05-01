@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/local/bin/python3
 
 # Below is the "default" python path, the one above is necessary on stars
 #!/usr/bin/env python
@@ -44,7 +44,7 @@ import time
 import string
 import re
 import shutil
-from drp.datafits import DataFits
+from darepype.drp.datafits import DataFits
 
 # Set up logging
 logging.basicConfig(level = logging.DEBUG)
@@ -117,7 +117,7 @@ for source_folder in source_folders:
     #suser = ssplit[1][0].upper()+ssplit[1][1:] # i.e. Galaxieslab1group2
     suser = os.path.split(srest)[1] # Get from upper level folder -- i.e. rich
     suser = suser[0].upper() + suser[1:] # Uppercase first character -- i.e. Rich
-    sobject = string.join(ssplit[2:-1],'') # i.e. NGC_2129
+    sobject = ''.join(ssplit[2:-1]) # i.e. NGC_2129
     # Get list of files in raw folder
     sfiles = glob.glob(os.path.join(source_folder,'raw/science','*.fits') )
     if len(sfiles) < 1:
