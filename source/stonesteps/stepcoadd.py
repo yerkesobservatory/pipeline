@@ -10,6 +10,7 @@ import os # os library
 import sys # sys library
 import numpy as np# numpy library
 import logging # logging object library
+import linalg # Linear algebra for matrix operations
 from astropy.io import fits
 from astropy import wcs as wcs
 from drizzle import drizzle as drz
