@@ -10,7 +10,6 @@ import os # os library
 import sys # sys library
 import numpy as np# numpy library
 import logging # logging object library
-import linalg # Linear algebra for matrix operations
 from astropy.io import fits
 from astropy import wcs as wcs
 from drizzle import drizzle as drz
@@ -75,11 +74,11 @@ class StepCoadd(StepMIParent):
         """
         #calculate platescale of first input image
         try:
-            det = linalg.det(wcs.WCS(self.datain[0].header).wcs.cd)
+            det = np.linalg.det(wcs.WCS(self.datain[0].header).wcs.cd)
             pscale = np.sqrt(np.abs(det))*3600.
         except:
             try:
-                det = linalg.det(wcs.WCS(self.datain[0].header).wcs.pc)
+                det = np.linalg.det(wcs.WCS(self.datain[0].header).wcs.pc)
                 pscale = np.sqrt(np.abs(det))*3600.
             except:
                 pscale = self.datain[0].header['PIXSCAL']
