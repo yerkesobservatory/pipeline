@@ -74,11 +74,11 @@ class StepCoadd(StepMIParent):
         """
         #calculate platescale of first input image
         try:
-            det = linalg.det(wcs.WCS(self.datain[0].header).wcs.cd)
+            det = np.linalg.det(wcs.WCS(self.datain[0].header).wcs.cd)
             pscale = np.sqrt(np.abs(det))*3600.
         except:
             try:
-                det = linalg.det(wcs.WCS(self.datain[0].header).wcs.pc)
+                det = np.linalg.det(wcs.WCS(self.datain[0].header).wcs.pc)
                 pscale = np.sqrt(np.abs(det))*3600.
             except:
                 pscale = self.datain[0].header['PIXSCAL']
