@@ -94,10 +94,14 @@ class StepAstrometry(StepParent):
         rawcommand = self.getarg('astrocmd') % (self.datain.filename, outname)
 
         # get estimated RA and DEC center values from the input FITS header
-        ra = Angle(self.datain.header['RA'], unit=u.hour).degree
-        dec = Angle(self.datain.header['DEC'], unit=u.deg).degree
+        try:
+            ra = Angle(self.datain.getheadval('RA'), unit=u.hour).degree
+            dec = Angle(self.datain.getheadval('DEC'), unit=u.deg).degree
+        except:
+            self.log.debug('FITS header missing RA/DEC -> searching entire sky')
+        else:
         # update command parameters to use these values
-        rawcommand = rawcommand + ' --ra %f --dec %f --radius %f' % (ra, dec, self.getarg('searchradius'))         
+            rawcommand = rawcommand + ' --ra %f --dec %f --radius %f' % (ra, dec, self.getarg('searchradius'))         
 
         ### Run Astrometry:
         #   This loop tries the downsample and param options until the fit is successful
