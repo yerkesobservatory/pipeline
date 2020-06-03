@@ -67,6 +67,10 @@ class StepFluxCalSex(StepParent):
         # Clear Parameter list
         self.paramlist = []
         # Append parameters
+        self.paramlist.append(['filtermap', 'g-band=g|r-band=r|i-band=i|z-band=z',
+                               'Mapping from telescope filter names to SDSS filter names. ' +
+                               'Data from multiple filters can be calibrated using the same band. ' +
+                               'Example: "telg=g|telr=r|telclear=r"'])
         self.paramlist.append(['sx_cmd', 'sex %s',
                                'Command to call source extractor, should contain ' +
                                '1 string placeholder for intput filepathname'])
@@ -164,7 +168,16 @@ class StepFluxCalSex(StepParent):
         self.log.debug('Running URL = %s' % gsc2_query)
         gsc2_result = requests.get(gsc2_query)
         # Get data from result
-        filter_name = self.datain.getheadval('FILTER').split('-')[0]
+        filter_map = self.getarg('filtermap').split('|')
+        filter_name = filter_tel = self.datain.getheadval('FILTER')
+        for fil in filter_map:
+            entry = fil.split('=')
+            if entry[0] == filter_tel:
+                try:
+                    filter_name = entry[1]
+                except:
+                    self.log.error("Badly formatted filter mapping. No '=' after %s"
+                                   % filter_tel)
         query_table = astropy.io.ascii.read(gsc2_result.text)
         table_filter = 'SDSS'+filter_name+'Mag'
         table_filter_err = 'SDSS'+filter_name+'MagErr'
@@ -181,8 +194,11 @@ class StepFluxCalSex(StepParent):
         # only select objects less than 0.025 away in distance, get distance value
         dist_value = 1*0.76*binning/3600. #Maximum distance is 1 pixel
         mask = d2d.value<dist_value
-        self.log.debug('Distance_Value = %f, Mask length = %d' %
-                       ( dist_value, np.sum(mask) ) )
+        if(np.sum(mask) < 2):
+            self.log.warn('Only %d sources match between image and guide star catalog, fit may not work' %
+                          np.sum(mask) )
+        self.log.debug('Distance_Value = %f, Min(distances) = %f, Mask length = %d' %
+                       ( dist_value, np.min(d2d.value), np.sum(mask) ) )
         ### Calculate the fit correction between the guide star and the extracted values
         # Make lambda function to be minimized
         # The fit finds m_ml and b_ml where
@@ -202,7 +218,8 @@ class StepFluxCalSex(StepParent):
                        ( guessdistmed, np.sum(mask) ) )
         # Solve linear equation
         result = scipy.optimize.minimize(nll, [1, b_ml0],
-                                         args=(GSC_Mag[mask], seo_Mag[seo_SN][idx][mask],
+                                         args=(GSC_Mag[mask],
+                                               seo_Mag[seo_SN][idx][mask],
                                                eps_data[mask]))
         m_ml, b_ml = result["x"]
         self.log.info('Fitted offset is %f mag, fitted slope is %f' % (b_ml, m_ml) )
@@ -215,11 +232,14 @@ class StepFluxCalSex(StepParent):
         cols.append(fits.Column(name='ID', format='D',
                                 array=num))
         cols.append(fits.Column(name='RA', format='D',
-                                array=seo_catalog['ALPHA_J2000'][seo_SN], unit='deg'))
+                                array=seo_catalog['ALPHA_J2000'][seo_SN],
+                                unit='deg'))
         cols.append(fits.Column(name='Dec', format='D',
-                                array=seo_catalog['DELTA_J2000'][seo_SN], unit='deg'))
+                                array=seo_catalog['DELTA_J2000'][seo_SN],
+                                unit='deg'))
         cols.append(fits.Column(name='Magnitude', format='D',
-                                array=seo_Mag[seo_SN]-b_ml_corr, unit='magnitude'))
+                                array=seo_Mag[seo_SN]-b_ml_corr,
+                                unit='magnitude'))
         cols.append(fits.Column(name='Magnitude_Err', format='D',
                                 array=seo_MagErr[seo_SN], unit='magnitude'))
         # Make table
@@ -228,12 +248,19 @@ class StepFluxCalSex(StepParent):
         ### Make table with data which was fit
         # Collect data columns
         cols = []
-        cols.append(fits.Column(name='RA', format='D', array=GSC_RA[mask], unit='deg'))
-        cols.append(fits.Column(name='Dec', format='D', array=GSC_DEC[mask], unit='deg'))
-        cols.append(fits.Column(name='Diff_Deg', format='D', array=d2d[mask], unit='deg'))
-        cols.append(fits.Column(name='GSC_Mag', format='D', array=GSC_Mag[mask], unit='magnitude'))
-        cols.append(fits.Column(name='Img_Mag', format='D', array=seo_Mag[seo_SN][idx][mask], unit='magnitude'))
-        cols.append(fits.Column(name='Error', format='D', array=eps_data[mask], unit='magnitude'))
+        cols.append(fits.Column(name='RA', format='D', array=GSC_RA[mask],
+                                unit='deg'))
+        cols.append(fits.Column(name='Dec', format='D', array=GSC_DEC[mask],
+                                unit='deg'))
+        cols.append(fits.Column(name='Diff_Deg', format='D', array=d2d[mask],
+                                unit='deg'))
+        cols.append(fits.Column(name='GSC_Mag', format='D',
+                                array=GSC_Mag[mask], unit='magnitude'))
+        cols.append(fits.Column(name='Img_Mag', format='D',
+                                array=seo_Mag[seo_SN][idx][mask],
+                                unit='magnitude'))
+        cols.append(fits.Column(name='Error', format='D', array=eps_data[mask],
+                                unit='magnitude'))
         # Make table
         c = fits.ColDefs(cols)
         fitdata_table = fits.BinTableHDU.from_columns(c)

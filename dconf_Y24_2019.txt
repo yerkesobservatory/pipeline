@@ -1,0 +1,53 @@
+### Delta Config file to Reduce Yerkes 24 Data
+#
+#   Use this with pipeconf_stoneedge_auto.txt to reduce
+#   Yerkes 24inch data.
+#
+#   To learn more about Delta Config files, read the
+#   darepype manual at https://darepype.readthedocs.io
+#
+#   Author: Jason Lin
+
+# Change to Environment Variables
+[envars]
+    MASTER_BDF_FOLDER = /data/images/Yerkes/24inch/2019/Masters
+
+[data]
+    filenamebegin = '\A.+_[A-Za-z0-9]+[a-z0-9][._]'
+    filenameend = '\.fit(\.gz)?\Z'
+
+# Y24 Mode Configuration
+[mode_y24]
+    # list of steps
+    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometry, save, StepFluxCalSex, save, StepRGB
+
+[mode_masterbias]
+    [[loadinput]]
+        filelocation = '/data/images/Yerkes/24inch/2019/%Y-%m-%d/bias/*.fit'
+
+[mode_masterdark]
+    [[loadinput]]
+        filelocation = 'data/images/Yerkes/24inch/2019/%Y-%m-%d/dark/*.fit'
+
+[mode_masterflat]
+    [[loadinput]]
+        filelocation = 'data/images/Yerkes/24inch/2019/%Y-%m-%d/flat/*.fit'
+
+[biasdarkflat]
+    biasfitkeys = XBIN, DATE-OBS
+    darkfitkeys = XBIN, DATE-OBS, EXPTIME
+    flatfitkeys = XBIN, FILTER, DATE-OBS
+
+[addkeys]
+    filternames = 'gprime', 'rprime', 'iprime', 'zprime', 'Halpha', 'OIII', 'Clear'
+
+[astrometry]
+    ra = '13:42:11.1568'
+    dec = '+28:22:25.0935'
+
+[fluxcalsex]
+    filtermap = 'gprime=g|rprime=r|iprime=i|zprime=z|Clear=r'
+
+[header]
+    INSTMODE = 'image'
+    XBIN = 1

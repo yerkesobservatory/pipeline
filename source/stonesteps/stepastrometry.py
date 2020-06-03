@@ -67,6 +67,10 @@ class StepAstrometry(StepParent):
                                'Parameter groups to run if the command fails'])
         self.paramlist.append(['timeout', 300,
                                'Timeout for running astrometry (seconds)'])
+        self.paramlist.append(['ra', '',
+                               'Option to manually set image center RA'])
+        self.paramlist.append(['dec', '',
+                               'Option to manually set image center DEC'])
         self.paramlist.append(['searchradius', 5,
                                'Only search in indexes within "searchradius" (degrees) of the field center given by --ra and --dec (degrees)'])
         # confirm end of setup
@@ -93,15 +97,29 @@ class StepAstrometry(StepParent):
         # Make command string
         rawcommand = self.getarg('astrocmd') % (self.datain.filename, outname)
 
-        # get estimated RA and DEC center values from the input FITS header
-        try:
-            ra = Angle(self.datain.getheadval('RA'), unit=u.hour).degree
-            dec = Angle(self.datain.getheadval('DEC'), unit=u.deg).degree
-        except:
-            self.log.debug('FITS header missing RA/DEC -> searching entire sky')
+        # get estimated RA and DEC center values from the config file or input FITS header
+        raopt = self.getarg('ra')
+        if raopt != '':
+            ra = Angle(raopt, unit=u.hour).degree
         else:
+            try:
+                ra = Angle(self.datain.getheadval('RA'), unit=u.hour).degree
+            except:
+                ra = ''
+        decopt = self.getarg('dec')
+        if decopt != '':
+            dec = Angle(decopt, unit=u.deg).degree
+        else:
+            try:
+                dec = Angle(self.datain.getheadval('DEC'), unit=u.deg).degree
+            except:
+                dec = ''
+
+        if (ra != '') and (dec != ''):
         # update command parameters to use these values
             rawcommand = rawcommand + ' --ra %f --dec %f --radius %f' % (ra, dec, self.getarg('searchradius'))         
+        else:
+            self.log.debug('FITS header missing RA/DEC -> searching entire sky')
 
         ### Run Astrometry:
         #   This loop tries the downsample and param options until the fit is successful
