@@ -6,7 +6,7 @@
     
     @author: Prechelt / Berthoud
 """
-# TODO add additional documentation, update version history, clean up
+# TODO add additional documentation, clean up
 
 import logging # logging object library
 import tempfile # temporary file library
