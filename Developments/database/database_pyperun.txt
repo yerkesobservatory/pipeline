@@ -1,0 +1,18 @@
+# ### DarePypeRun File for Testing StepDataBase ###
+#
+# This piperun file is to test the database step and
+# mode_addtodatabase.
+#
+# To use:
+# - Adjust the paths below for your configuration
+# - Run this file as a darepyperun. For example:
+#   /opt/local/Library/Frameworks/Python.framework/Versions/3.6/bin/darepyperun.py database_pyperun.txt
+
+pythonpath = /Users/berthoud/edu/outreach/Telescopes/pipeline/Developments/database
+/Users/berthoud/edu/outreach/Telescopes/pipeline/source
+loglevel = DEBUG
+logfile = /Users/berthoud/instruments/software/webviewlocal/exampledata/output/log.txt
+pipemode = addtodatabase
+pipeconf = /Users/berthoud/edu/outreach/Telescopes/pipeline/Developments/database/pipeconf_dbasereg.txt
+inputfiles = /Users/berthoud/instruments/software/webviewlocal/exampledata/Berthoud
+outputfolder = /Users/berthoud/instruments/software/webviewlocal/exampledata/output
