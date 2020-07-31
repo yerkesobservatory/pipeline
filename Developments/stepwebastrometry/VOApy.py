@@ -367,7 +367,7 @@ class unit:
             terma = (X - x0) * np.cos(theta) + (Y - y0) * np.sin(theta) 
             termb = (X - x0) * np.sin(theta) - (Y - y0) * np.cos(theta) 
             mask = ( terma**2 / a **2 ) + ( termb**2 / b **2 )
-            masked [mask < 1.] = np.nan
+            masked [mask < 1.] = np.ma.masked #np.nan
         self.primary = masked.copy()
 
     def integrate_sources(self):
