@@ -3,7 +3,7 @@
 # General Section: configuration of the pipeline
 [general]
     # list of packages to look for pipe step modules (order matters)
-    steppacks = stonesteps, darepype.drp, darepype.utils
+    steppacks = mysteps, stonesteps, darepype.drp, darepype.utils
     # list of steps for unknown instrument mode
     stepslist = StepLoadStoneedge, StepDemod
 
@@ -47,7 +47,7 @@
 # Loadinput step configuration
 [loadinput]
     # location of bdf folder(s)/file(s) to be reduced
-    filelocation = /data/images/StoneEdge/0.5meter/2019/%Y-%m-%d/flat/flat*.fits' # for current date
+    filelocation = '/Users/berthoud/instruments/software/webviewlocal/exampledata/Berthoud/*/*RAW.fits'
     # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
     includeheadvals =
     # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |

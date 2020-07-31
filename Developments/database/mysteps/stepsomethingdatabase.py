@@ -56,7 +56,7 @@ class StepSomethingDataBase(StepParent):
         """
         # Copy datain to dataout (the data doesn't actually have to change)
         self.dataout = self.datain
-        self.log.info('Added file %s to the databaes' % self.datain.filename)
+        self.log.info('###$$$*** Added file %s to the databaes' % self.datain.filename)
     
     def test(self):
         """ Test Pipe Step Parent Object:
