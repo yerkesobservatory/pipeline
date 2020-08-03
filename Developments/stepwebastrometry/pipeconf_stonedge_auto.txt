@@ -122,6 +122,9 @@
 # Hotpix step configuration
 [hotpix]
 
+# Mask image step configuration
+[maskimage]
+
 # Astrometry Step Configuration
 [astrometry]
     # Command to call astrometry, should contain 2 string
