@@ -192,13 +192,16 @@ class StepAddToDatabase(StepParent):
         cursor.close()
         db.close()
 
+
     def test(self):
         """ Test Pipe Step Parent Object:
-            Runs a set of basic tests on the object
+            Runs a adds to the database, checking for errors.
+            Should not be run on the actual database as it will add bogus records
         """
         # log message
         self.log.info('Testing pipe step %s' %self.name)
-
+        # Note that the config file used for testing is different from the one used in run
+        config_path = self.config['addtodatabase']['test_database_config_path']
         # log message
         self.log.info('Testing pipe step %s - Done' %self.name)
     
