@@ -35,7 +35,7 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    stepslist = StepLoadInput, StepSomethingDataBase
+    stepslist = StepLoadInput, StepAddToDatabase
 
 ### Pipe Step Section
 
@@ -56,6 +56,10 @@
     fileinclude = 
     # strings which must not be present in the filename for the file to be loaded, separate with |
     fileexclude = MFLAT|UNK|LOAD
+
+[addtodatabase]
+    # Path to the file specifying the fields within the database
+    database_config_path = '/Users/enriquecollin/CS/SEO/database/webfitsviewer/database/database_config.txt'
 
 ### Data Handling Section
 
