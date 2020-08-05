@@ -17,7 +17,7 @@
     @author: Enrique Collin
 """
 
-import logging # logging object library
+import logging 
 from darepype.drp import StepParent
 import mysql.connector as mysql
 from os import path
@@ -172,7 +172,7 @@ class StepAddToDatabase(StepParent):
                 # Need val in string form for the below.
                 val = self.datain.header[hdu_field]
                 if isinstance(val, bool):
-                    datain_field_vals.append(1)
+                    datain_field_vals.append(int(val))
                 else:
                     datain_field_vals.append(val)
         self.log.debug('About to attempt to execute the following SQL: "' \
