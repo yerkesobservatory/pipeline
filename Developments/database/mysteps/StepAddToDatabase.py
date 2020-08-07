@@ -119,6 +119,11 @@ class StepAddToDatabase(StepParent):
             'Password for the SQL user to access the database'])
         self.paramlist.append(['database_config_path', './pipeconf_dbasereg.txt',
             'Path to database configuration file'])
+        self.paramlist.append(['overwrite', False,
+            ('If True, when StepAddToDatabase is run on a file that is already in '
+            'the database, then it will be overwritten. Requires an SQL user with ' 
+            'delete permissions. If overwrite is False and a duplicate file exists, '
+            'an error will be thrown.')])
 
     def run(self):
         """ 
@@ -138,6 +143,7 @@ class StepAddToDatabase(StepParent):
         SQL_user = self.getarg('sql_username')
         SQL_pass = self.getarg('sql_password')
         database_config_path = self.getarg('database_config_path')
+        overwrite = self.getarg('overwrite')
         
         try:
             db = mysql.connect(
@@ -197,10 +203,26 @@ class StepAddToDatabase(StepParent):
                     datain_field_vals.append(int(val))
                 else:
                     datain_field_vals.append(val)
+
         self.log.debug(
             ('About to attempt to execute the following SQL: '
             f'"{insert_query}" with values "{datain_field_vals}"')
         )
+
+        if overwrite:
+            self.log.debug('Duplicate encountered; about to attempt to delete it')
+            
+            delete_cmd = f'DELETE FROM fits_data WHERE file_path = "{self.datain.filename}";'
+            try: 
+                cursor.execute(delete_cmd)
+            except mysql.errors.ProgrammingError as err:
+                err_msg = 'Error trying to overwrite duplicate file; likely insufficient privileges'
+                self.log.error(err_msg)
+                cursor.close()
+                db.close()
+                raise RuntimeError(err_msg) from err
+            self.log.info('Successfully deleted duplicate file from database')
+   
         try:
             cursor.execute(insert_query, tuple(datain_field_vals))
             db.commit()
