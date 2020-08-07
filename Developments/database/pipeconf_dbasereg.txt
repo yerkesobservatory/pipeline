@@ -57,10 +57,11 @@
     # strings which must not be present in the filename for the file to be loaded, separate with |
     fileexclude = MFLAT|UNK|LOAD
 
-[addtodatabase]
+[AddToDatabase]
     # Path to the file specifying the fields within the database
     database_config_path = '/Users/enriquecollin/CS/SEO/database/webfitsviewer/database/database_config.txt'
-    database_test_config_path = '/Users/enriquecollin/CS/SEO/database/webfitsviewer/database/test_database_config.txt'
+    #sql_username=''
+    #sql_password=''
 
 ### Data Handling Section
 

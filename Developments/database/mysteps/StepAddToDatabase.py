@@ -113,8 +113,12 @@ class StepAddToDatabase(StepParent):
         # Clear Parameter list
         self.paramlist = []
         # Append parameters
-        self.paramlist.append(['username', 'sqluser',
-            'Username for the SQL user to access the database'])
+        self.paramlist.append(['sql_username', 'default_user',
+            'Username for the SQL user to access the database; only add priveleges needed'])
+        self.paramlist.append(['sql_password', '',
+            'Password for the SQL user to access the database'])
+        self.paramlist.append(['database_config_path', './pipeconf_dbasereg.txt',
+            'Path to database configuration file'])
 
     def run(self):
         """ 
@@ -131,8 +135,10 @@ class StepAddToDatabase(StepParent):
         # Copy datain to dataout (the data doesn't actually have to change)
         self.dataout = self.datain
         # The user should be a mySQL user granted ONLY add permissions
-        SQL_user = 'root'
-        SQL_pass = 'SEO'
+        SQL_user = self.getarg('sql_username')
+        SQL_pass = self.getarg('sql_password')
+        database_config_path = self.getarg('database_config_path')
+        
         try:
             db = mysql.connect(
                 host="localhost",
@@ -141,10 +147,11 @@ class StepAddToDatabase(StepParent):
                 auth_plugin='mysql_native_password'
             )
         except mysql.errors.ProgrammingError as err:
-            err_msg = 'Encountered error connecting to DB. User/pass may be wrong'
+            err_msg = (f'Encountered error connecting to DB as "{SQL_user}". '
+                        'User or pass may be wrong')
             self.log.error(err_msg)
             raise RuntimeError(err_msg) from err
-        self.log.info(f'Successfully connected to SQL server as {SQL_user}')        
+        self.log.info(f'Successfully connected to SQL server as "{SQL_user}"')        
         cursor = db.cursor()
 
         try:
@@ -158,11 +165,8 @@ class StepAddToDatabase(StepParent):
             db.close()
             raise RuntimeError(err_msg) from err
 
-
-        config_path = self.config['addtodatabase']['database_config_path']
-        # parse_config function parses the DB config, not pipeline config used above
-        sql_fields = self.parse_config(config_path)
-        self.log.debug(f'Successfully read in database config at {config_path}')        
+        sql_fields = self.parse_config(database_config_path)
+        self.log.debug(f'Successfully read in database config at {database_config_path}')        
         if sql_fields[0] != 'file_path':
             err_msg = ('Current StepAddToDatabase code assumes the first entry'
                         'in the database config file is "file_path", but this '
@@ -201,13 +205,13 @@ class StepAddToDatabase(StepParent):
             cursor.execute(insert_query, tuple(datain_field_vals))
             db.commit()
         except mysql.errors.ProgrammingError as err:
-            err_msg = 'The above error could mean the config file is not up to date with db'
+            err_msg = 'The error could mean the config file is not up to date with db'
             self.log.error(err_msg)
             cursor.close()
             db.close()
             raise RuntimeError(err_msg) from err
         except mysql.errors.IntegrityError as err:
-            err_msg = "The above error likely means the file you're adding to the db is already there"
+            err_msg = "The error likely means the file you're adding to the db is already there"
             self.log.error(err_msg)
             cursor.close()
             db.close()
@@ -225,8 +229,6 @@ class StepAddToDatabase(StepParent):
         """
         # log message
         self.log.info('Testing pipe step %s' %self.name)
-        # Note that the config file used for testing is different from the one used in run
-        config_path = self.config['addtodatabase']['test_database_config_path']
         # log message
         self.log.info('Testing pipe step %s - Done' %self.name)
     
