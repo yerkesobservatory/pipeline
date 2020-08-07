@@ -47,7 +47,9 @@ class StepAddToDatabase(StepParent):
         """
         sql_fields = []
         if not path.exists(path_to_config):
-            raise FileNotFoundError('Path to database config given in StepAddToDatabase config does not exist')
+            err_msg = 'Path to database config given in StepAddToDatabase config does not exist!'
+            self.log.error(err_msg)
+            raise FileNotFoundError(err_msg)
         with open(path_to_config, 'r') as config:
             for line in config:
                 trimmed = line.strip()
@@ -131,28 +133,42 @@ class StepAddToDatabase(StepParent):
         # The user should be a mySQL user granted ONLY add permissions
         SQL_user = 'root'
         SQL_pass = 'SEO'
-        db = mysql.connect(
-            host="localhost",
-            user=SQL_user,
-            passwd=SQL_pass,
-            auth_plugin='mysql_native_password'
-        )
-
+        try:
+            db = mysql.connect(
+                host="localhost",
+                user=SQL_user,
+                passwd=SQL_pass,
+                auth_plugin='mysql_native_password'
+            )
+        except mysql.errors.ProgrammingError as err:
+            err_msg = 'Encountered error connecting to DB. User/pass may be wrong'
+            self.log.error(err_msg)
+            raise RuntimeError(err_msg) from err
+        self.log.info(f'Successfully connected to SQL server as {SQL_user}')        
         cursor = db.cursor()
+
         try:
             cursor.execute('USE seo;')
         except mysql.errors.ProgrammingError as err:
-            new_err_msg = "The above error could mean the SEO database hasn't been created yet!"
-            raise RuntimeError(new_err_msg) from err
+            err_msg = ('Encountered error running SQL command "USE seo". Could mean' 
+                      'seo database does not exist for some reason. Perhaps '
+                      'create_database.py needs to be run')
+            self.log.error(err_msg)    
+            cursor.close()
+            db.close()
+            raise RuntimeError(err_msg) from err
 
 
         config_path = self.config['addtodatabase']['database_config_path']
         # parse_config function parses the DB config, not pipeline config used above
         sql_fields = self.parse_config(config_path)
+        self.log.debug(f'Successfully read in database config at {config_path}')        
         if sql_fields[0] != 'file_path':
-            err_str = 'Current StepAddToDatabase code assumes the first entry ' \
-                     + 'in database config file is "file_path", but this is not the case!'
-            raise RuntimeError(err_str)
+            err_msg = ('Current StepAddToDatabase code assumes the first entry'
+                        'in the database config file is "file_path", but this '
+                        'is not the case!')
+            self.log.error(err_msg)    
+            raise RuntimeError(err_msg)
         
 
         fields_str = ', '.join(sql_fields)
@@ -162,8 +178,10 @@ class StepAddToDatabase(StepParent):
 
         datain_field_vals = []
         if not path.exists(self.datain.filename):
-            self.log.warning(f'Starting to add record for {self.datain.filename} to database even though ' \
-                             + 'os.path.exists for it is False; it has not yet been saved')
+            self.log.warning(
+                (f'Starting to add record for {self.datain.filename} to database'
+                ' even though os.path.exists for it is False; it has not yet been saved')
+            )
 
         datain_field_vals.append(self.datain.filename)
         for sql_field in sql_fields:
@@ -175,17 +193,24 @@ class StepAddToDatabase(StepParent):
                     datain_field_vals.append(int(val))
                 else:
                     datain_field_vals.append(val)
-        self.log.debug('About to attempt to execute the following SQL: "' \
-                        + f'{insert_query}" with values {datain_field_vals})"')
-
+        self.log.debug(
+            ('About to attempt to execute the following SQL: '
+            f'"{insert_query}" with values "{datain_field_vals}"')
+        )
         try:
             cursor.execute(insert_query, tuple(datain_field_vals))
             db.commit()
         except mysql.errors.ProgrammingError as err:
             err_msg = 'The above error could mean the config file is not up to date with db'
+            self.log.error(err_msg)
+            cursor.close()
+            db.close()
             raise RuntimeError(err_msg) from err
         except mysql.errors.IntegrityError as err:
             err_msg = "The above error likely means the file you're adding to the db is already there"
+            self.log.error(err_msg)
+            cursor.close()
+            db.close()
             raise RuntimeError(err_msg) from err
         
         self.log.info('Successfully added file %s to the database' % self.datain.filename)
