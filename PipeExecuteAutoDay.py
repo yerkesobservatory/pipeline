@@ -118,7 +118,7 @@ def execute():
                 trb = traceback.format_exc().split('\n').reverse()
                 for tr in trb:
                     log.warning(tr)
-            except Exception as  f:
+            except Exception as f:
                 log.warning('Unable to print traceback')
                 print(traceback.format_exc(),trb)
 
@@ -134,7 +134,7 @@ except Exception as e:
         trb = traceback.format_exc().split('\n').reverse()
         for tr in trb:
             log.error(tr)
-    except Exceptionas as f:
+    except Exception as f:
         log.warning('Unable to print traceback')
         print(traceback.format_exc(),trb)
     raise e

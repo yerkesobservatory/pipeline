@@ -5,6 +5,12 @@
     WCS information to the data.
     
     @author: Prechelt / Berthoud
+
+    NOTE: Users running this step or the pipeline using a cron job
+    will need to add the following lines to their crontab file:
+
+    SHELL=/bin/bash
+    PATH=/usr/lib64/qt-3.3/bin:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:$HOME/bin
 """
 
 import logging # logging object library
@@ -134,7 +140,7 @@ class StepAstrometry(StepParent):
             # Add options to command
             command = rawcommand + ' --downsample %d' % downsample + ' ' + paramoption
             optionstring = "Downsample=%s Paramopts=%s" % (downsample, paramoption[:10])
-            # Run the process
+            # Run the process - see note at the top of the file if using cron
             process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
                                        stderr=subprocess.STDOUT)
             self.log.debug('running command = %s' % command)
@@ -154,7 +160,7 @@ class StepAstrometry(StepParent):
             else:             
                 self.log.debug('output file missing -> astrometry failed')
         # Print the output from astrometry (cut if necessary)
-        if self.getarg('verbose') and poll == 0:
+        if self.getarg('verbose'):
             output = process.stdout.read().decode()
             if len(output) > 1000:
                 outlines = output.split('\n')
