@@ -157,6 +157,8 @@
     scale_upper = 2.
     # Scale_units
     scale_units = 'arcsecperpix'
+    # API key
+    api_key = 'xpolczmnfaxzkihm'
 
 # ADDKEYS step configuration
 [addkeys]

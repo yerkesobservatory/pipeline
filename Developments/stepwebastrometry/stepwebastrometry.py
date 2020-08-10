@@ -6,6 +6,7 @@
     
     @author: Josh / Prechelt / Berthoud
 """
+# TODO more descriptive for scale_lower and scale_upper
 
 import logging # logging object library
 import tempfile # temporary file library
@@ -55,86 +56,61 @@ class StepWebAstrometry(StepParent):
         self.paramlist.append(['timeout', 300,
                                'Timeout for running astrometry (seconds)'])
         self.paramlist.append(['radius', 5.,
-                               'radius'])
+                               'Search within this many degrees of the center RA and Dec'])
         self.paramlist.append(['scale_lower', 0.5,
                                'lower scale'])
         self.paramlist.append(['scale_upper', 2.,
                                'upper scale'])
         self.paramlist.append(['scale_units', 'arcsecperpix',
-                               'scale units'])
+                               'Units of degrees/pixel'])
+        self.paramlist.append(['api_key', 'XXXXXXXX',
+                               'API key used for interfacing with Astrometry.net'])
         # confirm end of setup
         self.log.debug('Setup: done')
 
-    def astrometrymaster(self, outname = None, outpath = None):
+    def astrometrymaster(self):
         '''
-        Master function for calling upon different attempt styles for WCS matching.
-        local decides whether local astrometry.net code is used or web API
-        mask decides whether the image is masked first
-        The other parameters are necessary on a case-by-case basis depending on which attempt style is used.
+        Runs Astrometry.net on the inputted image
         '''
         
-        self.webastrometry(self.datain.filename)
+        ast = AstrometryNet()
+        ast.api_key = self.getarg('api_key')
+
+        self.log.debug("Now running ast.solve, get comfy this'll take a while")
+
+        try:
+            ra = Angle(self.datain.getheadval('RA'), unit=u.hour).degree
+            dec = Angle(self.datain.getheadval('DEC'), unit=u.deg).degree
+        except:
+            self.wcs_out = ast.solve_from_image(self.datain.filename, force_image_upload = True, solve_timeout = self.getarg('timeout'), 
+                                                scale_lower = self.getarg('scale_lower'), scale_upper = self.getarg('scale_upper'), 
+                                                scale_units = self.getarg('scale_units'))
+        else:
+            self.wcs_out = ast.solve_from_image(self.datain.filename, force_image_upload = True, ra_key = 'RA', dec_key = 'DEC', 
+                                                solve_timeout = self.getarg('timeout'), radius = self.getarg('radius'), 
+                                                scale_lower = self.getarg('scale_lower'), scale_upper = self.getarg('scale_upper'), 
+                                                scale_units = self.getarg('scale_units'))
 
         try:
             #Check if WCS exists
             self.wcs_out
         except:
             self.log.error("Unable to perform web astrometry.")
-            return False
         else:
-            if bool(self.wcs_out):
-                #Check if it was successful
-                self.log.debug('Web astrometry successful')
-                return True
-            else:
-                self.log.error("Unable to perform web astrometry.")
-                return False
+            self.log.debug('Web astrometry successful')
 
-    def webastrometry(self, inputfile):
-        '''
-        Run astrometry alignment through the web. Uploads the image and returns the solve result.
-        '''
-        ast = AstrometryNet()
-        ast.api_key = 'xpolczmnfaxzkihm'
-        try:
-            ra = Angle(self.datain.getheadval('RA'), unit=u.hour).degree
-            dec = Angle(self.datain.getheadval('DEC'), unit=u.deg).degree
-        except:
-            self.wcs_out = ast.solve_from_image(inputfile, force_image_upload = True, solve_timeout = self.getarg('timeout'), 
-                                                scale_lower = self.getarg('scale_lower'), scale_upper = self.getarg('scale_upper'), 
-                                                scale_units = self.getarg('scale_units'))
-        else:
-            self.wcs_out = ast.solve_from_image(inputfile, force_image_upload = True, ra_key = 'RA', dec_key = 'DEC', 
-                                                solve_timeout = self.getarg('timeout'), radius = self.getarg('radius'), 
-                                                scale_lower = self.getarg('scale_lower'), scale_upper = self.getarg('scale_upper'), 
-                                                scale_units = self.getarg('scale_units'))
 
     def run(self):
         """ Runs the data reduction algorithm. The self.datain is run
             through the code, the result is in self.dataout.
         """
-        ### Preparation
-        # construct a temp file name that astrometry will output
-        fp = tempfile.NamedTemporaryFile(suffix=".fits",dir=os.getcwd())
-        # split off path name, because a path that is too long causes remap to
-        # crash sometimes
-        outname = os.path.split(fp.name)[1]
-        fp.close()
-        # Add input file path to ouput file and make new name
-        outpath = os.path.split(self.datain.filename)[0]
-        # Make sure input data exists as file
-        if not os.path.exists(self.datain.filename) :
-            self.datain.save()
-        origimg = self.datain.imageget()
+        
         self.dataout = DataFits(config=self.config)
-        success = self.astrometrymaster()
-        assert success, "Unable to successfully match astrometry with any method."
+        self.astrometrymaster()
 
         ## Post-processing
         self.dataout = self.datain.copy()
         self.dataout.header.update(self.wcs_out)
-        self.dataout.filename = self.datain.filename
-        self.dataout.save()
         # Add RA from astrometry
         w = wcs.WCS(self.dataout.header)
         n1 = float( self.dataout.header['NAXIS1']/2 )
@@ -146,12 +122,8 @@ class StepWebAstrometry(StepParent):
         # self.dataout.header['CRVAL1']=float(ra)
         # self.dataout.header['CRVAL2']=float(dec)
         self.dataout.header['RA'] = Angle(ra,  u.deg).to_string(unit=u.hour, sep=':')
-        self.dataout.header['Dec']= Angle(dec, u.deg).to_string(sep=':')
+        self.dataout.header['Dec'] = Angle(dec, u.deg).to_string(sep=':')
         self.log.debug('Run: Done')
-
-        # print(repr(self.datain.header))
-        # print('\n\n\n')
-        # print(repr(self.dataout.header))
     
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
@@ -166,6 +138,9 @@ if __name__ == '__main__':
     StepWebAstrometry().execute()
 
 """ === History ===
+2020-08-10  -Removed overwriting of RAW files
+2020-08-07  -Removed unused code from previous version, combined webastrometry
+             and astrometrymaster, API key can now be specified in config
 2020-07-27  -No longer redundantly updates certain header keywords
             -Got rid of masking, going to move to separate pipestep
 2020-07-24  -Initial version of StepWebAstrometry
