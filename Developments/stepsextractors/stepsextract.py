@@ -245,10 +245,10 @@ class StepSextract(StepParent):
         cols.append(fits.Column(name='Y', format='D',
                                 array=seo_catalog['Y_IMAGE'][seo_SN],
                                 unit='pixel'))
-        cols.append(fits.Column(name='Uncalibrated Magnitude', format='D',
+        cols.append(fits.Column(name='Uncalibrated Flux', format='D',
                                 array=seo_Flux[seo_SN],
                                 unit='flux'))
-        cols.append(fits.Column(name='Uncalibrated Magnitude_Err', format='D',
+        cols.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
                                 array=seo_Fluxerr[seo_SN], unit='flux'))
         # Make table
         c = fits.ColDefs(cols)
