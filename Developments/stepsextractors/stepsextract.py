@@ -346,7 +346,7 @@ if __name__ == '__main__':
         --test : runs the functionality test i.e. pipestep.test()
         --loglevel=LEVEL : configures the logging output for a particular level
     """
-    StepSourceExtract().execute()
+    StepSextract().execute()
 
 '''HISTORY:
 2018-09-019 - Started based on Amanda's code. - Marc Berthoud
