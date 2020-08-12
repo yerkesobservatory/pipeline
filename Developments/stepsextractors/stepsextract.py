@@ -70,10 +70,7 @@ class StepSextract(StepParent):
         # Clear Parameter list
         self.paramlist = []
         # Append parameters
-        self.paramlist.append(['filtermap', 'g-band=g|r-band=r|i-band=i|z-band=z',
-                               'Mapping from telescope filter names to SDSS filter names. ' +
-                               'Data from multiple filters can be calibrated using the same band. ' +
-                               'Example: "telg=g|telr=r|telclear=r"'])
+        
         self.paramlist.append(['sx_cmd', 'sex %s',
                                'Command to call source extractor, should contain ' +
                                '1 string placeholder for intput filepathname'])
@@ -145,9 +142,14 @@ class StepSextract(StepParent):
         ### Extract catalog from source extractor and clean up dataset
         # Use catalog from sourse extrator (test.cat)
         seo_catalog = astropy.table.Table.read(catfilename, format="fits", hdu='LDAC_OBJECTS')
+        
+        seo_Flux= seo_catalog['FLUX_AUTO']
+        seo_Fluxerr=seo_catalog['FLUXERR_AUTO']
         seo_Mag = -2.5*np.log10(seo_catalog['FLUX_AUTO'])
         seo_MagErr = (2.5/np.log(10)*seo_catalog['FLUXERR_AUTO']/seo_catalog['FLUX_AUTO'])
-        # Select only the stars in the image: circular image and S/N > 10
+
+
+                # Select only the stars in the image: circular image and S/N > 10
         elongation = (seo_catalog['FLUX_APER']-seo_catalog['FLUX_AUTO'])<250
         seo_SN = ((seo_catalog['FLUX_AUTO']/seo_catalog['FLUXERR_AUTO'])>10)
         seo_SN = (seo_SN) & (elongation) & ((seo_catalog['FLUX_AUTO']/seo_catalog['FLUXERR_AUTO'])<1000)
@@ -243,10 +245,10 @@ class StepSextract(StepParent):
                                 array=seo_catalog['Y_IMAGE'][seo_SN],
                                 unit='pixel'))
         cols.append(fits.Column(name='Uncalibrated Magnitude', format='D',
-                                array=seo_Mag[seo_SN]-b_ml_corr,
-                                unit='magnitude'))
+                                array=seo_Flux[seo_SN],
+                                unit='flux'))
         cols.append(fits.Column(name='Uncalibrated Magnitude_Err', format='D',
-                                array=seo_MagErr[seo_SN], unit='magnitude'))
+                                array=seo_Fluxerr[seo_SN], unit='flux'))
         # Make table
         c = fits.ColDefs(cols)
         sources_table = fits.BinTableHDU.from_columns(c)
