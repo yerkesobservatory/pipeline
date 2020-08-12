@@ -157,6 +157,7 @@ class StepSextract(StepParent):
         # Delete source extractor catalog is needed
         if self.getarg('delete_cat'):
             os.remove(catfilename)
+
         ### Query and extract data from Guide Star Catalog
         # Get RA / Dec
         '''
@@ -252,37 +253,12 @@ class StepSextract(StepParent):
         # Make table
         c = fits.ColDefs(cols)
         sources_table = fits.BinTableHDU.from_columns(c)
-        '''
-        ### Make table with data which was fit
-        # Collect data columns
-        cols = []
-        cols.append(fits.Column(name='RA', format='D', array=GSC_RA[mask],
-                                unit='deg'))
-        cols.append(fits.Column(name='Dec', format='D', array=GSC_DEC[mask],
-                                unit='deg'))
-        cols.append(fits.Column(name='Diff_Deg', format='D', array=d2d[mask],
-                                unit='deg'))
-        cols.append(fits.Column(name='GSC_Mag', format='D',
-                                array=GSC_Mag[mask], unit='magnitude'))
-        cols.append(fits.Column(name='Img_Mag', format='D',
-                                array=seo_Mag[seo_SN][idx][mask],
-                                unit='magnitude'))
-        cols.append(fits.Column(name='Error', format='D', array=eps_data[mask],
-                                unit='magnitude'))
-        # Make table
-        c = fits.ColDefs(cols)
-        fitdata_table = fits.BinTableHDU.from_columns(c)
-        '''
+        
         ### Make output data
         # Copy data from datain
         self.dataout = self.datain
         '''
-        # Add Photometric Zero point magnitude
-        self.dataout.setheadval('PHTZPRAW', -b_ml_corr, 'Photometric zeropoint for RAW data')
-        self.dataout.setheadval('PTZRAWER', 0.0, 'Uncertainty of the RAW photometric zeropoint')
-        self.dataout.setheadval('PHOTZP', 8.9,  'Photometric zeropoint MAG=-2.5*log(data)+PHOTZP')
-        self.dataout.setheadval('BUNIT', 'Jy/pixel', 'Units for the data')
-        '''
+       
         # Scale the image using calculated b_ml_corr
         image_background = fits.open(bkgdfilename)[0].data
         #bzero = np.nanpercentile(self.dataout.image,self.getarg('zeropercent'))
@@ -292,6 +268,7 @@ class StepSextract(StepParent):
         #-bzero = np.median(image_array[mask])
         #bscale = 3631. * 10 ** (b_ml_corr/2.5)
         #self.dataout.image = bscale * (self.dataout.image - bzero)
+        '''
         # Add sources and fitdata table
         self.dataout.tableset(sources_table.data,'Sources',sources_table.header)
         
@@ -301,6 +278,7 @@ class StepSextract(StepParent):
         if not self.getarg('savebackground'):
             os.remove(bkgdfilename)
         '''
+        
         ### If requested make a plot of the fit and save as png
         if self.getarg('fitplot'):
             # Set up plot

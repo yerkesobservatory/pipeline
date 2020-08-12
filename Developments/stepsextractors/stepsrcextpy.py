@@ -29,6 +29,7 @@ import logging # logging object library
 import subprocess # running a subprocess library
 import requests # http request library
 import astropy.table # Read astropy tables
+import sep # Extracts Sources and Calculates Flux
 from astropy.io import fits
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord # To make RA/Dec as float
@@ -38,7 +39,7 @@ matplotlib.use('Agg') # Set pixel image
 import pylab as plt # pylab library for plotting
 from lmfit import minimize, Parameters # For brightness correction fit
 from darepype.drp import StepParent # pipestep stepparent object
-import sep
+
 
 class StepSrcExtPy(StepParent):
     """ Pipeline Step Object to calibrate Bias/Dark/Flat files
@@ -166,7 +167,7 @@ class StepSrcExtPy(StepParent):
         #seo_catalog = astropy.table.Table.read(catfilename, format="fits", hdu='LDAC_OBJECTS')
         seo_Mag = -2.5*np.log10(flux)
         seo_MagErr = (2.5/np.log(10)*(fluxerr/flux))
-        '''
+        
         # Select only the stars in the image: circular image and S/N > 10
         elongation = (seo_catalog['FLUX_APER']-seo_catalog['FLUX_AUTO'])<250
         seo_SN = ((seo_catalog['FLUX_AUTO']/seo_catalog['FLUXERR_AUTO'])>10)
@@ -177,7 +178,7 @@ class StepSrcExtPy(StepParent):
             os.remove(catfilename)
         ### Query and extract data from Guide Star Catalog
         # Get RA / Dec
-        '''
+       
         '''
         ra_center =  self.datain.getheadval('RA' ).split(':')
         dec_center = self.datain.getheadval('DEC').split(':')
