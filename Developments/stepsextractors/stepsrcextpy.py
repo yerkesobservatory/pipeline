@@ -123,21 +123,67 @@ class StepSrcExtPy(StepParent):
         self.log.debug('Sextractor catalog filename = %s' % catfilename)
 
         #Open data out of fits file for use in SEP
-        data = self.datain.image
+        image = self.datain.image
+
+        #Set values for variables used later
+        #These variables are used for the background analysis
+        maskthresh = 0.0
+        bw, bh = 64, 64
+        fw, fh = 3, 3
+        fthresh = 0.0
+
+
 
         #Create the background image and it's error
-        bkg = sep.Background(data)
-        bkgrms =bkg.rms()
+        bkg = sep.Background(image, maskthresh=maskthresh,bw=bw, bh=bh, fw=fw,
+        fh=fh, fthresh=fthresh) #have sep determine the background of the image
+
+        bkg_image=bkg.back()
+
+        bkg_rms =bkg.rms()
         #Subtract the background from the image
-        data_sub = data - bkg
+        image_sub = image - bkg_image
+
+        imsubmed = np.nanmedian(image_sub)
+        imsubmad = mad_std(image_sub)
+
+
+
+		#Create variables that are used during source Extraction
+        extract_thresh = 3
+        extract_err = bkg_rms
 
         #Extract sources from the subtracted image
-        objects = sep.extract(data_sub, 1.5, err= bkg.globalrms)
+        objects = sep.extract(image_sub, extract_thresh, err=extract_err)
 
-        #Do basic uncalibrated measurments of flux for use in step astrometry
-        flux, fluxerr, flag = sep.sum_circle(data_sub, objects['x'], objects['y'], 3.0,
-            err = bkg.globalrms, gain =1.0)
-        
+        #Define variables used later during flux calculation
+        sum_c = np.zeroes(len(objects))
+        sum_c_err = np.zeroes(len(objects))
+        sum_c_flags = np.zeroes(len(objects))
+        ratio = np.zeroes(len(objects))
+        rmax = np.zeroes(len(objects))
+        dx = np.zeros(len(objects))
+		dy = np.zeros(len(objects))
+
+
+
+        #Do basic uncalibrated measurments of flux for use in step astrometry. 
+      
+        #First we calculate flux using Ellipses. In order to do this we need to calculate the Kron Radius
+        #For the ellipses Extract identified using the ellipse parameters it gives
+        #R is equal to 6 as that is the default used in Source Extractor
+        kronrad, krflag = sep.kron_radius(image_sub, objects['x'], objects['y'], 
+        	objects['a'], objects['b'], objects['theta'], r=6)
+
+        #Using this Kron radius we calculate the flux, this is equivallent to FLUX_AUTO in SExtractor
+        flux_elip, fluxerr_elip, flag = sep.sum_ellipse(image_sub, objects['x'], 
+        	objects['y'], objects['a'], objects['b'], objects['theta'], 
+        	2.5*kronrad, err=bkg_rms, subpix=1)
+
+		#Then we calculate it using Circular Apetures, this will be used to remove sources that are too elipitical
+		flux_circ, fluxerr_circ, flag = sep.sum_circle(image_sub, objects['x'], objects['y'],
+                                               r=2.5, err = bkg_rms,subpix=1)
+
 
 
 
@@ -165,13 +211,13 @@ class StepSrcExtPy(StepParent):
         ### Extract catalog from source extractor and clean up dataset
         # Use catalog from sourse extrator (test.cat)
         #seo_catalog = astropy.table.Table.read(catfilename, format="fits", hdu='LDAC_OBJECTS')
-        seo_Mag = -2.5*np.log10(flux)
-        seo_MagErr = (2.5/np.log(10)*(fluxerr/flux))
+        seo_Mag = -2.5*np.log10(flux_elip)
+        seo_MagErr = (2.5/np.log(10)*(fluxerr_elip/flux_elip))
         
         # Select only the stars in the image: circular image and S/N > 10
-        elongation = (seo_catalog['FLUX_APER']-seo_catalog['FLUX_AUTO'])<250
-        seo_SN = ((seo_catalog['FLUX_AUTO']/seo_catalog['FLUXERR_AUTO'])>10)
-        seo_SN = (seo_SN) & (elongation) & ((seo_catalog['FLUX_AUTO']/seo_catalog['FLUXERR_AUTO'])<1000)
+        elongation = (flux_circ-flux_elip)<250
+        seo_SN = ((flux_elip/fluxerr_elip)>10)
+        seo_SN = (seo_SN) & (elongation) & ((flux_elip/fluxerr_elip)<1000)
         self.log.debug('Selected %d stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
         # Delete source extractor catalog is needed
         if self.getarg('delete_cat'):
