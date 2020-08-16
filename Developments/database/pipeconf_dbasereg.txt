@@ -1,0 +1,79 @@
+# Database Register Pipeline Configuration File - For Adding files to Database
+
+# General Section: configuration of the pipeline
+[general]
+    # list of packages to look for pipe step modules (order matters)
+    steppacks = mysteps, stonesteps, darepype.drp, darepype.utils
+    # list of steps for unknown instrument mode
+    stepslist = StepLoadStoneedge, StepDemod
+
+# Environment Variables
+[envars]
+    MYFILES = '/Users/berthoud/instruments/software/webviewlocal/exampledata'
+
+# Data Section: information on data objects and file names -h
+[data]
+    # Regexp for part of the filename before the file step identifier
+    # - default is '\A.+\.' for all filename before the last '.' including the '.'
+    filenamebegin = "\A.+_" # Stonedge: All before and including the last '_'
+    # Regexp for part of the filename after the file step identifier
+    # - default is '\.[A-Za-z0-9]+\Z' for alphanum characters after last '.'
+    filenameend = '\.fits(\.gz)?\Z' # .fits with optional .gz
+    dataobjects = DataFits, DataText
+    filenum = ''
+
+# Pipeline Section: Configuration of the pipeline
+[pipeline]
+    # Number of final results to save
+    finalsaveN = 5
+
+### Pipelines Section: configuration for individual pipeline modes
+
+# Stoneedge Mode Configuration
+[mode_addtodatabase]
+# List of keyword=values required in file header to select this pipeline mode
+    #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
+    datakeys = "OBSERVAT=StoneEdge"
+    # list of steps
+    stepslist = StepLoadInput, StepAddToDatabase
+
+### Pipe Step Section
+
+# Parent step configuration
+[parent]
+    # Sample parameter - no practical use
+    sampar = 0.25
+
+# Loadinput step configuration
+[loadinput]
+    # location of bdf folder(s)/file(s) to be reduced
+    filelocation = '/Users/berthoud/instruments/software/webviewlocal/exampledata/Berthoud/*/*RAW.fits'
+    # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
+    includeheadvals =
+    # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |
+    excludeheadvals =
+    # strings which must be present in the filename for the file to be loaded, separate with |
+    fileinclude = 
+    # strings which must not be present in the filename for the file to be loaded, separate with |
+    fileexclude = MFLAT|UNK|LOAD
+
+[AddToDatabase]
+    # Path to the file specifying the fields within the database
+    database_config_path = '/Users/enriquecollin/CS/SEO/database/webfitsviewer/database/database_config.txt'
+    #sql_username=''
+    #sql_password=''
+
+### Data Handling Section
+
+# Treatement of the FITS header: can include keyword replacement
+# The keyword value and comment must be printed as they would in a FITS header
+# If the value is another keyword, the value of that keyword will be used
+# instead (This only works if the other keywords starts with an alphabetic
+# character).
+[header]
+    INSTMODE = "stoneedge"
+    COMPLETE = 1
+    
+# Treatement for table values when combining images
+# Options are MIN, MED, AVG, FIRST, LAST, SUM
+[table]
