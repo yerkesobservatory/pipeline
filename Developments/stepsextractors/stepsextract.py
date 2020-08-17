@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-    Pipestep FluxCalSex
+    Pipestep Sextract
 
     This module defines the pipeline step to flux calibrate data files.
     The pipe step runs sextractor on the data and compares itentified
@@ -10,13 +10,11 @@
         https://www.astromatic.net/software/sextractor
       for details.
 
-    Author: Amanda Pagul / Marc Berthoud
+    Author: Amanda Pagul / Marc Berthoud / Daniel Sharkey
 
     Update 8/6/20 by Daniel Sharkey
     A majority of the code remains the same, it has just been separated into two seprate steps
-
-    export PYTHONPATH=/Users/berthoud/edu/outreach/Telescopes/pipeline/source
-
+   
 """
 import os # os library
 import sys # sys library

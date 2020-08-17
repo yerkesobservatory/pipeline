@@ -1,23 +1,21 @@
 #!/usr/bin/env python
 """
-    Pipestep FluxCalSex
+    Pipestep SrcExtPy
 
-    This module defines the pipeline step to flux calibrate data files.
-    The pipe step runs sextractor on the data and compares itentified
-    sources with values from the StSci guide star catalog.
+    This module defines the pipeline step to extract sources from data files.
+    The pipe step runs the python library SEP on the data in order to extract
+    the sources and calculate a first order approximation of flux and magnitude
 
-    Requirements: This step requires the source extractor program see
-        https://www.astromatic.net/software/sextractor
-      for details.
+    For more info check out the read the docs for SEP: https://sep.readthedocs.io/
 
-    Author: Amanda Pagul / Marc Berthoud
+   This uses the SEP python library for source extraction.
+    Author: Amanda Pagul / Marc Berthoud/ Daniel Sharkey
 
     Update 8/6/20 by Daniel Sharkey
     Here I have attempted to convert the original Fluxcalsex step into a 
     Sextract step that uses the python library SEP
 
 
-    export PYTHONPATH=/Users/berthoud/edu/outreach/Telescopes/pipeline/source
 
 """
 import os # os library
@@ -74,22 +72,6 @@ class StepSrcExtPy(StepParent):
         # Clear Parameter list
         self.paramlist = []
         # Append parameters
-        self.paramlist.append(['filtermap', 'g-band=g|r-band=r|i-band=i|z-band=z',
-                               'Mapping from telescope filter names to SDSS filter names. ' +
-                               'Data from multiple filters can be calibrated using the same band. ' +
-                               'Example: "telg=g|telr=r|telclear=r"'])
-       
-        self.paramlist.append(['sx_confilename','psf.sex',
-                               'Filepathname for SourceExtractor configuration file'])
-        self.paramlist.append(['sx_paramfilename','default.param',
-                               'Filepathname for SourceExtractor parameter list file'])
-        self.paramlist.append(['sx_filterfilename','default.conv',
-                               'Filepathname for SourceExtractor filter file'])
-       
-        self.paramlist.append(['zeropercent', 30.0,
-                               'Percentile for BZERO value'])
-        #self.paramlist.append(['fitplot',False,
-         #                      'Flag for making png plot of the fit'])
         self.paramlist.append(['sourcetable',False,
                                'Flag for making txt table of all sources'])
         self.paramlist.append(['sourcetableformat','csv',
