@@ -6,7 +6,7 @@
     
     @author: Josh / Prechelt / Berthoud
 """
-# TODO get image width/height from NAXIS1/2, more descriptive for scale_lower and scale_upper
+# TODO more descriptive for scale_lower and scale_upper
 
 import logging # logging object library
 from astropy import wcs # to get WCS coordinates
@@ -19,6 +19,7 @@ from darepype.drp import StepParent
 from astroquery.astrometry_net import AstrometryNet
 import pandas as pd
 import numpy as np
+from math import floor
 
 class StepWebAstrometry(StepParent):
     """ HAWC Pipeline Step Parent Object
@@ -76,18 +77,33 @@ class StepWebAstrometry(StepParent):
         ast = AstrometryNet()
         ast.api_key = self.getarg('api_key')
 
-        # Check whether the file contains image or table data
+
+        # Check whether the file contains image or table data, prefer table data
         upload = True
         for hdu in fits.open(self.datain.filename):
             try:
                 # FITS files use big endian, so it must be converted to little endian before it can be used by numpy/pandas
                 tbl = pd.DataFrame(np.array(hdu.data).byteswap(inplace=True).newbyteorder())
                 tbl.columns = ['X_IMAGE', 'Y_IMAGE', 'a', 'b', 'c', 'd', 'FLUX']
+                # Astrometry.net requires the source table be sorted in descending order of flux
                 tbl = tbl.sort_values(by='FLUX', axis=0, ascending=False)
             except:
                 pass
             else:
                 upload = False
+
+
+        # Determine the width/height of the image in pixels from the binning
+        try:
+            # The images taken are squares so the width and height are the same
+            imagewh = float(self.datain.getheadval('NAXIS1'))
+        except:
+            # Binning 2 is pretty typical in a lot of cases
+            imagewh = 1024.
+            self.log.debug('NAXIS1 keyword missing from header, assuming binning 2 and image width/height of %d' % imagewh)
+        else:
+            self.log.debug('Image width/height is %d' % imagewh)
+
 
         if upload:
             self.log.debug('File to reduce has not been source extracted, uploading image to Astrometry.net')
@@ -96,11 +112,13 @@ class StepWebAstrometry(StepParent):
 
         self.log.debug("Now running ast.solve, get comfy this'll take a while")
 
-        # If the header contains RA and Dec, use them to solve
+
+        # Check if the header contains RA and Dec
         try:
             ra = Angle(self.datain.getheadval('RA'), unit=u.hour).degree
             dec = Angle(self.datain.getheadval('DEC'), unit=u.deg).degree
         except:
+            # If the header is missing RA and Dec keywords, attempt to solve without them
             if upload:
                 self.log.debug('Solving from image without RA/Dec')
                 self.wcs_out = ast.solve_from_image(self.datain.filename, force_image_upload = True, solve_timeout = self.getarg('timeout'), 
@@ -108,9 +126,10 @@ class StepWebAstrometry(StepParent):
                                                     scale_units = self.getarg('scale_units'))
             else:
                 self.log.debug('Solving from source list without RA/Dec')
-                self.wcs_out = ast.solve_from_source_list(x=tbl['X_IMAGE'], y=tbl['Y_IMAGE'], image_width=1024., image_height=1024., 
+                self.wcs_out = ast.solve_from_source_list(x=tbl['X_IMAGE'], y=tbl['Y_IMAGE'], image_width=imagewh, image_height=imagewh, 
                                                           solve_timeout=self.getarg('timeout'))
         else:
+            # If the header contains RA and Dec, use them to solve
             if upload:
                 self.log.debug('Solving from image with RA/Dec')
                 self.wcs_out = ast.solve_from_image(self.datain.filename, force_image_upload = True, ra_key = 'RA', dec_key = 'DEC', 
@@ -119,9 +138,10 @@ class StepWebAstrometry(StepParent):
                                                     scale_units = self.getarg('scale_units'))
             else:
                 self.log.debug('Solving from source list with RA/Dec')
-                self.wcs_out = ast.solve_from_source_list(x=tbl['X_IMAGE'], y=tbl['Y_IMAGE'], image_width=1024., image_height=1024., 
+                self.wcs_out = ast.solve_from_source_list(x=tbl['X_IMAGE'], y=tbl['Y_IMAGE'], image_width=imagewh, image_height=imagewh, 
                                                           solve_timeout=self.getarg('timeout'), radius=self.getarg('radius'), center_ra=ra, 
                                                           center_dec=dec)
+
 
         # Check if the solution completed, though it should error if it times out anyway
         try:
