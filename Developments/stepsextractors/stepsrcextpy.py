@@ -160,7 +160,7 @@ class StepSrcExtPy(StepParent):
         ratio = np.zeroes(len(objects))
         rmax = np.zeroes(len(objects))
         dx = np.zeros(len(objects))
-		dy = np.zeros(len(objects))
+        dy = np.zeros(len(objects))
 
 
 
@@ -178,8 +178,8 @@ class StepSrcExtPy(StepParent):
         	2.5*kronrad, err=bkg_rms, subpix=1)
 
 		#Then we calculate it using Circular Apetures, this will be used to remove sources that are too elipitical
-		flux_circ, fluxerr_circ, flag = sep.sum_circle(image_sub, objects['x'], objects['y'],
-                                               r=2.5, err = bkg_rms,subpix=1)
+        flux_circ, fluxerr_circ, flag = sep.sum_circle(image_sub,
+			objects['x'], objects['y'], r=2.5, err = bkg_rms,subpix=1)
 
 
 
