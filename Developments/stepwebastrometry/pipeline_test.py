@@ -1,10 +1,13 @@
 import os
 import sys
 import urllib
+import logging
 from darepype.drp import DataParent, PipeLine, DataFits
 from stepwebastrometry import StepWebAstrometry
 
 filenames = ['M5_r-band_60s_bin2_200711_053415_itzamna_seo_0_RAW.fits']
+            #['M5_r-band_60s_bin2_200711_053415_itzamna_seo_0_RAW_TABLE.fits']
+            #['M5_r-band_60s_bin2_200711_053415_itzamna_seo_0_RAW.fits']
             #['M5_g-band_60s_bin2_200711_053258_itzamna_seo_0_RAW.fits']#,
             #   'M5_i-band_60s_bin2_200711_053538_itzamna_seo_0_RAW.fits',
             #   'M5_r-band_60s_bin2_200711_053415_itzamna_seo_0_RAW.fits']
@@ -15,7 +18,8 @@ codefolder = '/Users/josh/pipeline'
 datafolder = '/Users/josh/Desktop/pipeline_test/data'
 # Location of config files
 baseconfig = os.path.join(codefolder,'pipeline', 'Developments', 'stepwebastrometry', 'pipeconf_stonedge_auto.txt')
-
+logging.basicConfig(filename = logfilename, level = logging.DEBUG,
+                    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 os.chdir(codefolder)
 if not os.path.exists(datafolder):
@@ -28,7 +32,7 @@ dfits = dparent.load(infilenames[0])
 print(dfits.filename)
 
 ### Look at the FITS header of the loaded object
-print(repr(dfits.header))
+# print(repr(dfits.header))
 
 ### OPTIONAL BUT RECOMMENDED: Check if all necessary files exist
 error_flag = False

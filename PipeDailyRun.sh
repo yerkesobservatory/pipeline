@@ -8,6 +8,7 @@
 #   * Run all of today's data by using PipeExecuteAutoDay
 
 ### Setup
+export PATH=/usr/lib64/qt-3.3/bin:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:$HOME/bin:$PATH
 export PYTHONPATH=/data/scripts/DataReduction/source
 
 DRPath=/usr/local/lib/python3.6/site-packages/darepype

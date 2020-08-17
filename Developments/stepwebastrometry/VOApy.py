@@ -205,8 +205,9 @@ class unit:
     def build_sources_table(self):       
         df = pd.DataFrame()
         objects = self.sources
-        df['x'] = objects['x']; df['y'] = objects['y']; df['a'] = objects['a']; df['b'] = objects['b']; df['theta'] = objects['theta']; df['npix'] = objects['npix']; df['cflux'] = objects['cflux']
-        
+        # df['x'] = objects['x']; df['y'] = objects['y']; df['a'] = objects['a']; df['b'] = objects['b']; df['theta'] = objects['theta']; df['npix'] = objects['npix']; df['cflux'] = objects['cflux']
+        # df['xcentroid'] = objects['x']; df['ycentroid'] = objects['y']; df['sharpness'] = objects['sharpness']; df['roundness1'] = objects['roundness1']; df['roundness2'] = objects['roundness2']; df['npix'] = objects['npix']; df['sky'] = objects['sky']; df['peak'] = objects['peak']; df['flux'] = objects['flux']; df['mag'] = objects['mag']
+        print(repr(objects))
         argu = (df['y'] - self.center[1]) / (df['x'] - self.center[0])
         df['phi'] = np.arctan(argu)
         
