@@ -76,8 +76,6 @@ class StepSrcExtPy(StepParent):
                                'Flag for making txt table of all sources'])
         self.paramlist.append(['sourcetableformat','csv',
                                'txt table format (see astropy.io.ascii for options)'])
-        self.paramlist.append(['savebackground',False,
-                               'Flag for saving a background image'])
         # confirm end of setup
         self.log.debug('Setup: done')
 
@@ -91,6 +89,7 @@ class StepSrcExtPy(StepParent):
         # Make sure input data exists as file
         if not os.path.exists(self.datain.filename) :
             self.datain.save()
+        '''
         # Make catalog filename
         catfilename = self.datain.filenamebegin
         if catfilename[-1] in '._-': catfilename += 'sex_cat.fits'
@@ -100,7 +99,7 @@ class StepSrcExtPy(StepParent):
         if bkgdfilename[-1] in '._-': bkgdfilename += 'SxBkgd.fits'
         else: bkgdfilename += '_SxBkgd.fits'
         self.log.debug('Sextractor catalog filename = %s' % catfilename)
-
+		'''
         #Open data out of fits file for use in SEP
         image = self.datain.image
 
@@ -319,9 +318,7 @@ class StepSrcExtPy(StepParent):
         
         #self.dataout.tableset(fitdata_table.data,'Fit Data',fitdata_table.header)
         
-        # Remove background file if it's not needed
-        if not self.getarg('savebackground'):
-            os.remove(bkgdfilename)
+
         '''
         ### If requested make a plot of the fit and save as png
         if self.getarg('fitplot'):
@@ -361,8 +358,8 @@ class StepSrcExtPy(StepParent):
             with open(filename, 'w+') as f:
                 f.write("# Region file format: DS9 version 4.1\n")
                 f.write("""global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 image\n""")
-                for i in range(len(seo_catalog['X_IMAGE'][seo_SN])):
-                    f.write("circle(%.7f,%.7f,0.005) # text={%i}\n"%(seo_catalog['X_IMAGE'][seo_SN][i],seo_catalog['Y_IMAGE'][seo_SN][i],num[i]))
+                for i in range(len(seo_catalog['x'][seo_SN])):
+                    f.write("circle(%.7f,%.7f,0.005) # text={%i}\n"%(seo_catalog['x'][seo_SN][i],seo_catalog['y'][seo_SN][i],num[i]))
 
             # Save the table
             txtname = self.dataout.filenamebegin + 'FCALsources.txt'
