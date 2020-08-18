@@ -1,15 +1,17 @@
 #!/usr/bin/env python
-""" PIPE STEP WEBASTROMETRY- Version 1.1.0
+""" PIPE STEP WEBASTROMETRY- Version 1.2.0
 
-    This pipe step calls the external program astrometry.net to add
-    WCS information to the data.
+    This pipe step uploads source tables and image data to the
+    website Astrometry.net to update the WCS information of the data.
+    An API key must be specified in the config file for the upload 
+    to work. Files extracted using SExtractor or SEP are supported.
     
-    @author: Josh / Prechelt / Berthoud
+    @author: Josh Garza / Prechelt / Berthoud
 """
 # TODO more descriptive for scale_lower and scale_upper
 
-import logging # logging object library
-from astropy import wcs # to get WCS coordinates
+import logging
+from astropy import wcs
 from astropy.io import fits
 from astropy.coordinates import Angle
 from astropy.table import Table
@@ -19,7 +21,6 @@ from darepype.drp import StepParent
 from astroquery.astrometry_net import AstrometryNet
 import pandas as pd
 import numpy as np
-from math import floor
 
 class StepWebAstrometry(StepParent):
     """ HAWC Pipeline Step Parent Object
@@ -82,27 +83,39 @@ class StepWebAstrometry(StepParent):
         upload = True
         for hdu in fits.open(self.datain.filename):
             try:
+                ### This try statement works with sextractor catalog files (...sex_cat.fits)
                 # FITS files use big endian, so it must be converted to little endian before it can be used by numpy/pandas
                 tbl = pd.DataFrame(np.array(hdu.data).byteswap(inplace=True).newbyteorder())
-                tbl.columns = ['X_IMAGE', 'Y_IMAGE', 'a', 'b', 'c', 'd', 'FLUX']
+                # tbl.columns = ['X_IMAGE', 'Y_IMAGE', 'a', 'b', 'c', 'd', 'FLUX']
+                tbl.columns = ['NUMBER', 'FLUX_APER', 'FLUX_AUTO', 'FLUXERR_AUTO', 'X_IMAGE', 'Y_IMAGE']
                 # Astrometry.net requires the source table be sorted in descending order of flux
-                tbl = tbl.sort_values(by='FLUX', axis=0, ascending=False)
+                tbl = tbl.sort_values(by='FLUX_APER', axis=0, ascending=False)
             except:
-                pass
+                try:
+                    ### This try statement works with source extracted files containing image data (...SEXT.fits)
+                    tbl = pd.DataFrame(np.array(hdu.data).byteswap(inplace=True).newbyteorder())
+                    tbl.columns = ['ID', 'X_IMAGE', 'Y_IMAGE', 'FLUX', 'FLUX_ERR']
+                    tbl = tbl.sort_values(by='FLUX', axis=0, ascending=False)
+                except:
+                    pass
+                else:
+                    upload = False
             else:
                 upload = False
 
 
         # Determine the width/height of the image in pixels from the binning
         try:
-            # The images taken are squares so the width and height are the same
-            imagewh = float(self.datain.getheadval('NAXIS1'))
+            # The image width and height are stored in NAXIS1 and NAXIS 2 respectively
+            imagew = float(self.datain.getheadval('NAXIS1'))
+            imageh = float(self.datain.getheadval('NAXIS2'))
         except:
             # Binning 2 is pretty typical in a lot of cases
-            imagewh = 1024.
-            self.log.debug('NAXIS1 keyword missing from header, assuming binning 2 and image width/height of %d' % imagewh)
+            imagew = 1024.
+            imageh = 1024.
+            self.log.debug('NAXIS1/2 keyword missing from header, assuming image width and height of %d and %d' % (imagew, imageh))
         else:
-            self.log.debug('Image width/height is %d' % imagewh)
+            self.log.debug('Image width is %d, image height is %d' % (imagew, imageh))
 
 
         if upload:
@@ -126,7 +139,7 @@ class StepWebAstrometry(StepParent):
                                                     scale_units = self.getarg('scale_units'))
             else:
                 self.log.debug('Solving from source list without RA/Dec')
-                self.wcs_out = ast.solve_from_source_list(x=tbl['X_IMAGE'], y=tbl['Y_IMAGE'], image_width=imagewh, image_height=imagewh, 
+                self.wcs_out = ast.solve_from_source_list(x=tbl['X_IMAGE'], y=tbl['Y_IMAGE'], image_width=imagew, image_height=imageh, 
                                                           solve_timeout=self.getarg('timeout'))
         else:
             # If the header contains RA and Dec, use them to solve
@@ -138,7 +151,7 @@ class StepWebAstrometry(StepParent):
                                                     scale_units = self.getarg('scale_units'))
             else:
                 self.log.debug('Solving from source list with RA/Dec')
-                self.wcs_out = ast.solve_from_source_list(x=tbl['X_IMAGE'], y=tbl['Y_IMAGE'], image_width=imagewh, image_height=imagewh, 
+                self.wcs_out = ast.solve_from_source_list(x=tbl['X_IMAGE'], y=tbl['Y_IMAGE'], image_width=imagew, image_height=imageh, 
                                                           solve_timeout=self.getarg('timeout'), radius=self.getarg('radius'), center_ra=ra, 
                                                           center_dec=dec)
 
@@ -195,6 +208,7 @@ if __name__ == '__main__':
     StepWebAstrometry().execute()
 
 """ === History ===
+2020-08-17  -Compatibility for files source extracted using sextractor 
 2020-08-13  -Added ability to upload source tables to Astrometry
 2020-08-10  -Removed overwriting of RAW files
 2020-08-07  -Removed unused code from previous version, combined webastrometry
