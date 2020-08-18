@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 """ PIPE STEP WEBASTROMETRY- Version 1.2.0
 
-    This pipe step calls the external program astrometry.net to add
-    WCS information to the data.
+    This pipe step uploads source tables and image data to the
+    website Astrometry.net to update the WCS information of the data.
+    An API key must be specified in the config file for the upload 
+    to work. Files extracted using SExtractor or SEP are supported.
     
-    @author: Josh / Prechelt / Berthoud
+    @author: Josh Garza / Prechelt / Berthoud
 """
 # TODO more descriptive for scale_lower and scale_upper
 
-import logging # logging object library
-from astropy import wcs # to get WCS coordinates
+import logging
+from astropy import wcs
 from astropy.io import fits
 from astropy.coordinates import Angle
 from astropy.table import Table
