@@ -102,6 +102,7 @@ class StepSrcExtPy(StepParent):
 		'''
         #Open data out of fits file for use in SEP
         image = self.datain.image
+        image = image.byteswap().newbyteorder()
 
         #Set values for variables used later
         #These variables are used for the background analysis. bw and bh I found just testing various numbers
