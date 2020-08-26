@@ -32,6 +32,7 @@ from astropy.io import fits
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord # To make RA/Dec as float
 from astropy import units as u # To help with SkyCoord
+from astropy.stats import mad_std
 import matplotlib # to make plots
 matplotlib.use('Agg') # Set pixel image
 import pylab as plt # pylab library for plotting
@@ -136,14 +137,13 @@ class StepSrcExtPy(StepParent):
         objects = sep.extract(image_sub, extract_thresh, err=extract_err)
 
         #Define variables used later during flux calculation
-        sum_c = np.zeroes(len(objects))
-        sum_c_err = np.zeroes(len(objects))
-        sum_c_flags = np.zeroes(len(objects))
-        ratio = np.zeroes(len(objects))
-        rmax = np.zeroes(len(objects))
+        sum_c = np.zeros(len(objects))
+        sum_c_err = np.zeros(len(objects))
+        sum_c_flags = np.zeros(len(objects))
+        ratio = np.zeros(len(objects))
+        rmax = np.zeros(len(objects))
         dx = np.zeros(len(objects))
         dy = np.zeros(len(objects))
-        
 
 
 
@@ -153,16 +153,32 @@ class StepSrcExtPy(StepParent):
         #For the ellipses Extract identified using the ellipse parameters it gives
         #R is equal to 6 as that is the default used in Source Extractor
         kronrad, krflag = sep.kron_radius(image_sub, objects['x'], objects['y'], 
-        	objects['a'], objects['b'], objects['theta'], r=6)
+        	objects['a'], objects['b'], objects['theta'], r=6.0)
+
+        x=objects['x']
+        y=objects['y']
+        a=objects['a']
+        b=objects['b']
+        theta=objects['theta']
+
+
+        actkron= kronrad*2.5
+        
+        #This is the equivalent of the flux_auto rmin param. It is 3.5 in our param
+        r_min=3.5
+        
+        
 
         #Using this Kron radius we calculate the flux, this is equivallent to FLUX_AUTO in SExtractor
-        flux_elip, fluxerr_elip, flag = sep.sum_ellipse(image_sub, objects['x'], 
-        	objects['y'], objects['a'], objects['b'], objects['theta'], 
-        	2.5*kronrad, err=bkg_rms, subpix=1)
+        flux_elip, fluxerr_elip, flag = sep.sum_ellipse(image_sub, objects['x'], objects['y'], objects['a'], 
+                                      objects['b'], objects['theta'], r= 2.5*kronrad, err=bkg_rms,
+                                      subpix=1)
 
 		#Then we calculate it using Circular Apetures, this will be used to remove sources that are too elipitical
         flux_circ, fluxerr_circ, flag = sep.sum_circle(image_sub,
 			objects['x'], objects['y'], r=2.5, err = bkg_rms,subpix=1)
+
+
 
 
 
