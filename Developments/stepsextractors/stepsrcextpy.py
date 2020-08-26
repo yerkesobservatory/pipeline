@@ -274,7 +274,7 @@ class StepSrcExtPy(StepParent):
         ### Make table with all data from source extractor
         # Collect data columns
         cols = []
-        num = np.arange(1, len(objects['x']) + 1 )
+        num = np.arange(1, len(objects['x'][seo_SN]) + 1 )
         cols.append(fits.Column(name='ID', format='D',
                                 array=num))
         cols.append(fits.Column(name='X', format='D',
@@ -284,10 +284,10 @@ class StepSrcExtPy(StepParent):
                                 array=objects['y'][seo_SN],
                                 unit='pixel'))
         cols.append(fits.Column(name='Uncalibrated Magnitude', format='D',
-                                array=seo_Mag,
+                                array=seo_Mag[seo_SN],
                                 unit='magnitude'))
         cols.append(fits.Column(name='Uncalibrated Magnitude_Err', format='D',
-                                array=seo_MagErr, unit='magnitude'))
+                                array=seo_MagErr[seo_SN], unit='magnitude'))
         # Make table
         c = fits.ColDefs(cols)
         sources_table = fits.BinTableHDU.from_columns(c)
