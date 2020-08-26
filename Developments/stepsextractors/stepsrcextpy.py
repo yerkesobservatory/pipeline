@@ -143,6 +143,7 @@ class StepSrcExtPy(StepParent):
         rmax = np.zeroes(len(objects))
         dx = np.zeros(len(objects))
         dy = np.zeros(len(objects))
+        
 
 
 
