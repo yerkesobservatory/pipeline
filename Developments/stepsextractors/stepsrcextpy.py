@@ -13,7 +13,7 @@
 
     Update 8/6/20 by Daniel Sharkey
     Here I have attempted to convert the original Fluxcalsex step into a 
-    Sextract step that uses the python library SEP
+    Sextract step that uses the python library SEP.
 
 
 
@@ -161,8 +161,6 @@ class StepSrcExtPy(StepParent):
         b=objects['b']
         theta=objects['theta']
 
-
-        actkron= kronrad*2.5
         
         #This is the equivalent of the flux_auto rmin param. It is 3.5 in our param
         r_min=3.5
@@ -283,11 +281,11 @@ class StepSrcExtPy(StepParent):
         cols.append(fits.Column(name='Y', format='D',
                                 array=objects['y'][seo_SN],
                                 unit='pixel'))
-        cols.append(fits.Column(name='Uncalibrated Magnitude', format='D',
-                                array=seo_Mag[seo_SN],
-                                unit='magnitude'))
-        cols.append(fits.Column(name='Uncalibrated Magnitude_Err', format='D',
-                                array=seo_MagErr[seo_SN], unit='magnitude'))
+        cols.append(fits.Column(name='Uncalibrated Flux', format='D',
+                                array=flux_elip[seo_SN],
+                                unit='flux'))
+        cols.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
+                                array=fluxerr_elip[seo_SN], unit='flux'))
         # Make table
         c = fits.ColDefs(cols)
         sources_table = fits.BinTableHDU.from_columns(c)
