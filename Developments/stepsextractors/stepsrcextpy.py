@@ -177,6 +177,14 @@ class StepSrcExtPy(StepParent):
 			objects['x'], objects['y'], r=2.5, err = bkg_rms,subpix=1)
 
 
+        #Now we want to calculat the Half-flux Radius.
+
+        dx = (objects['xmax'] - objects['xmin']) / 2
+        dy = (objects['ymax'] - objects['ymin']) / 2
+        rmax = np.sqrt(dx*dx + dy*dy)
+        #Frac is the amount of flux we want for the radius, since we want half flux it is .5
+        frac=0.5
+        rh, rh_flag = sep.flux_radius(image_sub, x, y, rmax, frac)
 
 
 
@@ -286,6 +294,8 @@ class StepSrcExtPy(StepParent):
                                 unit='flux'))
         cols.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
                                 array=fluxerr_elip[seo_SN], unit='flux'))
+        cols.append(fits.Column(name='Half-light Radius', format='D',
+                                array=rh[seo_SN], unit='pixel'))
         # Make table
         c = fits.ColDefs(cols)
         sources_table = fits.BinTableHDU.from_columns(c)
@@ -374,8 +384,8 @@ class StepSrcExtPy(StepParent):
             with open(filename, 'w+') as f:
                 f.write("# Region file format: DS9 version 4.1\n")
                 f.write("""global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 image\n""")
-                for i in range(len(seo_catalog['x'][seo_SN])):
-                    f.write("circle(%.7f,%.7f,0.005) # text={%i}\n"%(seo_catalog['x'][seo_SN][i],seo_catalog['y'][seo_SN][i],num[i]))
+                for i in range(len(objects['x'][seo_SN])):
+                    f.write("circle(%.7f,%.7f,0.005) # text={%i}\n"%(objects['x'][seo_SN][i],objects['y'][seo_SN][i],num[i]))
 
             # Save the table
             txtname = self.dataout.filenamebegin + 'FCALsources.txt'
