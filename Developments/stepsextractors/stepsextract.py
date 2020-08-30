@@ -170,7 +170,11 @@ class StepSextract(StepParent):
                                 array=seo_Flux[seo_SN],
                                 unit='flux'))
         cols.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
-                                array=seo_Fluxerr[seo_SN], unit='flux'))
+                                array=seo_Fluxerr[seo_SN],
+                                 unit='flux'))
+        cols.append(fits.Column(name='Half Light Radius', format='D',
+                                array=seo_catalog['FLUX_RADIUS'],
+                                unit='pixel'))
         # Make table
         c = fits.ColDefs(cols)
         sources_table = fits.BinTableHDU.from_columns(c)
