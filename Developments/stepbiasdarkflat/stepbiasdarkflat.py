@@ -60,9 +60,10 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         # set configuration
         self.log.debug('Init: done')
     
-    # This function is directly lifted from CCDProc https://github.com/astropy/ccdproc/blob/master/ccdproc/core.py
-    # Instead of directly calling CCDProc, we have included the function here to increase educational value
-    # and to decrease reliance on external libraries.
+    # This function is directly lifted from CCDProc
+    #     https://github.com/astropy/ccdproc/blob/master/ccdproc/core.py
+    # Instead of directly calling CCDProc, we have included the function here to
+    # increase educational value and to decrease reliance on external libraries.
     def subtract_bias(self, image, bias):
         """
         Subtract master bias from image.
@@ -95,9 +96,11 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         self.log.debug('Subtracted bias.')
         return result
 
-    # this code is also lifted from ccdproc https://github.com/astropy/ccdproc/blob/master/ccdproc/core.py
-    # some of the code is removed from the original ccdproc because it is not relevant to how SEO currently 
-    # processes data. If you are looking at this code in the future, there is more code available to draw from
+    # this code is also lifted from ccdproc
+    # https://github.com/astropy/ccdproc/blob/master/ccdproc/core.py
+    # some of the code is removed from the original ccdproc because it is not
+    # relevant to how SEO currently processes data. If you are looking at this
+    # code in the future, there is more code available to draw from
     def subtract_dark(self, image, dark, scale=False, exposure_time=None, exposure_unit=None):
         """
         Subtract dark current from an image.
@@ -151,6 +154,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         
         self.log.debug('Subtracted dark.')
         return result
+    
     # This code is also from ccdproc. A notable removal is the option to manually choose
     # maximum and minimum flat values.
     def flat_correct(self, image, flat):
@@ -240,7 +244,8 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         # Load bias files if necessary
         if not self.biasloaded or self.getarg('reload'):
             self.loadbias()
-        # Else: check data for correct instrument configuration - currently not in use(need improvement)
+        # Else: check data for correct instrument configuration
+        # - currently not in use(need improvement)
         else:
             for keyind in range(len(self.biasfitkeys)):
                 if self.biaskeyvalues[keyind] != self.datain.getheadval(self.biasfitkeys[keyind]):
@@ -311,6 +316,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             self.dataout.setheadval('HISTORY','FLAT: %s' % self.flatname)
 
         self.dataout.filename = self.datain.filename
+
     def loadbias(self):
         """ Loads the bias information for the instrument settings
             described in the header of self.datain.
