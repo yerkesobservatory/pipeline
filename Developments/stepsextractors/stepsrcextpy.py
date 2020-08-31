@@ -13,7 +13,7 @@
 
     Update 8/6/20 by Daniel Sharkey
     Here I have attempted to convert the original Fluxcalsex step into a 
-    Sextract step that uses the python library SEP
+    Sextract step that uses the python library SEP.
 
 
 
@@ -32,6 +32,7 @@ from astropy.io import fits
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord # To make RA/Dec as float
 from astropy import units as u # To help with SkyCoord
+from astropy.stats import mad_std
 import matplotlib # to make plots
 matplotlib.use('Agg') # Set pixel image
 import pylab as plt # pylab library for plotting
@@ -102,6 +103,7 @@ class StepSrcExtPy(StepParent):
 		'''
         #Open data out of fits file for use in SEP
         image = self.datain.image
+        image = image.byteswap().newbyteorder()
 
         #Set values for variables used later
         #These variables are used for the background analysis. bw and bh I found just testing various numbers
@@ -135,11 +137,11 @@ class StepSrcExtPy(StepParent):
         objects = sep.extract(image_sub, extract_thresh, err=extract_err)
 
         #Define variables used later during flux calculation
-        sum_c = np.zeroes(len(objects))
-        sum_c_err = np.zeroes(len(objects))
-        sum_c_flags = np.zeroes(len(objects))
-        ratio = np.zeroes(len(objects))
-        rmax = np.zeroes(len(objects))
+        sum_c = np.zeros(len(objects))
+        sum_c_err = np.zeros(len(objects))
+        sum_c_flags = np.zeros(len(objects))
+        ratio = np.zeros(len(objects))
+        rmax = np.zeros(len(objects))
         dx = np.zeros(len(objects))
         dy = np.zeros(len(objects))
 
@@ -151,16 +153,38 @@ class StepSrcExtPy(StepParent):
         #For the ellipses Extract identified using the ellipse parameters it gives
         #R is equal to 6 as that is the default used in Source Extractor
         kronrad, krflag = sep.kron_radius(image_sub, objects['x'], objects['y'], 
-        	objects['a'], objects['b'], objects['theta'], r=6)
+        	objects['a'], objects['b'], objects['theta'], r=6.0)
+
+        x=objects['x']
+        y=objects['y']
+        a=objects['a']
+        b=objects['b']
+        theta=objects['theta']
+
+        
+        #This is the equivalent of the flux_auto rmin param. It is 3.5 in our param
+        r_min=3.5
+        
+        
 
         #Using this Kron radius we calculate the flux, this is equivallent to FLUX_AUTO in SExtractor
-        flux_elip, fluxerr_elip, flag = sep.sum_ellipse(image_sub, objects['x'], 
-        	objects['y'], objects['a'], objects['b'], objects['theta'], 
-        	2.5*kronrad, err=bkg_rms, subpix=1)
+        flux_elip, fluxerr_elip, flag = sep.sum_ellipse(image_sub, objects['x'], objects['y'], objects['a'], 
+                                      objects['b'], objects['theta'], r= 2.5*kronrad, err=bkg_rms,
+                                      subpix=1)
 
 		#Then we calculate it using Circular Apetures, this will be used to remove sources that are too elipitical
         flux_circ, fluxerr_circ, flag = sep.sum_circle(image_sub,
 			objects['x'], objects['y'], r=2.5, err = bkg_rms,subpix=1)
+
+
+        #Now we want to calculat the Half-flux Radius.
+
+        dx = (objects['xmax'] - objects['xmin']) / 2
+        dy = (objects['ymax'] - objects['ymin']) / 2
+        rmax = np.sqrt(dx*dx + dy*dy)
+        #Frac is the amount of flux we want for the radius, since we want half flux it is .5
+        frac=0.5
+        rh, rh_flag = sep.flux_radius(image_sub, x, y, rmax, frac)
 
 
 
@@ -256,7 +280,7 @@ class StepSrcExtPy(StepParent):
         ### Make table with all data from source extractor
         # Collect data columns
         cols = []
-        num = np.arange(1, len(objects['x']) + 1 )
+        num = np.arange(1, len(objects['x'][seo_SN]) + 1 )
         cols.append(fits.Column(name='ID', format='D',
                                 array=num))
         cols.append(fits.Column(name='X', format='D',
@@ -265,11 +289,13 @@ class StepSrcExtPy(StepParent):
         cols.append(fits.Column(name='Y', format='D',
                                 array=objects['y'][seo_SN],
                                 unit='pixel'))
-        cols.append(fits.Column(name='Uncalibrated Magnitude', format='D',
-                                array=seo_Mag,
-                                unit='magnitude'))
-        cols.append(fits.Column(name='Uncalibrated Magnitude_Err', format='D',
-                                array=seo_MagErr, unit='magnitude'))
+        cols.append(fits.Column(name='Uncalibrated Flux', format='D',
+                                array=flux_elip[seo_SN],
+                                unit='flux'))
+        cols.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
+                                array=fluxerr_elip[seo_SN], unit='flux'))
+        cols.append(fits.Column(name='Half-light Radius', format='D',
+                                array=rh[seo_SN], unit='pixel'))
         # Make table
         c = fits.ColDefs(cols)
         sources_table = fits.BinTableHDU.from_columns(c)
@@ -358,8 +384,8 @@ class StepSrcExtPy(StepParent):
             with open(filename, 'w+') as f:
                 f.write("# Region file format: DS9 version 4.1\n")
                 f.write("""global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 image\n""")
-                for i in range(len(seo_catalog['x'][seo_SN])):
-                    f.write("circle(%.7f,%.7f,0.005) # text={%i}\n"%(seo_catalog['x'][seo_SN][i],seo_catalog['y'][seo_SN][i],num[i]))
+                for i in range(len(objects['x'][seo_SN])):
+                    f.write("circle(%.7f,%.7f,0.005) # text={%i}\n"%(objects['x'][seo_SN][i],objects['y'][seo_SN][i],num[i]))
 
             # Save the table
             txtname = self.dataout.filenamebegin + 'FCALsources.txt'
