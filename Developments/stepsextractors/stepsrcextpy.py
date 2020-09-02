@@ -191,7 +191,7 @@ class StepSrcExtPy(StepParent):
         self.log.debug('Selected %d stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
         
         #Calculate Median RH to report in header
-        rhmed, rhmad = np.nanmedian(rh[seo_SN]), mad_std(rh[seo_SN], ignore_nan = True)
+        rhmean, rhstd = np.nanmean(rh[seo_SN]), mad_std(rh[seo_SN], ignore_nan = True)
 
         
         ### Make table with all data from source extractor
@@ -220,8 +220,8 @@ class StepSrcExtPy(StepParent):
         ### Make output data
         # Copy data from datain
         self.dataout = self.datain
-        self.dataout.setheadval ('RHALF',rhmed, 'Median half-power radius of stars (in pixels)')
-        self.dataout.setheadval ('RHALFSTD', rhmad, 'STD of masked mean of half-power radius')
+        self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)')
+        self.dataout.setheadval ('RHALFSTD', rhstd, 'STD of masked mean of half-power radius')
         self.dataout.tableset(sources_table.data,'Sources',sources_table.header)
         
     
