@@ -7,7 +7,8 @@
     @author: Prechelt / Berthoud
 
     NOTE: Users running this step or the pipeline using a cron job
-    will need to add the following lines to their crontab file:
+    will need to add the following lines to their crontab file to make
+    sure that the external astromery.net solve-field command works:
 
     SHELL=/bin/bash
     PATH=/usr/lib64/qt-3.3/bin:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:$HOME/bin
@@ -25,7 +26,7 @@ import astropy.units as u
 from darepype.drp import DataFits
 from darepype.drp import StepParent
 
-class StepAstrometry(StepParent):
+class StepLocalAstrometry(StepParent):
     """ HAWC Pipeline Step Parent Object
         The object is callable. It requires a valid configuration input
         (file or object) when it runs.
@@ -49,7 +50,7 @@ class StepAstrometry(StepParent):
         """
         ### Set Names
         # Name of the pipeline reduction step
-        self.name='astrometry'
+        self.name='localastrometry'
         # Shortcut for pipeline reduction step and identifier for
         # saved file names.
         self.procname = 'WCS'
@@ -211,7 +212,7 @@ if __name__ == '__main__':
           --loglevel=LEVEL : configures the logging output for a particular level
           -h, --help : Returns a list of 
     """
-    StepAstrometry().execute()
+    StepLocalAstrometry().execute()
 
 """ === History ===
 2018-10-12 MGB: - Add code to try different --downsample factors
