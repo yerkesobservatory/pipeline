@@ -142,6 +142,21 @@
     # Only search in indexes within 'searchradius' (degrees) of the field center given by --ra and --dec
     searchradius = 5
 
+# Web Astrometry Step Configuration
+[webastrometry]
+    # Timeout for running astrometry (seconds)
+    timeout = 900
+    # Search within this many degrees of the center RA and Dec
+    radius = 5.
+    # Lower bound of the scale of the image
+    scale_lower = 0.5
+    # Upper bound of the scale of the image
+    scale_upper = 2.
+    # Image plate scale units
+    scale_units = 'arcsecperpix'
+    # API key used for interfacing with Astrometry.net
+    api_key = 'XXXXXXXX'
+
 # ADDKEYS step configuration
 [addkeys]
     # List of valid strings for filter names (only used if FILTER keyword is not set)
