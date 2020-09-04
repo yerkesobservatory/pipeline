@@ -124,7 +124,14 @@ class StepSrcExtPy(StepParent):
         extract_err = bkg_rms
 
         #Extract sources from the subtracted image
-        objects = sep.extract(image_sub, extract_thresh, err=extract_err)
+        sources = sep.extract(image_sub, extract_thresh, err=extract_err)
+
+        ## Sort by descending isophotal flux. (Taken from Dr. Harper's SEP Notebook)
+        ind = np.argsort(sources['flux'])
+        reverser = np.arange(len(ind) - 1,-1,-1)
+        rev_ind = np.take_along_axis(ind, reverser, axis = 0)
+        objects = np.take_along_axis(sources, rev_ind, axis = 0)
+
 
         #Define variables used later during flux calculation
         sum_c = np.zeros(len(objects))
