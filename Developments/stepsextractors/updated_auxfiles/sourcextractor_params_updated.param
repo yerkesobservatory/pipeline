@@ -207,7 +207,7 @@ Y_IMAGE                  Object position along y                                
 #FLUX_GROWTHSTEP          Step for growth-curves                                    [pixel]
 #MAG_GROWTH               Cumulated magnitude growth-curve                          [mag]
 #MAG_GROWTHSTEP           Step for growth-curves                                    [pixel]
-#FLUX_RADIUS              Fraction-of-light radii                                   [pixel]
+FLUX_RADIUS              Fraction-of-light radii                                   [pixel]
 #XPSF_IMAGE               X coordinate from PSF-fitting                             [pixel]
 #YPSF_IMAGE               Y coordinate from PSF-fitting                             [pixel]
 #XPSF_WORLD               PSF position along world x axis                           [deg]
