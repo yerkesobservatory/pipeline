@@ -117,8 +117,8 @@
     #datalist = R array, T array
     # Reload: Set to True to look for new bias files for every input
     reload = T
-    # Intermediate: Set to true to return a fits file with intermediate BDF steps
-    intermediate = false
+    # Intermediate: Set to T to return a fits file with intermediate BDF steps
+    intermediate = F
 
 
 
