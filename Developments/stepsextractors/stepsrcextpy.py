@@ -153,12 +153,6 @@ class StepSrcExtPy(StepParent):
         kronrad, krflag = sep.kron_radius(image_sub, objects['x'], objects['y'], 
         	objects['a'], objects['b'], objects['theta'], r=6.0)
 
-        x=objects['x']
-        y=objects['y']
-        a=objects['a']
-        b=objects['b']
-        theta=objects['theta']
-
         '''
         This is the equivalent of the flux_auto rmin param for Source Extractor. 
         It is 3.5 in the param file from the original version of the step
@@ -187,7 +181,7 @@ class StepSrcExtPy(StepParent):
         rmax = np.sqrt(dx*dx + dy*dy)
         #Frac is the amount of flux we want for the radius, since we want half flux it is .5
         frac=0.5
-        rh, rh_flag = sep.flux_radius(image_sub, x, y, rmax, frac)
+        rh, rh_flag = sep.flux_radius(image_sub, objects['x'], objects['y'], rmax, frac)
 
    
         
@@ -197,8 +191,9 @@ class StepSrcExtPy(StepParent):
         seo_SN = (seo_SN) & (elongation) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0)
         self.log.debug('Selected %d stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
         
-        #Calculate Median RH to report in header
+        #Calculate mean RH, its STD, and mean Elongation to report in header
         rhmean, rhstd = np.nanmean(rh[seo_SN]), mad_std(rh[seo_SN], ignore_nan = True)
+        elmean= np.nanmean(objects['a'][seo_SN]/objects['b'][seo_SN])
 
         
         ### Make table with all data from source extractor
@@ -220,16 +215,20 @@ class StepSrcExtPy(StepParent):
                                 array=fluxerr_elip[seo_SN], unit='flux'))
         cols.append(fits.Column(name='Half-light Radius', format='D',
                                 array=rh[seo_SN], unit='pixel'))
+
         # Make table
         c = fits.ColDefs(cols)
         sources_table = fits.BinTableHDU.from_columns(c)
+
         
         ### Make output data
         # Copy data from datain
         self.dataout = self.datain
-        self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)')
+        self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)') 
         self.dataout.setheadval ('RHALFSTD', rhstd, 'STD of masked mean of half-power radius')
+        self.dataout.setheadval ('ELONG',elmean, 'Mean elongation of accepted sources')
         self.dataout.tableset(sources_table.data,'Sources',sources_table.header)
+
         
     
         

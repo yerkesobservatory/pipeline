@@ -158,6 +158,11 @@ class StepSextract(StepParent):
         #Calculate Mean and STD for Rh to report
         rhmean, rhstd = np.nanmean(seo_catalog['FLUX_RADIUS']), mad_std(seo_catalog['FLUX_RADIUS'], ignore_nan = True)
 
+
+        ind = np.argsort(seo_Flux)
+        reverser = np.arange(len(ind) - 1,-1,-1)
+        rev_ind = np.take_along_axis(ind, reverser, axis = 0)
+        seo_catalog = np.take_along_axis(seo_catalog, rev_ind, axis = 0)
         ### Make table with all data from source extractor
         # Collect data columns
         cols = []
