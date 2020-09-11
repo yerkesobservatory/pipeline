@@ -232,8 +232,9 @@ class StepSrcExtPy(StepParent):
         seo_SNL = (elonglow) & ((flux_elow/fluxerr_elow)<1000) & (fluxerr_elow != 0)
 
 
-        self.log.debug('Selected %d stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
-        
+        self.log.debug('Selected %d high thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
+        self.log.debug('Selected %d low thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SNL))
+
         #Calculate mean RH, its STD, and mean Elongation to report in header
         rhmean, rhstd = np.nanmean(rhl[seo_SNL]), mad_std(rhl[seo_SNL], ignore_nan = True)
         elmean= np.nanmean(lowobjects['a'][seo_SNL]/lowobjects['b'][seo_SNL])
