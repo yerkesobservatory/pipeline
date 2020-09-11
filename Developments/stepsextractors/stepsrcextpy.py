@@ -92,8 +92,8 @@ class StepSrcExtPy(StepParent):
             self.datain.save()
         
         #Open data out of fits file for use in SEP
-        image = self.datain.image
-        image = image.byteswap().newbyteorder()
+        psimage = self.datain.image
+        image = psimage.byteswap().newbyteorder()
 
         #Set values for variables used later
         #These variables are used for the background analysis. bw and bh I found just testing various numbers
@@ -120,11 +120,14 @@ class StepSrcExtPy(StepParent):
 
 
 		#Create variables that are used during source Extraction
-        extract_thresh = 5
+        extract_thresh1 = 20
+        extract_thresh2 = 2
         extract_err = bkg_rms
 
         #Extract sources from the subtracted image
-        sources = sep.extract(image_sub, extract_thresh, err=extract_err)
+        sources = sep.extract(image_sub, extract_thresh1, err=extract_err)
+        lowthresh= sep.extract(image_sub, extract_thresh2, err=extract_err)
+
 
         ## Sort by descending isophotal flux. (Taken from Dr. Harper's SEP Notebook)
         ind = np.argsort(sources['flux'])
@@ -132,16 +135,10 @@ class StepSrcExtPy(StepParent):
         rev_ind = np.take_along_axis(ind, reverser, axis = 0)
         objects = np.take_along_axis(sources, rev_ind, axis = 0)
 
-
-        #Define variables used later during flux calculation
-        sum_c = np.zeros(len(objects))
-        sum_c_err = np.zeros(len(objects))
-        sum_c_flags = np.zeros(len(objects))
-        ratio = np.zeros(len(objects))
-        rmax = np.zeros(len(objects))
-        dx = np.zeros(len(objects))
-        dy = np.zeros(len(objects))
-
+        indlow = np.argsort(lowthresh['flux'])
+        reverserlow = np.arange(len(indlow) - 1,-1,-1)
+        rev_indlow = np.take_along_axis(indlow, reverserlow, axis = 0)
+        lowobjects = np.take_along_axis(lowthresh, rev_indlow, axis = 0)
 
         ###Do basic uncalibrated measurments of flux for use in step astrometry. 
         '''
@@ -152,6 +149,9 @@ class StepSrcExtPy(StepParent):
         '''
         kronrad, krflag = sep.kron_radius(image_sub, objects['x'], objects['y'], 
         	objects['a'], objects['b'], objects['theta'], r=6.0)
+
+        lowkron, lowkrflag= sep.kron_radius(image_sub, lowobjects['x'], lowobjects['y'], 
+            lowobjects['a'],lowobjects['b'], lowobjects['theta'], r=6.0)
 
         '''
         This is the equivalent of the flux_auto rmin param for Source Extractor. 
@@ -166,34 +166,55 @@ class StepSrcExtPy(StepParent):
         flux_elip, fluxerr_elip, flag = sep.sum_ellipse(image_sub, objects['x'], objects['y'], objects['a'], 
                                       objects['b'], objects['theta'], r= 2.5*kronrad, err=bkg_rms,
                                       subpix=1)
+        flux_elow, fluxerr_elow, flag = sep.sum_ellipse(image_sub, lowobjects['x'], lowobjects['y'], lowobjects['a'], 
+                                      lowobjects['b'], lowobjects['theta'], r= 2.5*lowkron, err=bkg_rms,
+                                      subpix=1)
 
 		#Then we calculate it using Circular Apetures
         #This will be used to remove sources that are too elipitical
         #It is equivalent to FLUX_APER in Sextractor
-        flux_circ, fluxerr_circ, flag = sep.sum_circle(image_sub,
-			objects['x'], objects['y'], r=2.5, err = bkg_rms,subpix=1)
+        flux_circ, fluxerr_circ, lflag = sep.sum_circle(image_sub,
+			objects['x'], objects['y'], r=2.5, err = bkg_rms, subpix=1)
+
+        flux_lowc, fluxerr_lowc, cflag = sep.sum_circle(image_sub,
+            lowobjects['x'], lowobjects['y'], r=2.5, err = bkg_rms, subpix=1)
 
 
         #Now we want to calculat the Half-flux Radius.
 
         dx = (objects['xmax'] - objects['xmin']) / 2
         dy = (objects['ymax'] - objects['ymin']) / 2
+
+        dxl = (lowobjects['xmax'] - lowobjects['xmin']) / 2
+        dyl = (lowobjects['ymax'] - lowobjects['ymin']) / 2
+
+
         rmax = np.sqrt(dx*dx + dy*dy)
+        rmaxlow= np.sqrt(dxl*dxl + dyl*dyl)
         #Frac is the amount of flux we want for the radius, since we want half flux it is .5
         frac=0.5
         rh, rh_flag = sep.flux_radius(image_sub, objects['x'], objects['y'], rmax, frac)
+        rhl, rhl_flag = sep.flux_radius(image_sub, lowobjects['x'], lowobjects['y'], rmaxlow, frac)
 
    
         
         # Select only the stars in the image: circular image and S/N > 10
-        elongation = (flux_circ-flux_elip)<250
-        seo_SN = ((flux_elip/fluxerr_elip)>10)
-        seo_SN = (seo_SN) & (elongation) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0)
+        #Establish an elongation limit
+        elim=1.5
+        #Create cuts
+        elongation = (objects['a']/objects['b'])<elim
+        seo_SN = (elongation) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0)
+
+        #Now do this for the low threshold sources
+        elonglow = (lowobjects['a']/lowobjects['b'])<elim
+        seo_SNL = (elonglow) & ((flux_elow/fluxerr_elow)<1000) & (fluxerr_elow != 0)
+
+
         self.log.debug('Selected %d stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
         
         #Calculate mean RH, its STD, and mean Elongation to report in header
-        rhmean, rhstd = np.nanmean(rh[seo_SN]), mad_std(rh[seo_SN], ignore_nan = True)
-        elmean= np.nanmean(objects['a'][seo_SN]/objects['b'][seo_SN])
+        rhmean, rhstd = np.nanmean(rhl[seo_SNL]), mad_std(rhl[seo_SNL], ignore_nan = True)
+        elmean= np.nanmean(lowobjects['a'][seo_SNL]/lowobjects['b'][seo_SNL])
 
         
         ### Make table with all data from source extractor
@@ -216,9 +237,33 @@ class StepSrcExtPy(StepParent):
         cols.append(fits.Column(name='Half-light Radius', format='D',
                                 array=rh[seo_SN], unit='pixel'))
 
+        # Now lets make a table using the lower threshold
+        grid = []
+        numlow = np.arange(1, len(lowobjects['x']) + 1 )
+        grid.append(fits.Column(name='ID', format='D',
+                                array=numlow))
+        grid.append(fits.Column(name='X', format='D',
+                                array=lowobjects['x'][seo_SNL],
+                                unit='pixel'))
+        grid.append(fits.Column(name='Y', format='D',
+                                array=lowobjects['y'][seo_SNL],
+                                unit='pixel'))
+        grid.append(fits.Column(name='Uncalibrated Flux', format='D',
+                                array=flux_elow[seo_SNL],
+                                unit='flux'))
+        grid.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
+                                array=fluxerr_elow[seo_SNL], unit='flux'))
+        grid.append(fits.Column(name='Half-light Radius', format='D',
+                                array=rhl[seo_SNL], unit='pixel'))
+
         # Make table
         c = fits.ColDefs(cols)
+
+        clow=fits.ColDefs(grid)
+
         sources_table = fits.BinTableHDU.from_columns(c)
+
+        lowsource_table= fits.BinTableHDU.from_columns(clow)
 
         
         ### Make output data
@@ -227,7 +272,9 @@ class StepSrcExtPy(StepParent):
         self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)') 
         self.dataout.setheadval ('RHALFSTD', rhstd, 'STD of masked mean of half-power radius')
         self.dataout.setheadval ('ELONG',elmean, 'Mean elongation of accepted sources')
-        self.dataout.tableset(sources_table.data,'Sources',sources_table.header)
+        self.dataout.tableset(sources_table.data,'High Threshold Sources',sources_table.header)
+        self.dataout.tableset(lowsource_table.data, 'Low Threshold Sources', lowsource_table.header)
+
 
         
     
@@ -248,7 +295,7 @@ class StepSrcExtPy(StepParent):
 
             # Save the table
             txtname = self.dataout.filenamebegin + 'FCALsources.txt'
-            ascii.write(self.dataout.tableget('Sources'),txtname,
+            ascii.write(self.dataout.tableget('Low Threshold Sources'),txtname,
                         format = self.getarg('sourcetableformat'))
             self.log.debug('Saved sources table under %s' % txtname)
 
