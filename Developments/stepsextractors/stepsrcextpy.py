@@ -197,6 +197,28 @@ class StepSrcExtPy(StepParent):
         rhl, rhl_flag = sep.flux_radius(image_sub, lowobjects['x'], lowobjects['y'], rmaxlow, frac)
 
    
+        #Sort the individual arrays so that the final table is sorted by flux
+        #create sorting index by using flux. This is for low threshold
+        indl = np.argsort(flux_elow)
+        reverserl = np.arange(len(indl) - 1,-1,-1)
+        rev_indl = np.take_along_axis(indl, reverserl, axis = 0)
+        flux_elow = np.take_along_axis(flux_elow, rev_indl, axis = 0)
+        #now apply it to all the axis
+        fluxerr_elow = np.take_along_axis(fluxerr_elow, rev_indl, axis = 0)
+        lowobjects = np.take_along_axis(lowobjects, rev_indl, axis = 0)
+        rhl = np.take_along_axis(rhl, rev_indl, axis = 0)
+
+        #now for high threshold
+
+        ind = np.argsort(flux_elip)
+        reverser = np.arange(len(ind) - 1,-1,-1)
+        rev_ind = np.take_along_axis(ind, reverser, axis = 0)
+        flux_elip = np.take_along_axis(flux_elip, rev_ind, axis = 0)
+        #now apply it to all the axis
+        fluxerr_elip = np.take_along_axis(fluxerr_elip, rev_ind, axis = 0)
+        objects = np.take_along_axis(objects, rev_ind, axis = 0)
+        rh = np.take_along_axis(rh, rev_ind, axis = 0)
+
         
         # Select only the stars in the image: circular image and S/N > 10
         #Establish an elongation limit
@@ -215,6 +237,12 @@ class StepSrcExtPy(StepParent):
         #Calculate mean RH, its STD, and mean Elongation to report in header
         rhmean, rhstd = np.nanmean(rhl[seo_SNL]), mad_std(rhl[seo_SNL], ignore_nan = True)
         elmean= np.nanmean(lowobjects['a'][seo_SNL]/lowobjects['b'][seo_SNL])
+
+
+       
+
+
+
 
         
         ### Make table with all data from source extractor
@@ -237,9 +265,11 @@ class StepSrcExtPy(StepParent):
         cols.append(fits.Column(name='Half-light Radius', format='D',
                                 array=rh[seo_SN], unit='pixel'))
 
+
+
         # Now lets make a table using the lower threshold
         grid = []
-        numlow = np.arange(1, len(lowobjects['x']) + 1 )
+        numlow = np.arange(1, len(lowobjects['x'][seo_SNL]) + 1 )
         grid.append(fits.Column(name='ID', format='D',
                                 array=numlow))
         grid.append(fits.Column(name='X', format='D',
@@ -255,6 +285,7 @@ class StepSrcExtPy(StepParent):
                                 array=fluxerr_elow[seo_SNL], unit='flux'))
         grid.append(fits.Column(name='Half-light Radius', format='D',
                                 array=rhl[seo_SNL], unit='pixel'))
+
 
         # Make table
         c = fits.ColDefs(cols)
