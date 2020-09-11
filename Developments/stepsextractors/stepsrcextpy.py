@@ -301,7 +301,8 @@ class StepSrcExtPy(StepParent):
         self.dataout.setheadval ('ELONG',elmean, 'Mean elongation of accepted sources')
         self.dataout.tableset(sources_table.data,'Low Threshold Sources',sources_table.header)
         self.dataout.tableset(brisource_table.data, 'High Threshold Sources', brisource_table.header)
-
+        self.dataout.setheadval ('EXTRACT_THRESH', extract_thresh, 'Extraction Thershold for Low Thershold Table')
+        self.dataout.setheadval ('BRIGHT_FACTOR', bright_factor, 'Multiplier to create High Threshold Table')
 
         
     
