@@ -120,13 +120,14 @@ class StepSrcExtPy(StepParent):
 
 
 		#Create variables that are used during source Extraction
-        extract_thresh1 = 20
-        extract_thresh2 = 2
+        extract_thresh = 2.0
+        bright_factor= 10.0
+        deblend_nthresh =256
         extract_err = bkg_rms
 
         #Extract sources from the subtracted image
-        sources = sep.extract(image_sub, extract_thresh1, err=extract_err)
-        lowthresh= sep.extract(image_sub, extract_thresh2, err=extract_err)
+        sources = sep.extract(image_sub, extract_thresh, err=extract_err, deblend_nthresh= deblend_nthresh)
+        sourcesbri= sep.extract(image_sub, extract_thresh*bright_factor, err=extract_err)
 
 
         ## Sort by descending isophotal flux. (Taken from Dr. Harper's SEP Notebook)
@@ -135,10 +136,10 @@ class StepSrcExtPy(StepParent):
         rev_ind = np.take_along_axis(ind, reverser, axis = 0)
         objects = np.take_along_axis(sources, rev_ind, axis = 0)
 
-        indlow = np.argsort(lowthresh['flux'])
-        reverserlow = np.arange(len(indlow) - 1,-1,-1)
-        rev_indlow = np.take_along_axis(indlow, reverserlow, axis = 0)
-        lowobjects = np.take_along_axis(lowthresh, rev_indlow, axis = 0)
+        indbri = np.argsort(sourcesbri['flux'])
+        reverserbri = np.arange(len(indbri) - 1,-1,-1)
+        rev_indbri = np.take_along_axis(indbri, reverserbri, axis = 0)
+        briobjects = np.take_along_axis(sourcesbri, rev_indbri, axis = 0)
 
         ###Do basic uncalibrated measurments of flux for use in step astrometry. 
         '''
@@ -150,8 +151,8 @@ class StepSrcExtPy(StepParent):
         kronrad, krflag = sep.kron_radius(image_sub, objects['x'], objects['y'], 
         	objects['a'], objects['b'], objects['theta'], r=6.0)
 
-        lowkron, lowkrflag= sep.kron_radius(image_sub, lowobjects['x'], lowobjects['y'], 
-            lowobjects['a'],lowobjects['b'], lowobjects['theta'], r=6.0)
+        brikron, brikflag= sep.kron_radius(image_sub, briobjects['x'], briobjects['y'], 
+            briobjects['a'],briobjects['b'], briobjects['theta'], r=6.0)
 
         '''
         This is the equivalent of the flux_auto rmin param for Source Extractor. 
@@ -166,18 +167,18 @@ class StepSrcExtPy(StepParent):
         flux_elip, fluxerr_elip, flag = sep.sum_ellipse(image_sub, objects['x'], objects['y'], objects['a'], 
                                       objects['b'], objects['theta'], r= 2.5*kronrad, err=bkg_rms,
                                       subpix=1)
-        flux_elow, fluxerr_elow, flag = sep.sum_ellipse(image_sub, lowobjects['x'], lowobjects['y'], lowobjects['a'], 
-                                      lowobjects['b'], lowobjects['theta'], r= 2.5*lowkron, err=bkg_rms,
+        flux_ebri, fluxerr_ebri, flag = sep.sum_ellipse(image_sub, briobjects['x'], briobjects['y'], briobjects['a'], 
+                                      briobjects['b'], briobjects['theta'], r= 2.5*brikron, err=bkg_rms,
                                       subpix=1)
 
 		#Then we calculate it using Circular Apetures
         #This will be used to remove sources that are too elipitical
         #It is equivalent to FLUX_APER in Sextractor
-        flux_circ, fluxerr_circ, lflag = sep.sum_circle(image_sub,
+        flux_circ, fluxerr_circ, ebflag = sep.sum_circle(image_sub,
 			objects['x'], objects['y'], r=2.5, err = bkg_rms, subpix=1)
 
-        flux_lowc, fluxerr_lowc, cflag = sep.sum_circle(image_sub,
-            lowobjects['x'], lowobjects['y'], r=2.5, err = bkg_rms, subpix=1)
+        flux_bric, fluxerr_bric, cflag = sep.sum_circle(image_sub,
+            briobjects['x'], briobjects['y'], r=2.5, err = bkg_rms, subpix=1)
 
 
         #Now we want to calculat the Half-flux Radius.
@@ -185,30 +186,30 @@ class StepSrcExtPy(StepParent):
         dx = (objects['xmax'] - objects['xmin']) / 2
         dy = (objects['ymax'] - objects['ymin']) / 2
 
-        dxl = (lowobjects['xmax'] - lowobjects['xmin']) / 2
-        dyl = (lowobjects['ymax'] - lowobjects['ymin']) / 2
+        dxb = (briobjects['xmax'] - briobjects['xmin']) / 2
+        dyb = (briobjects['ymax'] - briobjects['ymin']) / 2
 
 
         rmax = np.sqrt(dx*dx + dy*dy)
-        rmaxlow= np.sqrt(dxl*dxl + dyl*dyl)
+        rmaxbri= np.sqrt(dxb*dxb + dyb*dyb)
         #Frac is the amount of flux we want for the radius, since we want half flux it is .5
         frac=0.5
         rh, rh_flag = sep.flux_radius(image_sub, objects['x'], objects['y'], rmax, frac)
-        rhl, rhl_flag = sep.flux_radius(image_sub, lowobjects['x'], lowobjects['y'], rmaxlow, frac)
+        rhb, rhb_flag = sep.flux_radius(image_sub, briobjects['x'], briobjects['y'], rmaxbri, frac)
 
    
         #Sort the individual arrays so that the final table is sorted by flux
-        #create sorting index by using flux. This is for low threshold
-        indl = np.argsort(flux_elow)
-        reverserl = np.arange(len(indl) - 1,-1,-1)
-        rev_indl = np.take_along_axis(indl, reverserl, axis = 0)
-        flux_elow = np.take_along_axis(flux_elow, rev_indl, axis = 0)
+        #create sorting index by using flux. This is for the brightness boosted threshold
+        indb = np.argsort(flux_ebri)
+        reverserb = np.arange(len(indb) - 1,-1,-1)
+        rev_indb = np.take_along_axis(indb, reverserb, axis = 0)
+        flux_ebri = np.take_along_axis(flux_ebri, rev_indb, axis = 0)
         #now apply it to all the axis
-        fluxerr_elow = np.take_along_axis(fluxerr_elow, rev_indl, axis = 0)
-        lowobjects = np.take_along_axis(lowobjects, rev_indl, axis = 0)
-        rhl = np.take_along_axis(rhl, rev_indl, axis = 0)
+        fluxerr_ebri = np.take_along_axis(fluxerr_ebri, rev_indb, axis = 0)
+        briobjects = np.take_along_axis(briobjects, rev_indb, axis = 0)
+        rhb = np.take_along_axis(rhb, rev_indb, axis = 0)
 
-        #now for high threshold
+        #now for normal threshold
 
         ind = np.argsort(flux_elip)
         reverser = np.arange(len(ind) - 1,-1,-1)
@@ -228,22 +229,16 @@ class StepSrcExtPy(StepParent):
         seo_SN = (elongation) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0)
 
         #Now do this for the low threshold sources
-        elonglow = (lowobjects['a']/lowobjects['b'])<elim
-        seo_SNL = (elonglow) & ((flux_elow/fluxerr_elow)<1000) & (fluxerr_elow != 0)
+        elongbri = (briobjects['a']/briobjects['b'])<elim
+        seo_SNB = (elongbri) & ((flux_ebri/fluxerr_ebri)<1000) & (fluxerr_ebri != 0)
 
 
         self.log.debug('Selected %d high thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
-        self.log.debug('Selected %d low thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SNL))
+        self.log.debug('Selected %d low thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SNB))
 
         #Calculate mean RH, its STD, and mean Elongation to report in header
-        rhmean, rhstd = np.nanmean(rhl[seo_SNL]), mad_std(rhl[seo_SNL], ignore_nan = True)
-        elmean= np.nanmean(lowobjects['a'][seo_SNL]/lowobjects['b'][seo_SNL])
-
-
-       
-
-
-
+        rhmean, rhstd = np.nanmean(rh[seo_SN]), mad_std(rh[seo_SN], ignore_nan = True)
+        elmean= np.nanmean(objects['a'][seo_SN]/objects['b'][seo_SN])
 
         
         ### Make table with all data from source extractor
@@ -268,34 +263,34 @@ class StepSrcExtPy(StepParent):
 
 
 
-        # Now lets make a table using the lower threshold
+        # Now lets make a table using the Brighter threshold
         grid = []
-        numlow = np.arange(1, len(lowobjects['x'][seo_SNL]) + 1 )
+        numbri = np.arange(1, len(briobjects['x'][seo_SNB]) + 1 )
         grid.append(fits.Column(name='ID', format='D',
-                                array=numlow))
+                                array=numbri))
         grid.append(fits.Column(name='X', format='D',
-                                array=lowobjects['x'][seo_SNL],
+                                array=briobjects['x'][seo_SNB],
                                 unit='pixel'))
         grid.append(fits.Column(name='Y', format='D',
-                                array=lowobjects['y'][seo_SNL],
+                                array=briobjects['y'][seo_SNB],
                                 unit='pixel'))
         grid.append(fits.Column(name='Uncalibrated Flux', format='D',
-                                array=flux_elow[seo_SNL],
+                                array=flux_ebri[seo_SNB],
                                 unit='flux'))
         grid.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
-                                array=fluxerr_elow[seo_SNL], unit='flux'))
+                                array=fluxerr_ebri[seo_SNB], unit='flux'))
         grid.append(fits.Column(name='Half-light Radius', format='D',
-                                array=rhl[seo_SNL], unit='pixel'))
+                                array=rhb[seo_SNB], unit='pixel'))
 
 
         # Make table
         c = fits.ColDefs(cols)
 
-        clow=fits.ColDefs(grid)
+        cbri=fits.ColDefs(grid)
 
         sources_table = fits.BinTableHDU.from_columns(c)
 
-        lowsource_table= fits.BinTableHDU.from_columns(clow)
+        brisource_table= fits.BinTableHDU.from_columns(cbri)
 
         
         ### Make output data
@@ -304,8 +299,8 @@ class StepSrcExtPy(StepParent):
         self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)') 
         self.dataout.setheadval ('RHALFSTD', rhstd, 'STD of masked mean of half-power radius')
         self.dataout.setheadval ('ELONG',elmean, 'Mean elongation of accepted sources')
-        self.dataout.tableset(sources_table.data,'High Threshold Sources',sources_table.header)
-        self.dataout.tableset(lowsource_table.data, 'Low Threshold Sources', lowsource_table.header)
+        self.dataout.tableset(sources_table.data,'Low Threshold Sources',sources_table.header)
+        self.dataout.tableset(brisource_table.data, 'High Threshold Sources', brisource_table.header)
 
 
         
