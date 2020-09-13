@@ -41,7 +41,7 @@ from darepype.drp import StepParent # pipestep stepparent object
 
 
 class StepSrcExtPy(StepParent):
-    """ Pipeline Step Object to calibrate Bias/Dark/Flat files
+    """ Pipeline Step Object to extract sources from image files
     """
 
     stepver = '0.1' # pipe step version
@@ -95,7 +95,7 @@ class StepSrcExtPy(StepParent):
         psimage = self.datain.image
         image = psimage.byteswap().newbyteorder()
 
-        #Set values for variables used later
+   
         #These variables are used for the background analysis.
         maskthresh = 0.0
         bw, bh = 16, 16
@@ -121,7 +121,7 @@ class StepSrcExtPy(StepParent):
         deblend_nthresh =256
         extract_err = bkg_rms
 
-        #Extract sources from the subtracted image. It extracts a low thershold list and a high threshold list
+        #Extract sources from the subtracted image. It extracts a low threshold list and a high threshold list
         sources = sep.extract(image_sub, extract_thresh, err=extract_err, deblend_nthresh= deblend_nthresh)
         sourcesbri= sep.extract(image_sub, extract_thresh*bright_factor, err=extract_err)
 
@@ -156,15 +156,15 @@ class StepSrcExtPy(StepParent):
         r_min=3.5
 
         #Using this Kron radius we calculate the flux
-        #This is equivallent to FLUX_AUTO in SExtractor
+        #This is equivalent to FLUX_AUTO in SExtractor
         flux_elip, fluxerr_elip, flag = sep.sum_ellipse(image_sub, objects['x'], objects['y'], objects['a'], 
                                       objects['b'], objects['theta'], r= 2.5*kronrad, err=bkg_rms,
                                       subpix=1)
         flux_ebri, fluxerr_ebri, flag = sep.sum_ellipse(image_sub, briobjects['x'], briobjects['y'], briobjects['a'], 
                                       briobjects['b'], briobjects['theta'], r= 2.5*brikron, err=bkg_rms,
                                       subpix=1)
-        #Now we want to calculat the Half-flux Radius.
 
+        #Now we want to calculate the Half-flux Radius. This will be reported later
         dx = (objects['xmax'] - objects['xmin']) / 2
         dy = (objects['ymax'] - objects['ymin']) / 2
 
@@ -174,7 +174,9 @@ class StepSrcExtPy(StepParent):
 
         rmax = np.sqrt(dx*dx + dy*dy)
         rmaxbri= np.sqrt(dxb*dxb + dyb*dyb)
-        #Frac is the amount of flux we want for the radius, since we want half flux it is .5
+        '''Frac is the percentage of flux we want contained within the radius,
+        since we want half flux radius, frac is .5 '''
+        
         frac=0.5
         rh, rh_flag = sep.flux_radius(image_sub, objects['x'], objects['y'], rmax, frac)
         rhb, rhb_flag = sep.flux_radius(image_sub, briobjects['x'], briobjects['y'], rmaxbri, frac)
@@ -285,11 +287,6 @@ class StepSrcExtPy(StepParent):
         self.dataout.tableset(brisource_table.data, 'High Threshold Sources', brisource_table.header)
         self.dataout.setheadval ('EXTRACT_THRESH', extract_thresh, 'Extraction Thershold for Low Thershold Table')
         self.dataout.setheadval ('BRIGHT_FACTOR', bright_factor, 'Multiplier to create High Threshold Table')
-
-        
-    
-        
-
        
         ### If requested make a text file with the sources list
         if self.getarg('sourcetable'):
