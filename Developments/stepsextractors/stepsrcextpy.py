@@ -86,7 +86,7 @@ class StepSrcExtPy(StepParent):
         """
         ### Preparation
         binning = self.datain.getheadval('XBIN')
-        ### Run Source Extractor
+        ### Perform Source Extraction
         # Make sure input data exists as file
         if not os.path.exists(self.datain.filename) :
             self.datain.save()
@@ -96,13 +96,11 @@ class StepSrcExtPy(StepParent):
         image = psimage.byteswap().newbyteorder()
 
         #Set values for variables used later
-        #These variables are used for the background analysis. bw and bh I found just testing various numbers
+        #These variables are used for the background analysis.
         maskthresh = 0.0
         bw, bh = 16, 16
         fw, fh = 3, 3
         fthresh = 0.0
-
-
 
         #Create the background image and it's error
         bkg = sep.Background(image, maskthresh=maskthresh,bw=bw, bh=bh, fw=fw,
@@ -113,11 +111,9 @@ class StepSrcExtPy(StepParent):
         bkg_rms =bkg.rms()
         #Subtract the background from the image
         image_sub = image - bkg_image
-
+        #Calculate the Median and STD of the Subtracted Image
         imsubmed = np.nanmedian(image_sub)
         imsubmad = mad_std(image_sub)
-
-
 
 		#Create variables that are used during source Extraction
         extract_thresh = 2.0
@@ -125,12 +121,11 @@ class StepSrcExtPy(StepParent):
         deblend_nthresh =256
         extract_err = bkg_rms
 
-        #Extract sources from the subtracted image
+        #Extract sources from the subtracted image. It extracts a low thershold list and a high threshold list
         sources = sep.extract(image_sub, extract_thresh, err=extract_err, deblend_nthresh= deblend_nthresh)
         sourcesbri= sep.extract(image_sub, extract_thresh*bright_factor, err=extract_err)
 
-
-        ## Sort by descending isophotal flux. (Taken from Dr. Harper's SEP Notebook)
+        ### Sort sources by descending isophotal flux. (Taken from Dr. Harper's Explore SEP Notebook)
         ind = np.argsort(sources['flux'])
         reverser = np.arange(len(ind) - 1,-1,-1)
         rev_ind = np.take_along_axis(ind, reverser, axis = 0)
@@ -144,7 +139,7 @@ class StepSrcExtPy(StepParent):
         ###Do basic uncalibrated measurments of flux for use in step astrometry. 
         '''
         First we calculate flux using Ellipses. In order to do this we need to calculate
-        the Kron Radius for the ellipses Extract identified using the ellipse 
+        the Kron Radius for the ellipses the Extract process identified using the ellipse 
         parameters it gives. 
         R is equal to 6 as that is the default used in Source Extractor
         '''
@@ -156,11 +151,9 @@ class StepSrcExtPy(StepParent):
 
         '''
         This is the equivalent of the flux_auto rmin param for Source Extractor. 
-        It is 3.5 in the param file from the original version of the step
+        It is 3.5 in the param file from the original version of the step which use Sextractor
         '''
         r_min=3.5
-        
-        
 
         #Using this Kron radius we calculate the flux
         #This is equivallent to FLUX_AUTO in SExtractor
@@ -170,17 +163,6 @@ class StepSrcExtPy(StepParent):
         flux_ebri, fluxerr_ebri, flag = sep.sum_ellipse(image_sub, briobjects['x'], briobjects['y'], briobjects['a'], 
                                       briobjects['b'], briobjects['theta'], r= 2.5*brikron, err=bkg_rms,
                                       subpix=1)
-
-		#Then we calculate it using Circular Apetures
-        #This will be used to remove sources that are too elipitical
-        #It is equivalent to FLUX_APER in Sextractor
-        flux_circ, fluxerr_circ, ebflag = sep.sum_circle(image_sub,
-			objects['x'], objects['y'], r=2.5, err = bkg_rms, subpix=1)
-
-        flux_bric, fluxerr_bric, cflag = sep.sum_circle(image_sub,
-            briobjects['x'], briobjects['y'], r=2.5, err = bkg_rms, subpix=1)
-
-
         #Now we want to calculat the Half-flux Radius.
 
         dx = (objects['xmax'] - objects['xmin']) / 2
@@ -199,7 +181,7 @@ class StepSrcExtPy(StepParent):
 
    
         #Sort the individual arrays so that the final table is sorted by flux
-        #create sorting index by using flux. This is for the brightness boosted threshold
+        #create sorting index by using flux. This is for the boosted threshold
         indb = np.argsort(flux_ebri)
         reverserb = np.arange(len(indb) - 1,-1,-1)
         rev_indb = np.take_along_axis(indb, reverserb, axis = 0)
