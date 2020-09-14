@@ -16,7 +16,6 @@ import logging # logging object library
 import shutil # library to provide operations on collections of files
 from astropy import units as u
 from astropy.nddata import CCDData
-# import ccdproc # package for reducing optical CCD telescope data 
 from astropy.io import fits #package to recognize FITS files
 from darepype.drp import DataFits # pipeline data object
 from darepype.drp import StepParent # pipestep stepparent object
@@ -26,7 +25,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
     """ Pipeline Step Object to calibrate Bias/Dark/Flat files
     """
     
-    stepver = '0.1' # pipe step version
+    stepver = '0.2' # pipe step version
     
     def __init__(self):
         """ Constructor: Initialize data objects and variables
@@ -142,11 +141,8 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         saveIntermediateSteps = self.getarg('intermediate')
         self.dataout = DataFits(config=self.datain.config)
         
-        #convert self.datain to CCD Data object
-        # image = CCDData(self.datain.image, unit='adu')
         image = self.datain.image
         image_exp = self.datain.header['EXPTIME']
-        # image.header = self.datain.header
         
         # subtract bias from image
         image = self.subtract_bias(image, self.bias)
@@ -304,13 +300,12 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
 
         self.log.debug('Corrected flat.')
         return flat_corrected
+        
     def loadbias(self):
         """ Loads the bias information for the instrument settings
             described in the header of self.datain.
             If an appropriate file can not be found or the file is invalid
             various warnings and errors are returned.
-            If multiple matching files are found, they are combined into a
-            single master bias frame by ccdproc.
         """
         # master bias frame
         # Search for bias and load it into data object
@@ -334,8 +329,6 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             described in the header of self.datain.
             If an appropriate file can not be found or the file is invalid
             various warnings and errors are returned.
-            If multiple matching files are found, they are combined into a single 
-            master dark frame by ccdproc.
             Also bias corrects dark files if not already done.
         """
         #master dark frame
@@ -361,8 +354,6 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             described in the header of self.datain.
             If an appropriate file can not be found or the file is invalid
             various warnings and errors are returned.
-            If multiple matching files are found, they are combined into a single 
-            master flat frame by ccdproc.
             Also biascorrects and dark corrects flat files if not already done.
         """
         #create master flat frame
