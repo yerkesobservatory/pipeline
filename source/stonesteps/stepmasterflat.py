@@ -51,7 +51,7 @@ class StepMasterFlat(StepLoadAux, StepMIParent):
         # saved file names.
         self.procname = 'mflat'
         # Set Logger for this pipe step
-        self.log = logging.getLogger('stoneedge.pipe.step.%s' % self.name)
+        self.log = logging.getLogger('pipe.step.%s' % self.name)
         ### Set Parameter list
         # Clear Parameter list
         self.paramlist = []
