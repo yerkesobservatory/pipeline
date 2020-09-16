@@ -15,7 +15,6 @@ import numpy # numpy library
 import logging # logging object library
 import shutil # library to provide operations on collections of files
 from astropy import units as u
-from astropy.nddata import CCDData
 from astropy.io import fits #package to recognize FITS files
 from darepype.drp import DataFits # pipeline data object
 from darepype.drp import StepParent # pipestep stepparent object
@@ -101,7 +100,186 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         # confirm end of setup
         self.log.debug('Setup: done')
     
-   
+    def loadbias(self):
+        """ Loads the bias information for the instrument settings
+            described in the header of self.datain.
+            If an appropriate file can not be found or the file is invalid
+            various warnings and errors are returned.
+        """
+        # master bias frame
+        # Search for bias and load it into data object
+        self.log.debug('LoadBias: Start')
+        name = self.loadauxname('bias', multi = False)
+        self.log.info('File loaded: %s' % name)
+        if(name == None):
+            self.log.error('Bias calibration frame not found.')
+            raise RuntimeError('No bias file loaded')
+        
+        bias = DataFits(name)
+        bias.load()
+        self.bias = bias.imageget()
+
+        # Finish up
+        self.biasloaded = True
+        self.biasname = name
+        self.log.debug('LoadBias: done')
+
+    def loaddark(self):
+        """ Loads the dark information for the instrument settings
+            described in the header of self.datain.
+            If an appropriate file can not be found or the file is invalid
+            various warnings and errors are returned.
+            Also bias corrects dark files if not already done.
+        """
+        self.log.debug('LoadDark: Start')
+        #master dark frame
+        name = self.loadauxname('dark', multi = False)
+        self.log.info('File loaded: %s' % name)
+        if(name == None):
+            self.log.error('Dark calibration frame(s) not found.')
+            raise RuntimeError('No dark file loaded')
+        
+        
+        dark = DataFits(name)
+
+        # load the dark image data
+        dark.load()
+        self.dark = dark.imageget()
+
+        # load the dark header data
+        dark.loadhead()
+        self.dark_exp_length = dark.getheadval('EXPTIME')
+        
+        # Finish up 
+        self.darkloaded = True 
+        self.darkname = name
+        self.log.debug('LoadDark: done')
+            
+    def loadflat(self):
+        """ Loads the dark information for the instrument settings
+            described in the header of self.datain.
+            If an appropriate file can not be found or the file is invalid
+            various warnings and errors are returned.
+            Also biascorrects and dark corrects flat files if not already done.
+        """
+        #create master flat frame
+        self.log.debug('LoadFlat: Start')
+        name = self.loadauxname('flat', multi = False)
+        if(name == None):
+            self.log.error('Flat calibration frame not found.')
+            raise RuntimeError('No flat file loaded')
+        
+        flat = DataFits(name)
+        flat.load()
+        self.flat = flat.imageget()
+
+        # Finish up
+        self.flatloaded = True  
+        self.flatname = name 
+        self.log.debug('LoadFlat: done')
+    
+    # This function is directly lifted from CCDProc
+    #     https://github.com/astropy/ccdproc/blob/master/ccdproc/core.py
+    # Instead of directly calling CCDProc, we have included the function here
+    # to increase educational value and to decrease reliance on external
+    # libraries.
+    def subtract_bias(self, image, bias):
+        """
+        Subtract master bias from image.
+        Parameters
+        ----------
+        image : `~numpy.ndarray`
+            Image from which bias will be subtracted.
+        bias : `~astropy.ndarray`
+            Master image to be subtracted from ``image``.
+        {log}
+        Returns
+        -------
+        result : `~numpy.ndarray`
+            numpy array object with bias subtracted.
+        """
+        self.log.debug('Subtracting bias...')
+        result = image - bias
+        self.log.debug('Subtracted bias.')
+        return result
+
+    # this code is also lifted from ccdproc
+    # https://github.com/astropy/ccdproc/blob/master/ccdproc/core.py
+    # some of the code is removed from the original ccdproc because it is not
+    # relevant to how SEO currently processes data. If you are looking at this
+    # code in the future, there is more code available to draw from
+    def subtract_dark(self, image, dark, scale=False, img_exposure=None, dark_exposure=None):
+        """
+        Subtract dark current from an image.
+        Parameters
+        ----------
+        image : `~numpy.ndarray`
+            Image from which dark will be subtracted.
+        dark : `~anumpy.ndarray`
+            Dark image.
+        scale: bool, optional
+            If True, scale the dark frame by the exposure times.
+            Default is ``False``.
+        img_exposure : double, optional
+            Exposure time for the base image. Only used if scale = True
+            Default is ``None``.
+        dark_exposure : double, optional
+            Exposure time for the dark image. Only used if scale = True
+            Default is ``None``.
+        
+        {log}
+        Returns
+        -------
+        result : `~numpy.ndarray`
+            Dark-subtracted image.
+        """
+        
+        self.log.debug('Subtracting dark...')
+        # if dark current is linear, then this first step scales the
+        # provided dark to match the exposure time
+        print(type(dark))
+        if scale:
+            dark_scaled = dark.copy()
+            dark_scaled = dark_scaled * img_exposure / dark_exposure
+            result = image - dark_scaled
+        else:
+            result = image - dark
+    
+        self.log.debug('Subtracted dark.')
+        return result
+    
+    # This code is also from ccdproc. A notable removal is the option to 
+    # manually choose maximum and minimum flat values.
+    def flat_correct(self, image, flat):
+        """Correct the image for flat fielding.
+        The flat field image is normalized by its mean before flat correcting.
+        Parameters
+        ----------
+        image : `~numpy.ndarray`
+            Data to be transformed.
+        flat : `~numpy.ndarray`
+            Flatfield to apply to the data.
+        {log}
+        Returns
+        -------
+        flat_corrected : `~numpy.ndarray`
+            Numpy array object with flat corrected.
+        """
+        self.log.debug('Correcting flat...')
+        # Use the min_value to replace any values in the flat
+        flat_corrected = image.copy()
+        
+        flat_mean = flat.mean()
+
+        # Normalize the flat.
+        flat_normed = flat / flat_mean
+
+        # divide through the flat
+        flat_corrected = image / flat_normed
+
+        self.log.debug('Corrected flat.')
+        return flat_corrected
+
     def run(self):
         """ Runs the calibrating algorithm. The calibrated data is
             returned in self.dataout
@@ -199,181 +377,9 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         self.dataout.filename = self.datain.filename
 
 
-    # This function is directly lifted from CCDProc
-    #     https://github.com/astropy/ccdproc/blob/master/ccdproc/core.py
-    # Instead of directly calling CCDProc, we have included the function here
-    # to increase educational value and to decrease reliance on external
-    # libraries.
-    def subtract_bias(self, image, bias):
-        """
-        Subtract master bias from image.
-        Parameters
-        ----------
-        image : `~numpy.ndarray`
-            Image from which bias will be subtracted.
-        bias : `~astropy.ndarray`
-            Master image to be subtracted from ``image``.
-        {log}
-        Returns
-        -------
-        result : `~numpy.ndarray`
-            numpy array object with bias subtracted.
-        """
-        self.log.debug('Subtracting bias...')
-        result = image - bias
-        self.log.debug('Subtracted bias.')
-        return result
-
-    # this code is also lifted from ccdproc
-    # https://github.com/astropy/ccdproc/blob/master/ccdproc/core.py
-    # some of the code is removed from the original ccdproc because it is not
-    # relevant to how SEO currently processes data. If you are looking at this
-    # code in the future, there is more code available to draw from
-    def subtract_dark(self, image, dark, scale=False, img_exposure=None, dark_exposure=None):
-        """
-        Subtract dark current from an image.
-        Parameters
-        ----------
-        image : `~numpy.ndarray`
-            Image from which dark will be subtracted.
-        dark : `~anumpy.ndarray`
-            Dark image.
-        scale: bool, optional
-            If True, scale the dark frame by the exposure times.
-            Default is ``False``.
-        img_exposure : double, optional
-            Exposure time for the base image. Only used if scale = True
-            Default is ``None``.
-        dark_exposure : double, optional
-            Exposure time for the dark image. Only used if scale = True
-            Default is ``None``.
-        
-        {log}
-        Returns
-        -------
-        result : `~numpy.ndarray`
-            Dark-subtracted image.
-        """
-        
-        self.log.debug('Subtracting dark...')
-        # if dark current is linear, then this first step scales the
-        # provided dark to match the exposure time
-        if scale:
-            dark_scaled = dark.copy()
-
-            dark_scaled = dark_scaled * img_exposure / dark_exposure
-            result = image - dark_scaled
-        else:
-            result = image - dark
     
-        self.log.debug('Subtracted dark.')
-        return result
+        
     
-    # This code is also from ccdproc. A notable removal is the option to 
-    # manually choose maximum and minimum flat values.
-    def flat_correct(self, image, flat):
-        """Correct the image for flat fielding.
-        The flat field image is normalized by its mean before flat correcting.
-        Parameters
-        ----------
-        image : `~numpy.ndarray`
-            Data to be transformed.
-        flat : `~numpy.ndarray`
-            Flatfield to apply to the data.
-        {log}
-        Returns
-        -------
-        flat_corrected : `~numpy.ndarray`
-            Numpy array object with flat corrected.
-        """
-        self.log.debug('Correcting flat...')
-        # Use the min_value to replace any values in the flat
-        flat_corrected = image.copy()
-        
-        flat_mean = flat.mean()
-
-        # Normalize the flat.
-        flat_normed = flat / flat_mean
-
-        # divide through the flat
-        flat_corrected = image / flat_normed
-
-        self.log.debug('Corrected flat.')
-        return flat_corrected
-        
-    def loadbias(self):
-        """ Loads the bias information for the instrument settings
-            described in the header of self.datain.
-            If an appropriate file can not be found or the file is invalid
-            various warnings and errors are returned.
-        """
-        # master bias frame
-        # Search for bias and load it into data object
-        namelist = self.loadauxname('bias', multi = False)
-        self.log.info('File loaded: %s' % namelist)
-        if(len(namelist) == 0):
-            self.log.error('Bias calibration frame not found.')
-            raise RuntimeError('No bias file loaded')
-        self.log.debug('Creating master bias frame...')
-        # if there is just one, use it as biasfile or else combine
-        # all to make a master bias
-        biasData = CCDData.read(namelist, unit='adu', relax=True)
-        self.bias = biasData.data
-        # Finish up
-        self.biasloaded = True
-        self.biasname = namelist
-        self.log.debug('LoadBias: done')
-
-    def loaddark(self):
-        """ Loads the dark information for the instrument settings
-            described in the header of self.datain.
-            If an appropriate file can not be found or the file is invalid
-            various warnings and errors are returned.
-            Also bias corrects dark files if not already done.
-        """
-        #master dark frame
-        dark_is_bias_corrected = False
-        dark_bias = None
-        namelist = self.loadauxname('dark', multi = False)
-        if(len(namelist) == 0):
-            self.log.error('Dark calibration frame(s) not found.')
-            raise RuntimeError('No dark file loaded')
-        
-        self.log.debug('Creating master dark frame...')
-        #if there is just one, use it as darkfile or else combine all to make a master dark
-        darkFile = CCDData.read(namelist, unit='adu', relax=True)
-        self.dark = darkFile.data
-        self.dark_exp_length = darkFile.header['EXPTIME']
-        # Finish up 
-        self.darkloaded = True 
-        self.darkname = namelist
-        self.log.debug('LoadDark: done')
-            
-    def loadflat(self):
-        """ Loads the dark information for the instrument settings
-            described in the header of self.datain.
-            If an appropriate file can not be found or the file is invalid
-            various warnings and errors are returned.
-            Also biascorrects and dark corrects flat files if not already done.
-        """
-        #create master flat frame
-        namelist = self.loadauxname('flat', multi = False)
-        if(len(namelist) == 0):
-            self.log.error('Flat calibration frame not found.')
-            raise RuntimeError('No flat file loaded')
-        count = 0
-        datalist = []
-        flat_corrected = None
-
-        self.log.debug('Creating master flat frame...')
-        #if there is just one, use it as flatfile or else combine all to make a master flat
-        flatFile = CCDData.read(namelist, unit='adu', relax=True)
-        self.flat = flatFile.data
-
-        # Finish up
-        self.flatloaded = True  
-        self.flatname = namelist 
-        self.log.debug('LoadFlat: done')
             
     def reset(self):
         """ Resets the step to the same condition as it was when it was
