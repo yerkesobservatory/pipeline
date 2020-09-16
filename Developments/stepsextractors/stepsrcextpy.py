@@ -127,10 +127,10 @@ class StepSrcExtPy(StepParent):
         rev_ind = np.take_along_axis(ind, reverser, axis = 0)
         objects = np.take_along_axis(sources, rev_ind, axis = 0)
 
-        indbri = np.argsort(sourcesb['flux'])
-        reverserbri = np.arange(len(indbri) - 1,-1,-1)
-        rev_indbri = np.take_along_axis(indbri, reverserbri, axis = 0)
-        objectsb = np.take_along_axis(sourcesb, rev_indbri, axis = 0)
+        indb = np.argsort(sourcesb['flux'])
+        reverserbri = np.arange(len(indb) - 1,-1,-1)
+        rev_indb = np.take_along_axis(indb, reverserbri, axis = 0)
+        objectsb = np.take_along_axis(sourcesb, rev_indb, axis = 0)
 
         ###Do basic uncalibrated measurments of flux for use in step astrometry. 
         '''
@@ -199,8 +199,8 @@ class StepSrcExtPy(StepParent):
         #Establish an elongation limit
         elim=1.5
         #Create cuts
-        elongation = (objects['a']/objects['b'])<elim
-        seo_SN = (elongation) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0) & (flux_elip != 0)
+        elong = (objects['a']/objects['b'])<elim
+        seo_SN = (elong) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0) & (flux_elip != 0)
 
         #Now do this for the low threshold sources
         elongb = (objectsb['a']/objectsb['b'])<elim
@@ -239,9 +239,9 @@ class StepSrcExtPy(StepParent):
 
         # Now lets make a table using the Brighter threshold
         grid = []
-        numbri = np.arange(1, len(objectsb['x'][seo_SNB]) + 1 )
+        numb = np.arange(1, len(objectsb['x'][seo_SNB]) + 1 )
         grid.append(fits.Column(name='ID', format='D',
-                                array=numbri))
+                                array=numb))
         grid.append(fits.Column(name='X', format='D',
                                 array=objectsb['x'][seo_SNB],
                                 unit='pixel'))
@@ -264,7 +264,7 @@ class StepSrcExtPy(StepParent):
 
         sources_table = fits.BinTableHDU.from_columns(c)
 
-        brisource_table= fits.BinTableHDU.from_columns(cbri)
+        sourceb_table= fits.BinTableHDU.from_columns(cbri)
 
         
         ### Make output data
@@ -272,9 +272,9 @@ class StepSrcExtPy(StepParent):
         self.dataout = self.datain
         self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)') 
         self.dataout.setheadval ('RHALFSTD', rhstd, 'STD of masked mean of half-power radius')
-        self.dataout.setheadval ('ELONG',elmean, 'Mean elongation of accepted sources')
+        self.dataout.setheadval ('ELONG',elmean, 'Mean elong of accepted sources')
         self.dataout.tableset(sources_table.data,'Low Threshold Sources',sources_table.header)
-        self.dataout.tableset(brisource_table.data, 'High Threshold Sources', brisource_table.header)
+        self.dataout.tableset(sourceb_table.data, 'High Threshold Sources', sourceb_table.header)
         self.dataout.setheadval ('EXTRACT_THRESH', extract_thresh, 'Extraction Thershold for Low Thershold Table')
         self.dataout.setheadval ('BRIGHT_FACTOR', bright_factor, 'Multiplier to create High Threshold Table')
        
