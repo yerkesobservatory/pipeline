@@ -77,6 +77,24 @@ class StepSrcExtPy(StepParent):
                                'Flag for making txt table of all sources'])
         self.paramlist.append(['sourcetableformat','csv',
                                'txt table format (see astropy.io.ascii for options)'])
+        self.paramlist.append(['maskthreshold', 0.0,
+                                'mask threshold for background detection'])
+        self.paramlist.append(['backgroundwh', [16,16],
+                                'background box width and height for background detection'])
+        self.paramlist.append(['filterwh', [3,3],
+                                'filter width and height for background detection'])
+        self.paramlist.append(['fthreshold', 0.0,
+                                'filter threshold for background detection'])
+        self.paramlist.append(['extractthersh', 2.0,
+                                'extraction threshold for source extration'])
+        self.paramlist.append(['bfactor', 10.0,
+                                'brightness factor for creating highlevel threshold'])
+        self.paramlist.append(['deblend', 256,
+                                'deblend threshold for source extration'])
+        self.paramlist.append(['kronf', 2.5,
+                                'factor multiplied into kronrad to get radius for integration'])
+
+
         # confirm end of setup
         self.log.debug('Setup: done')
 
@@ -90,12 +108,15 @@ class StepSrcExtPy(StepParent):
         #Open data out of fits file for use in SEP
         psimage = self.datain.image
         image = psimage.byteswap().newbyteorder()
-   
-        #These variables are used for the background analysis.
-        maskthresh = 0.0
-        bw, bh = 16, 16
-        fw, fh = 3, 3
-        fthresh = 0.0
+
+        #These variables are used for the background analysis. 
+        #We grab the values from the paramlist
+        maskthresh = self.getarg('maskthreshold')
+        backwh= self.getarg('backgroundwh')
+        filwh= self.getarg('filterwh')
+        bw, bh = backwh[0], backwh[1]
+        fw, fh = filwh[0], filwh[1]
+        fthresh = self.getarg('fthreshold')
 
         #Create the background image and it's error
         bkg = sep.Background(image, maskthresh=maskthresh,bw=bw, bh=bh, fw=fw,
@@ -111,12 +132,12 @@ class StepSrcExtPy(StepParent):
         imsubmad = mad_std(image_sub)
 
 		#Create variables that are used during source Extraction and Flux Calculation
-        extract_thresh = 2.0
-        bright_factor= 10.0
-        deblend_nthresh =256
+        #Some defined in the param are grabbed now
+        extract_thresh = self.getarg('extractthersh')
+        bright_factor= self.getarg('bfactor')
+        deblend_nthresh = self.getarg('deblend')
+        kfactor = self.getarg('kronf')
         extract_err = bkg_rms
-        kfactor = 2.5
-
         #Extract sources from the subtracted image. It extracts a low threshold list and a high threshold list
         sources = sep.extract(image_sub, extract_thresh, err=extract_err, deblend_nthresh= deblend_nthresh)
         sourcesb= sep.extract(image_sub, extract_thresh*bright_factor, err=extract_err)
@@ -294,7 +315,7 @@ class StepSrcExtPy(StepParent):
                     [seo_SN][i],objects['y'][seo_SN][i],num[i]))
 
             # Save the table
-            txtname = self.dataout.filenamebegin + 'FCALsources.txt'
+            txtname = self.dataout.filenamebegin + 'FALsources.txt'
             ascii.write(self.dataout.tableget('Low Threshold Sources'),txtname,
                         format = self.getarg('sourcetableformat'))
             self.log.debug('Saved sources table under %s' % txtname)
