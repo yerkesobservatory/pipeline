@@ -4,6 +4,9 @@
 # 2012 Marc Berthoud: Numerous updates
 # 2013-10-09 Nicholas Chapman: Made a config validation file
 # 2017-07-28 Atreyo Pal config file (added bdf section, removed KEYS)
+# 2020-09-16 Carissa Kumar modified the file so it runs the isolated stepsextract.py 
+# pipestep, without a connection to the rest of the pipeline. The sextract section was
+# added and master bias/dark/flat sections were removed
 
 # General Section: configuration of the pipeline
 [general]
@@ -50,9 +53,6 @@
     # list of steps
     stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometry, save, StepFluxCalSex, save, StepRGB
     #stepslist = load, StepAddKeys, save, StepBiasDarkFlat, StepHotpix, StepRGB
-
-
-
 
 
 ### Pipe Step Section
@@ -111,8 +111,6 @@
     minpercent = 0.5
     # percentile value for maximum scaling
     maxpercent = 0.999
-
-
 
 # Loadinput step configuration
 [loadinput]
