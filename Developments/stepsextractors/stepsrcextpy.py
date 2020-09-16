@@ -30,11 +30,11 @@ import astropy.table # Read astropy tables
 import sep # Extracts Sources and Calculates Flux
 from astropy.io import fits
 from astropy.io import ascii
-from astropy.coordinates import SkyCoord # To make RA/Dec as float
-from astropy import units as u # To help with SkyCoord
+#from astropy.coordinates import SkyCoord # To make RA/Dec as float
+#from astropy import units as u # To help with SkyCoord
 from astropy.stats import mad_std
-import matplotlib # to make plots
-matplotlib.use('Agg') # Set pixel image
+#import matplotlib # to make plots
+#matplotlib.use('Agg') # Set pixel image
 import pylab as plt # pylab library for plotting
 from lmfit import minimize, Parameters # For brightness correction fit
 from darepype.drp import StepParent # pipestep stepparent object
@@ -63,10 +63,10 @@ class StepSrcExtPy(StepParent):
         """
         ### Set Names
         # Name of the pipeline reduction step
-        self.name='SrcExtPy'
+        self.name='srcextpy'
         # Shortcut for pipeline reduction step and identifier for
         # saved file names.
-        self.procname = 'sepext'
+        self.procname = 'SEP'
         # Set Logger for this pipe step
         self.log = logging.getLogger('pipe.step.%s' % self.name)
         ### Set Parameter list
@@ -87,14 +87,9 @@ class StepSrcExtPy(StepParent):
         ### Preparation
         binning = self.datain.getheadval('XBIN')
         ### Perform Source Extraction
-        # Make sure input data exists as file
-        if not os.path.exists(self.datain.filename) :
-            self.datain.save()
-        
         #Open data out of fits file for use in SEP
         psimage = self.datain.image
         image = psimage.byteswap().newbyteorder()
-
    
         #These variables are used for the background analysis.
         maskthresh = 0.0
@@ -104,7 +99,7 @@ class StepSrcExtPy(StepParent):
 
         #Create the background image and it's error
         bkg = sep.Background(image, maskthresh=maskthresh,bw=bw, bh=bh, fw=fw,
-        fh=fh, fthresh=fthresh) #have sep determine the background of the image
+        fh=fh, fthresh=fthresh) 
 
         bkg_image=bkg.back()
 
@@ -115,15 +110,16 @@ class StepSrcExtPy(StepParent):
         imsubmed = np.nanmedian(image_sub)
         imsubmad = mad_std(image_sub)
 
-		#Create variables that are used during source Extraction
+		#Create variables that are used during source Extraction and Flux Calculation
         extract_thresh = 2.0
         bright_factor= 10.0
         deblend_nthresh =256
         extract_err = bkg_rms
+        kfactor = 2.5
 
         #Extract sources from the subtracted image. It extracts a low threshold list and a high threshold list
         sources = sep.extract(image_sub, extract_thresh, err=extract_err, deblend_nthresh= deblend_nthresh)
-        sourcesbri= sep.extract(image_sub, extract_thresh*bright_factor, err=extract_err)
+        sourcesb= sep.extract(image_sub, extract_thresh*bright_factor, err=extract_err)
 
         ### Sort sources by descending isophotal flux. (Taken from Dr. Harper's Explore SEP Notebook)
         ind = np.argsort(sources['flux'])
@@ -131,10 +127,10 @@ class StepSrcExtPy(StepParent):
         rev_ind = np.take_along_axis(ind, reverser, axis = 0)
         objects = np.take_along_axis(sources, rev_ind, axis = 0)
 
-        indbri = np.argsort(sourcesbri['flux'])
+        indbri = np.argsort(sourcesb['flux'])
         reverserbri = np.arange(len(indbri) - 1,-1,-1)
         rev_indbri = np.take_along_axis(indbri, reverserbri, axis = 0)
-        briobjects = np.take_along_axis(sourcesbri, rev_indbri, axis = 0)
+        objectsb = np.take_along_axis(sourcesb, rev_indbri, axis = 0)
 
         ###Do basic uncalibrated measurments of flux for use in step astrometry. 
         '''
@@ -146,51 +142,45 @@ class StepSrcExtPy(StepParent):
         kronrad, krflag = sep.kron_radius(image_sub, objects['x'], objects['y'], 
         	objects['a'], objects['b'], objects['theta'], r=6.0)
 
-        brikron, brikflag= sep.kron_radius(image_sub, briobjects['x'], briobjects['y'], 
-            briobjects['a'],briobjects['b'], briobjects['theta'], r=6.0)
-
-        '''
-        This is the equivalent of the flux_auto rmin param for Source Extractor. 
-        It is 3.5 in the param file from the original version of the step which use Sextractor
-        '''
-        r_min=3.5
+        kronradb, krflagb= sep.kron_radius(image_sub, objectsb['x'], objectsb['y'], 
+            objectsb['a'],objectsb['b'], objectsb['theta'], r=6.0)
 
         #Using this Kron radius we calculate the flux
         #This is equivalent to FLUX_AUTO in SExtractor
         flux_elip, fluxerr_elip, flag = sep.sum_ellipse(image_sub, objects['x'], objects['y'], objects['a'], 
-                                      objects['b'], objects['theta'], r= 2.5*kronrad, err=bkg_rms,
-                                      subpix=1)
-        flux_ebri, fluxerr_ebri, flag = sep.sum_ellipse(image_sub, briobjects['x'], briobjects['y'], briobjects['a'], 
-                                      briobjects['b'], briobjects['theta'], r= 2.5*brikron, err=bkg_rms,
-                                      subpix=1)
+        objects['b'], objects['theta'], r= kfactor*kronrad, err=bkg_rms, subpix=1)
+        flux_elipb, fluxerr_elipb, flag = sep.sum_ellipse(image_sub, objectsb['x'], 
+        objectsb['y'], objectsb['a'], objectsb['b'], objectsb['theta'],
+        r= kfactor*kronradb, err=bkg_rms, subpix=1)
 
         #Now we want to calculate the Half-flux Radius. This will be reported later
+        #First in order to establish a zone to integrate over we need an Rmax
         dx = (objects['xmax'] - objects['xmin']) / 2
         dy = (objects['ymax'] - objects['ymin']) / 2
 
-        dxb = (briobjects['xmax'] - briobjects['xmin']) / 2
-        dyb = (briobjects['ymax'] - briobjects['ymin']) / 2
+        dxb = (objectsb['xmax'] - objectsb['xmin']) / 2
+        dyb = (objectsb['ymax'] - objectsb['ymin']) / 2
 
 
         rmax = np.sqrt(dx*dx + dy*dy)
-        rmaxbri= np.sqrt(dxb*dxb + dyb*dyb)
+        rmaxb= np.sqrt(dxb*dxb + dyb*dyb)
         '''Frac is the percentage of flux we want contained within the radius,
         since we want half flux radius, frac is .5 '''
         
         frac=0.5
         rh, rh_flag = sep.flux_radius(image_sub, objects['x'], objects['y'], rmax, frac)
-        rhb, rhb_flag = sep.flux_radius(image_sub, briobjects['x'], briobjects['y'], rmaxbri, frac)
+        rhb, rhb_flag = sep.flux_radius(image_sub, objectsb['x'], objectsb['y'], rmaxb, frac)
 
    
         #Sort the individual arrays so that the final table is sorted by flux
         #create sorting index by using flux. This is for the boosted threshold
-        indb = np.argsort(flux_ebri)
+        indb = np.argsort(flux_elipb)
         reverserb = np.arange(len(indb) - 1,-1,-1)
         rev_indb = np.take_along_axis(indb, reverserb, axis = 0)
-        flux_ebri = np.take_along_axis(flux_ebri, rev_indb, axis = 0)
+        flux_elipb = np.take_along_axis(flux_elipb, rev_indb, axis = 0)
         #now apply it to all the axis
-        fluxerr_ebri = np.take_along_axis(fluxerr_ebri, rev_indb, axis = 0)
-        briobjects = np.take_along_axis(briobjects, rev_indb, axis = 0)
+        fluxerr_elipb = np.take_along_axis(fluxerr_elipb, rev_indb, axis = 0)
+        objectsb = np.take_along_axis(objectsb, rev_indb, axis = 0)
         rhb = np.take_along_axis(rhb, rev_indb, axis = 0)
 
         #now for normal threshold
@@ -210,11 +200,11 @@ class StepSrcExtPy(StepParent):
         elim=1.5
         #Create cuts
         elongation = (objects['a']/objects['b'])<elim
-        seo_SN = (elongation) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0)
+        seo_SN = (elongation) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0) & (flux_elip != 0)
 
         #Now do this for the low threshold sources
-        elongbri = (briobjects['a']/briobjects['b'])<elim
-        seo_SNB = (elongbri) & ((flux_ebri/fluxerr_ebri)<1000) & (fluxerr_ebri != 0)
+        elongb = (objectsb['a']/objectsb['b'])<elim
+        seo_SNB = (elongb) & ((flux_elipb/fluxerr_elipb)<1000) & (fluxerr_elipb != 0) & (flux_elipb != 0)
 
 
         self.log.debug('Selected %d high thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
@@ -225,7 +215,7 @@ class StepSrcExtPy(StepParent):
         elmean= np.nanmean(objects['a'][seo_SN]/objects['b'][seo_SN])
 
         
-        ### Make table with all data from source extractor
+        ### Make table with the restricted data from SEP
         # Collect data columns
         cols = []
         num = np.arange(1, len(objects['x'][seo_SN]) + 1 )
@@ -249,20 +239,20 @@ class StepSrcExtPy(StepParent):
 
         # Now lets make a table using the Brighter threshold
         grid = []
-        numbri = np.arange(1, len(briobjects['x'][seo_SNB]) + 1 )
+        numbri = np.arange(1, len(objectsb['x'][seo_SNB]) + 1 )
         grid.append(fits.Column(name='ID', format='D',
                                 array=numbri))
         grid.append(fits.Column(name='X', format='D',
-                                array=briobjects['x'][seo_SNB],
+                                array=objectsb['x'][seo_SNB],
                                 unit='pixel'))
         grid.append(fits.Column(name='Y', format='D',
-                                array=briobjects['y'][seo_SNB],
+                                array=objectsb['y'][seo_SNB],
                                 unit='pixel'))
         grid.append(fits.Column(name='Uncalibrated Flux', format='D',
-                                array=flux_ebri[seo_SNB],
+                                array=flux_elipb[seo_SNB],
                                 unit='flux'))
         grid.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
-                                array=fluxerr_ebri[seo_SNB], unit='flux'))
+                                array=fluxerr_elipb[seo_SNB], unit='flux'))
         grid.append(fits.Column(name='Half-light Radius', format='D',
                                 array=rhb[seo_SNB], unit='pixel'))
 
@@ -296,9 +286,12 @@ class StepSrcExtPy(StepParent):
             filename = self.dataout.filenamebegin + 'FCALsources.reg'
             with open(filename, 'w+') as f:
                 f.write("# Region file format: DS9 version 4.1\n")
-                f.write("""global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 image\n""")
+                f.write("""global color=green dashlist=8 3 width=1 font="helvetica
+                 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1
+                  delete=1 include=1 source=1 image\n""")
                 for i in range(len(objects['x'][seo_SN])):
-                    f.write("circle(%.7f,%.7f,0.005) # text={%i}\n"%(objects['x'][seo_SN][i],objects['y'][seo_SN][i],num[i]))
+                    f.write("circle(%.7f,%.7f,0.005) # text={%i}\n"%(objects['x']
+                    [seo_SN][i],objects['y'][seo_SN][i],num[i]))
 
             # Save the table
             txtname = self.dataout.filenamebegin + 'FCALsources.txt'
