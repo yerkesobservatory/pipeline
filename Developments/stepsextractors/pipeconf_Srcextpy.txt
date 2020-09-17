@@ -153,19 +153,19 @@
     #Mask Threshold, a variable for the background detection that we don't use
     maskthreshold = 0.0
     #Background width and height, controls size of background boxes)
-    backgroundwh = 16, 16
+    bkg_wh = 16, 16
     #Filter width and height, controls filter width and height in boxes
-    filterwh = 3, 3
+    bkg_filterwh = 3, 3
     #Filter Threshold, a variable currently unused in background detection
-    fthreshold = 0.0
+    bkg_fthreshold = 0.0
     #Extraction Threshold, used during source extraction as the signal to noise ratio required to be recorded
-    extractthresh = 2.0
+    ext_thresh = 2.0
     #Brightness Factor, A factor used to multiply by the extract thresh to determine the threshold for the heigh pass list
-    bfactor=10.0
+    ext_bfactor=10.0
     #Number of objects used for threshold deblending during source extraction
-    deblend= 256
+    ext_deblend= 256
     #Kron Factor, value multiplied by kron radius to get the radius of integration.
-    kronf = 2.5
+    pho_kronf = 2.5
 
 
 

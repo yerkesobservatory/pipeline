@@ -77,21 +77,21 @@ class StepSrcExtPy(StepParent):
                                'Flag for making txt table of all sources'])
         self.paramlist.append(['sourcetableformat','csv',
                                'txt table format (see astropy.io.ascii for options)'])
-        self.paramlist.append(['maskthreshold', 0.0,
+        self.paramlist.append(['bkg_maskthreshold', 0.0,
                                 'mask threshold for background detection'])
-        self.paramlist.append(['backgroundwh', [16,16],
+        self.paramlist.append(['bkg_wh', [16,16],
                                 'background box width and height for background detection'])
-        self.paramlist.append(['filterwh', [3,3],
+        self.paramlist.append(['bkg_filterwh', [3,3],
                                 'filter width and height for background detection'])
-        self.paramlist.append(['fthreshold', 0.0,
+        self.paramlist.append(['bkg_fthreshold', 0.0,
                                 'filter threshold for background detection'])
-        self.paramlist.append(['extractthersh', 2.0,
+        self.paramlist.append(['ext_thresh', 2.0,
                                 'extraction threshold for source extration'])
-        self.paramlist.append(['bfactor', 10.0,
+        self.paramlist.append(['ext_bfactor', 10.0,
                                 'brightness factor for creating highlevel threshold'])
-        self.paramlist.append(['deblend', 256,
+        self.paramlist.append(['ext_deblend', 256,
                                 'deblend threshold for source extration'])
-        self.paramlist.append(['kronf', 2.5,
+        self.paramlist.append(['pho_kronf', 2.5,
                                 'factor multiplied into kronrad to get radius for integration'])
 
 
@@ -111,12 +111,12 @@ class StepSrcExtPy(StepParent):
 
         #These variables are used for the background analysis. 
         #We grab the values from the paramlist
-        maskthresh = self.getarg('maskthreshold')
-        backwh= self.getarg('backgroundwh')
-        filwh= self.getarg('filterwh')
+        maskthresh = self.getarg('bkg_maskthreshold')
+        backwh= self.getarg('bkg_wh')
+        filwh= self.getarg('bkg_filterwh')
         bw, bh = backwh[0], backwh[1]
         fw, fh = filwh[0], filwh[1]
-        fthresh = self.getarg('fthreshold')
+        fthresh = self.getarg('bkg_fthreshold')
 
         #Create the background image and it's error
         bkg = sep.Background(image, maskthresh=maskthresh,bw=bw, bh=bh, fw=fw,
@@ -133,10 +133,10 @@ class StepSrcExtPy(StepParent):
 
 		#Create variables that are used during source Extraction and Flux Calculation
         #Some defined in the param are grabbed now
-        extract_thresh = self.getarg('extractthersh')
-        bright_factor= self.getarg('bfactor')
-        deblend_nthresh = self.getarg('deblend')
-        kfactor = self.getarg('kronf')
+        extract_thresh = self.getarg('ext_thresh')
+        bright_factor= self.getarg('ext_bfactor')
+        deblend_nthresh = self.getarg('ext_deblend')
+        kfactor = self.getarg('pho_kronf')
         extract_err = bkg_rms
         #Extract sources from the subtracted image. It extracts a low threshold list and a high threshold list
         sources = sep.extract(image_sub, extract_thresh, err=extract_err, deblend_nthresh= deblend_nthresh)
@@ -220,7 +220,8 @@ class StepSrcExtPy(StepParent):
         #Establish an elongation limit
         elim=1.5
         #Create cuts
-        elong = (objects['a']/objects['b'])<elim
+        a2b= (objects['a']/objects['b'])
+        elong = a2b<elim
         seo_SN = (elong) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0) & (flux_elip != 0)
 
         #Now do this for the low threshold sources
@@ -237,6 +238,7 @@ class StepSrcExtPy(StepParent):
 
         
         ### Make table with the restricted data from SEP
+
         # Collect data columns
         cols = []
         num = np.arange(1, len(objects['x'][seo_SN]) + 1 )
@@ -291,13 +293,18 @@ class StepSrcExtPy(StepParent):
         ### Make output data
         # Copy data from datain
         self.dataout = self.datain
+        #This is making a third table which includes all of objects and more for future use
+        self.dataout.tableset(objects, tablename='SEP_objects')
+        self.dataout.tableaddcol('rh', rh, 'SEP_objects')
+        self.dataout.tableaddcol('kflux', flux_elip, 'SEP_objects')
+        self.dataout.tableaddcol('a2b', a2b, 'SEP_Objects')
         self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)') 
         self.dataout.setheadval ('RHALFSTD', rhstd, 'STD of masked mean of half-power radius')
         self.dataout.setheadval ('ELONG',elmean, 'Mean elong of accepted sources')
         self.dataout.tableset(sources_table.data,'Low Threshold Sources',sources_table.header)
         self.dataout.tableset(sourceb_table.data, 'High Threshold Sources', sourceb_table.header)
-        self.dataout.setheadval ('EXTRACT_THRESH', extract_thresh, 'Extraction Thershold for Low Thershold Table')
-        self.dataout.setheadval ('BRIGHT_FACTOR', bright_factor, 'Multiplier to create High Threshold Table')
+        self.dataout.setheadval ('ETHRESH', extract_thresh, 'Extraction Thershold for Low Thershold Table')
+        self.dataout.setheadval ('BFACTOR', bright_factor, 'Multiplier to create High Threshold Table')
        
         ### If requested make a text file with the sources list
         if self.getarg('sourcetable'):
