@@ -298,6 +298,8 @@ class StepSrcExtPy(StepParent):
         self.dataout.tableaddcol('rh', rh, 'SEP_objects')
         self.dataout.tableaddcol('kflux', flux_elip, 'SEP_objects')
         self.dataout.tableaddcol('a2b', a2b, 'SEP_Objects')
+
+        #Add other headers and tables
         self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)') 
         self.dataout.setheadval ('RHALFSTD', rhstd, 'STD of masked mean of half-power radius')
         self.dataout.setheadval ('ELONG',elmean, 'Mean elong of accepted sources')
