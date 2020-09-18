@@ -2,21 +2,31 @@
 """
     Pipestep SrcExtPy
 
-    This module defines the pipeline step to extract sources from data files.
-    The pipe step runs the python library SEP on the data in order to extract
-    the sources and calculate a first order approximation of flux and magnitude
+    This module defines the pipeline step to extract sources from FITS image data.
+    Normally, it would be used after bias/dark/flat correction and bad-pixel masking.
+    However, it can operate on any image file.
+    It uses the python library SEP to extract a list of sources and associated data.
+    In addition to the tables and image described below, keyword data are added to
+    the header of the DataFits output object for the mean elongation of isolated stars,
+    the half-light radii of isolated stars, and for their STDs of the mean.
+
+    Inputs: 
+        A FITS image file and input parameters defined in a config file.
+    Table outputs (in DataFits output object):
+        A table of extracted sources (from sep.extract() with additional columns with other data derived from the SEP output).
+        A table of sources deemed to be stars, along with their fluxes (in ADU) and x and y positions (in physical pixel coordinates). The table is ordered by descending flux and is optimized to provide a list of stars to be analyzed by a subsequent astrometry step to determine a WCS.
+        Another starlist like the second table described above, but with an extraction threshold set to a multiple of its threshold. This table is included because it may provide a more complete and accurate extraction of bright stars.
+        Optional table outputs (as separate FITS files):
+        ASCII versions of the second and third tables above in CSV format, saved as separate files.
+    Image outputs (HDUs in DataFits output object):
+        The primary image HDU passed through from the input file.
+    Optional image HDU outputs:
+        An image of the background provided by the function sep.Background().
+        An image of the rms background noise.
+        An image which is the difference of the original image and the background image.
 
     For more info check out the read the docs for SEP: https://sep.readthedocs.io/
-
-   This uses the SEP python library for source extraction.
-    Author: Amanda Pagul / Marc Berthoud/ Daniel Sharkey
-
-    Update 8/6/20 by Daniel Sharkey
-    Here I have attempted to convert the original Fluxcalsex step into a 
-    Sextract step that uses the python library SEP.
-
-
-
+    Authors: Amanda Pagul / Marc Berthoud/ Daniel Sharkey/ Al Harper
 """
 import os # os library
 import sys # sys library
@@ -62,6 +72,16 @@ class StepSrcExtPy(StepParent):
             - help: A short description of the parameter.
         """
         ### Set Names
+        '''
+        NAMES:
+        Set the internal name for the function and the procedure identifier to be incorporated in output file names. 
+        name: The name should be all lower-case and should be identical to 
+            the module name (the module name is used to identify pipe steps
+            in the config file, so if it doesn’t match case an error will occur). 
+        procname: The procname should be all upper-case and, if possible, 
+            restricted to three or four alphabetic characters(the code would 
+            automatically capitalize, but it’s good form to also capitalize it here).
+        '''
         # Name of the pipeline reduction step
         self.name='srcextpy'
         # Shortcut for pipeline reduction step and identifier for
@@ -70,6 +90,16 @@ class StepSrcExtPy(StepParent):
         # Set Logger for this pipe step
         self.log = logging.getLogger('pipe.step.%s' % self.name)
         ### Set Parameter list
+        '''
+        PARAMETERS:
+        Parameters are stored in a list containing the following information:
+        name: The name for the parameter. This name is used when calling the 
+            pipe step from command line or python shell. It is also used to 
+            identify the parameter in the pipeline configuration file.
+        default: A default value for the parameter. 
+            If nothing, set ‘ ’ for strings 0 for integers, and 0.0 for floats.
+        help: A short description of the parameter.
+        '''
         # Clear Parameter list
         self.paramlist = []
         # Append parameters
@@ -77,6 +107,24 @@ class StepSrcExtPy(StepParent):
                                'Flag for making txt table of all sources'])
         self.paramlist.append(['sourcetableformat','csv',
                                'txt table format (see astropy.io.ascii for options)'])
+        self.paramlist.append(['bkg_maskthreshold', 0.0,
+                                'mask threshold for background detection'])
+        self.paramlist.append(['bkg_wh', [16,16],
+                                'background box width and height for background detection'])
+        self.paramlist.append(['bkg_filterwh', [3,3],
+                                'filter width and height for background detection'])
+        self.paramlist.append(['bkg_fthreshold', 0.0,
+                                'filter threshold for background detection'])
+        self.paramlist.append(['ext_thresh', 2.0,
+                                'extraction threshold for source extration'])
+        self.paramlist.append(['ext_bfactor', 10.0,
+                                'brightness factor for creating highlevel threshold'])
+        self.paramlist.append(['ext_deblend', 256,
+                                'deblend threshold for source extration'])
+        self.paramlist.append(['phot_kronf', 2.5,
+                                'factor multiplied into kronrad to get radius for integration'])
+
+
         # confirm end of setup
         self.log.debug('Setup: done')
 
@@ -90,12 +138,15 @@ class StepSrcExtPy(StepParent):
         #Open data out of fits file for use in SEP
         psimage = self.datain.image
         image = psimage.byteswap().newbyteorder()
-   
-        #These variables are used for the background analysis.
-        maskthresh = 0.0
-        bw, bh = 16, 16
-        fw, fh = 3, 3
-        fthresh = 0.0
+
+        #These variables are used for the background analysis. 
+        #We grab the values from the paramlist
+        maskthresh = self.getarg('bkg_maskthreshold')
+        backwh= self.getarg('bkg_wh')
+        filwh= self.getarg('bkg_filterwh')
+        bw, bh = backwh[0], backwh[1]
+        fw, fh = filwh[0], filwh[1]
+        fthresh = self.getarg('bkg_fthreshold')
 
         #Create the background image and it's error
         bkg = sep.Background(image, maskthresh=maskthresh,bw=bw, bh=bh, fw=fw,
@@ -111,12 +162,12 @@ class StepSrcExtPy(StepParent):
         imsubmad = mad_std(image_sub)
 
 		#Create variables that are used during source Extraction and Flux Calculation
-        extract_thresh = 2.0
-        bright_factor= 10.0
-        deblend_nthresh =256
+        #Some defined in the param are grabbed now
+        extract_thresh = self.getarg('ext_thresh')
+        bright_factor= self.getarg('ext_bfactor')
+        deblend_nthresh = self.getarg('ext_deblend')
+        kfactor = self.getarg('phot_kronf')
         extract_err = bkg_rms
-        kfactor = 2.5
-
         #Extract sources from the subtracted image. It extracts a low threshold list and a high threshold list
         sources = sep.extract(image_sub, extract_thresh, err=extract_err, deblend_nthresh= deblend_nthresh)
         sourcesb= sep.extract(image_sub, extract_thresh*bright_factor, err=extract_err)
@@ -127,10 +178,10 @@ class StepSrcExtPy(StepParent):
         rev_ind = np.take_along_axis(ind, reverser, axis = 0)
         objects = np.take_along_axis(sources, rev_ind, axis = 0)
 
-        indbri = np.argsort(sourcesb['flux'])
-        reverserbri = np.arange(len(indbri) - 1,-1,-1)
-        rev_indbri = np.take_along_axis(indbri, reverserbri, axis = 0)
-        objectsb = np.take_along_axis(sourcesb, rev_indbri, axis = 0)
+        indb = np.argsort(sourcesb['flux'])
+        reverserbri = np.arange(len(indb) - 1,-1,-1)
+        rev_indb = np.take_along_axis(indb, reverserbri, axis = 0)
+        objectsb = np.take_along_axis(sourcesb, rev_indb, axis = 0)
 
         ###Do basic uncalibrated measurments of flux for use in step astrometry. 
         '''
@@ -199,12 +250,19 @@ class StepSrcExtPy(StepParent):
         #Establish an elongation limit
         elim=1.5
         #Create cuts
-        elongation = (objects['a']/objects['b'])<elim
-        seo_SN = (elongation) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0) & (flux_elip != 0)
+        a2b= (objects['a']/objects['b'])
+        semimajor = objects['a'] < 1.0
+        semiminor = objects['b'] < 1.0
+        smallmoment = (semimajor) & (semiminor)
+        elong = a2b<elim
+        seo_SN = (elong) & (smallmoment) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0) & (flux_elip != 0) 
 
         #Now do this for the low threshold sources
         elongb = (objectsb['a']/objectsb['b'])<elim
-        seo_SNB = (elongb) & ((flux_elipb/fluxerr_elipb)<1000) & (fluxerr_elipb != 0) & (flux_elipb != 0)
+        semimajorb = (objectsb['a']) < 1.0
+        semiminorb = (objectsb['b']) < 1.0
+        smallmomentb = (semimajorb) & (semiminorb)
+        seo_SNB = (elongb) & (smallmomentb) & ((flux_elipb/fluxerr_elipb)<1000) & (fluxerr_elipb != 0) & (flux_elipb != 0)
 
 
         self.log.debug('Selected %d high thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
@@ -216,6 +274,7 @@ class StepSrcExtPy(StepParent):
 
         
         ### Make table with the restricted data from SEP
+
         # Collect data columns
         cols = []
         num = np.arange(1, len(objects['x'][seo_SN]) + 1 )
@@ -238,45 +297,52 @@ class StepSrcExtPy(StepParent):
 
 
         # Now lets make a table using the Brighter threshold
-        grid = []
-        numbri = np.arange(1, len(objectsb['x'][seo_SNB]) + 1 )
-        grid.append(fits.Column(name='ID', format='D',
-                                array=numbri))
-        grid.append(fits.Column(name='X', format='D',
+        colsb = []
+        numb = np.arange(1, len(objectsb['x'][seo_SNB]) + 1 )
+        colsb.append(fits.Column(name='ID', format='D',
+                                array=numb))
+        colsb.append(fits.Column(name='X', format='D',
                                 array=objectsb['x'][seo_SNB],
                                 unit='pixel'))
-        grid.append(fits.Column(name='Y', format='D',
+        colsb.append(fits.Column(name='Y', format='D',
                                 array=objectsb['y'][seo_SNB],
                                 unit='pixel'))
-        grid.append(fits.Column(name='Uncalibrated Flux', format='D',
+        colsb.append(fits.Column(name='Uncalibrated Flux', format='D',
                                 array=flux_elipb[seo_SNB],
                                 unit='flux'))
-        grid.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
+        colsb.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
                                 array=fluxerr_elipb[seo_SNB], unit='flux'))
-        grid.append(fits.Column(name='Half-light Radius', format='D',
+        colsb.append(fits.Column(name='Half-light Radius', format='D',
                                 array=rhb[seo_SNB], unit='pixel'))
 
 
         # Make table
         c = fits.ColDefs(cols)
 
-        cbri=fits.ColDefs(grid)
+        cb=fits.ColDefs(colsb)
 
         sources_table = fits.BinTableHDU.from_columns(c)
 
-        brisource_table= fits.BinTableHDU.from_columns(cbri)
+        sourceb_table= fits.BinTableHDU.from_columns(cb)
 
         
         ### Make output data
         # Copy data from datain
         self.dataout = self.datain
+        #This is making a third table which includes all of objects and more for future use
+        self.dataout.tableset(objects, tablename='SEP_objects')
+        self.dataout.tableaddcol('rh', rh, 'SEP_objects')
+        self.dataout.tableaddcol('kflux', flux_elip, 'SEP_objects')
+        self.dataout.tableaddcol('a2b', a2b, 'SEP_Objects')
+
+        #Add other headers and tables
         self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)') 
         self.dataout.setheadval ('RHALFSTD', rhstd, 'STD of masked mean of half-power radius')
-        self.dataout.setheadval ('ELONG',elmean, 'Mean elongation of accepted sources')
+        self.dataout.setheadval ('ELONG',elmean, 'Mean elong of accepted sources')
         self.dataout.tableset(sources_table.data,'Low Threshold Sources',sources_table.header)
-        self.dataout.tableset(brisource_table.data, 'High Threshold Sources', brisource_table.header)
-        self.dataout.setheadval ('EXTRACT_THRESH', extract_thresh, 'Extraction Thershold for Low Thershold Table')
-        self.dataout.setheadval ('BRIGHT_FACTOR', bright_factor, 'Multiplier to create High Threshold Table')
+        self.dataout.tableset(sourceb_table.data, 'High Threshold Sources', sourceb_table.header)
+        self.dataout.setheadval ('ETHRESH', extract_thresh, 'Extraction Thershold for Low Thershold Table')
+        self.dataout.setheadval ('BFACTOR', bright_factor, 'Multiplier to create High Threshold Table')
        
         ### If requested make a text file with the sources list
         if self.getarg('sourcetable'):
@@ -294,7 +360,7 @@ class StepSrcExtPy(StepParent):
                     [seo_SN][i],objects['y'][seo_SN][i],num[i]))
 
             # Save the table
-            txtname = self.dataout.filenamebegin + 'FCALsources.txt'
+            txtname = self.dataout.filenamebegin + 'FALsources.txt'
             ascii.write(self.dataout.tableget('Low Threshold Sources'),txtname,
                         format = self.getarg('sourcetableformat'))
             self.log.debug('Saved sources table under %s' % txtname)
