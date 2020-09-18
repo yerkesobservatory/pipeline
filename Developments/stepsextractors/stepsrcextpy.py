@@ -2,21 +2,31 @@
 """
     Pipestep SrcExtPy
 
-    This module defines the pipeline step to extract sources from data files.
-    The pipe step runs the python library SEP on the data in order to extract
-    the sources and calculate a first order approximation of flux and magnitude
+    This module defines the pipeline step to extract sources from FITS image data.
+    Normally, it would be used after bias/dark/flat correction and bad-pixel masking.
+    However, it can operate on any image file.
+    It uses the python library SEP to extract a list of sources and associated data.
+    In addition to the tables and image described below, keyword data are added to
+    the header of the DataFits output object for the mean elongation of isolated stars,
+    the half-light radii of isolated stars, and for their STDs of the mean.
+
+    Inputs: 
+        A FITS image file and input parameters defined in a config file.
+    Table outputs (in DataFits output object):
+        A table of extracted sources (from sep.extract() with additional columns with other data derived from the SEP output).
+        A table of sources deemed to be stars, along with their fluxes (in ADU) and x and y positions (in physical pixel coordinates). The table is ordered by descending flux and is optimized to provide a list of stars to be analyzed by a subsequent astrometry step to determine a WCS.
+        Another starlist like the second table described above, but with an extraction threshold set to a multiple of its threshold. This table is included because it may provide a more complete and accurate extraction of bright stars.
+        Optional table outputs (as separate FITS files):
+        ASCII versions of the second and third tables above in CSV format, saved as separate files.
+    Image outputs (HDUs in DataFits output object):
+        The primary image HDU passed through from the input file.
+    Optional image HDU outputs:
+        An image of the background provided by the function sep.Background().
+        An image of the rms background noise.
+        An image which is the difference of the original image and the background image.
 
     For more info check out the read the docs for SEP: https://sep.readthedocs.io/
-
-   This uses the SEP python library for source extraction.
-    Author: Amanda Pagul / Marc Berthoud/ Daniel Sharkey
-
-    Update 8/6/20 by Daniel Sharkey
-    Here I have attempted to convert the original Fluxcalsex step into a 
-    Sextract step that uses the python library SEP.
-
-
-
+    Authors: Amanda Pagul / Marc Berthoud/ Daniel Sharkey/ Al Harper
 """
 import os # os library
 import sys # sys library
