@@ -62,6 +62,16 @@ class StepSrcExtPy(StepParent):
             - help: A short description of the parameter.
         """
         ### Set Names
+        '''
+        NAMES:
+        Set the internal name for the function and the procedure identifier to be incorporated in output file names. 
+        name: The name should be all lower-case and should be identical to 
+            the module name (the module name is used to identify pipe steps
+            in the config file, so if it doesn’t match case an error will occur). 
+        procname: The procname should be all upper-case and, if possible, 
+            restricted to three or four alphabetic characters(the code would 
+            automatically capitalize, but it’s good form to also capitalize it here).
+        '''
         # Name of the pipeline reduction step
         self.name='srcextpy'
         # Shortcut for pipeline reduction step and identifier for
@@ -70,6 +80,16 @@ class StepSrcExtPy(StepParent):
         # Set Logger for this pipe step
         self.log = logging.getLogger('pipe.step.%s' % self.name)
         ### Set Parameter list
+        '''
+        PARAMETERS:
+        Parameters are stored in a list containing the following information:
+        name: The name for the parameter. This name is used when calling the 
+            pipe step from command line or python shell. It is also used to 
+            identify the parameter in the pipeline configuration file.
+        default: A default value for the parameter. 
+            If nothing, set ‘ ’ for strings 0 for integers, and 0.0 for floats.
+        help: A short description of the parameter.
+        '''
         # Clear Parameter list
         self.paramlist = []
         # Append parameters
@@ -91,7 +111,7 @@ class StepSrcExtPy(StepParent):
                                 'brightness factor for creating highlevel threshold'])
         self.paramlist.append(['ext_deblend', 256,
                                 'deblend threshold for source extration'])
-        self.paramlist.append(['pho_kronf', 2.5,
+        self.paramlist.append(['phot_kronf', 2.5,
                                 'factor multiplied into kronrad to get radius for integration'])
 
 
@@ -261,33 +281,33 @@ class StepSrcExtPy(StepParent):
 
 
         # Now lets make a table using the Brighter threshold
-        grid = []
+        colsb = []
         numb = np.arange(1, len(objectsb['x'][seo_SNB]) + 1 )
-        grid.append(fits.Column(name='ID', format='D',
+        colsb.append(fits.Column(name='ID', format='D',
                                 array=numb))
-        grid.append(fits.Column(name='X', format='D',
+        colsb.append(fits.Column(name='X', format='D',
                                 array=objectsb['x'][seo_SNB],
                                 unit='pixel'))
-        grid.append(fits.Column(name='Y', format='D',
+        colsb.append(fits.Column(name='Y', format='D',
                                 array=objectsb['y'][seo_SNB],
                                 unit='pixel'))
-        grid.append(fits.Column(name='Uncalibrated Flux', format='D',
+        colsb.append(fits.Column(name='Uncalibrated Flux', format='D',
                                 array=flux_elipb[seo_SNB],
                                 unit='flux'))
-        grid.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
+        colsb.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
                                 array=fluxerr_elipb[seo_SNB], unit='flux'))
-        grid.append(fits.Column(name='Half-light Radius', format='D',
+        colsb.append(fits.Column(name='Half-light Radius', format='D',
                                 array=rhb[seo_SNB], unit='pixel'))
 
 
         # Make table
         c = fits.ColDefs(cols)
 
-        cbri=fits.ColDefs(grid)
+        cb=fits.ColDefs(colsb)
 
         sources_table = fits.BinTableHDU.from_columns(c)
 
-        sourceb_table= fits.BinTableHDU.from_columns(cbri)
+        sourceb_table= fits.BinTableHDU.from_columns(cb)
 
         
         ### Make output data

@@ -4,6 +4,7 @@
 # 2012 Marc Berthoud: Numerous updates
 # 2013-10-09 Nicholas Chapman: Made a config validation file
 # 2017-07-28 Atreyo Pal config file (added bdf section, removed KEYS)
+# 2020-09-17 Daniel Sharkey: Added SrcExtPy Config, and updated params.
 
 # General Section: configuration of the pipeline
 [general]
@@ -165,7 +166,7 @@
     #Number of objects used for threshold deblending during source extraction
     ext_deblend= 256
     #Kron Factor, value multiplied by kron radius to get the radius of integration.
-    pho_kronf = 2.5
+    phot_kronf = 2.5
 
 
 
