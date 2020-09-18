@@ -265,8 +265,8 @@ class StepSrcExtPy(StepParent):
         seo_SNB = (elongb) & (smallmomentb) & ((flux_elipb/fluxerr_elipb)<1000) & (fluxerr_elipb != 0) & (flux_elipb != 0)
 
 
-        self.log.debug('Selected %d high thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
-        self.log.debug('Selected %d low thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SNB))
+        self.log.debug('Selected %d low thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
+        self.log.debug('Selected %d high thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SNB))
 
         #Calculate mean RH, its STD, and mean Elongation to report in header
         rhmean, rhstd = np.nanmean(rh[seo_SN]), mad_std(rh[seo_SN], ignore_nan = True)
@@ -278,6 +278,7 @@ class StepSrcExtPy(StepParent):
         # Collect data columns
         cols = []
         num = np.arange(1, len(objects['x'][seo_SN]) + 1 )
+        #This is done so that the list is indexed properly
         cols.append(fits.Column(name='ID', format='D',
                                 array=num))
         cols.append(fits.Column(name='X', format='D',
@@ -289,8 +290,6 @@ class StepSrcExtPy(StepParent):
         cols.append(fits.Column(name='Uncalibrated Flux', format='D',
                                 array=flux_elip[seo_SN],
                                 unit='flux'))
-        cols.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
-                                array=fluxerr_elip[seo_SN], unit='flux'))
         cols.append(fits.Column(name='Half-light Radius', format='D',
                                 array=rh[seo_SN], unit='pixel'))
 
@@ -310,8 +309,6 @@ class StepSrcExtPy(StepParent):
         colsb.append(fits.Column(name='Uncalibrated Flux', format='D',
                                 array=flux_elipb[seo_SNB],
                                 unit='flux'))
-        colsb.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
-                                array=fluxerr_elipb[seo_SNB], unit='flux'))
         colsb.append(fits.Column(name='Half-light Radius', format='D',
                                 array=rhb[seo_SNB], unit='pixel'))
 
