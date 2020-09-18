@@ -166,7 +166,7 @@ class StepSrcExtPy(StepParent):
         extract_thresh = self.getarg('ext_thresh')
         bright_factor= self.getarg('ext_bfactor')
         deblend_nthresh = self.getarg('ext_deblend')
-        kfactor = self.getarg('pho_kronf')
+        kfactor = self.getarg('phot_kronf')
         extract_err = bkg_rms
         #Extract sources from the subtracted image. It extracts a low threshold list and a high threshold list
         sources = sep.extract(image_sub, extract_thresh, err=extract_err, deblend_nthresh= deblend_nthresh)
@@ -251,12 +251,18 @@ class StepSrcExtPy(StepParent):
         elim=1.5
         #Create cuts
         a2b= (objects['a']/objects['b'])
+        semimajor = objects['a'] < 1.0
+        semiminor = objects['b'] < 1.0
+        smallmoment = (semimajor) & (semiminor)
         elong = a2b<elim
-        seo_SN = (elong) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0) & (flux_elip != 0)
+        seo_SN = (elong) & (smallmoment) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0) & (flux_elip != 0) 
 
         #Now do this for the low threshold sources
         elongb = (objectsb['a']/objectsb['b'])<elim
-        seo_SNB = (elongb) & ((flux_elipb/fluxerr_elipb)<1000) & (fluxerr_elipb != 0) & (flux_elipb != 0)
+        semimajorb = (objectsb['a']) < 1.0
+        semiminorb = (objectsb['b']) < 1.0
+        smallmomentb = (semimajorb) & (semiminorb)
+        seo_SNB = (elongb) & (smallmomentb) & ((flux_elipb/fluxerr_elipb)<1000) & (fluxerr_elipb != 0) & (flux_elipb != 0)
 
 
         self.log.debug('Selected %d high thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
