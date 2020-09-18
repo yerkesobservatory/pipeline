@@ -2,10 +2,9 @@
 """ 
     Pipestep BiasDarkFlat
     This module defines the pipeline step to calibrate data files w.r.t. bias, 
-    dark and flat frames. This pipestep works with pipedata object lists called 
-    by StepLoadAux and removes bad pixels from the final RGB image. This is very 
-    important to smoothen the background texture of the image and the final image
-    looks far more clearer once calibration is done.
+    dark and flat frames. This is very important to smoothen the background
+    texture of the image and the final image looks far more clearer once
+    calibration is done.
     
     Authors: Atreyo Pal, Lorenzo Orders
 """
@@ -13,8 +12,6 @@ import os # os library
 import sys # sys library
 import numpy # numpy library
 import logging # logging object library
-import shutil # library to provide operations on collections of files
-from astropy import units as u
 from astropy.io import fits #package to recognize FITS files
 from darepype.drp import DataFits # pipeline data object
 from darepype.drp import StepParent # pipestep stepparent object
@@ -33,28 +30,19 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         super(StepBiasDarkFlat,self).__init__()
         # bias values
         self.biasloaded = False # indicates if bias has been loaded
-        self.bias = None # CCD data object containing arrays with bias values
-        self.biasdata = DataFits() # Pipedata object containing the bias file
-        # bias file info and header keywords to fit
+        self.bias = None # Numpy array object containing bias values
         self.biasname = '' # name of selected bias file
-        self.biasfitkeys = [] # FITS keywords that are present in bias      
-        self.biaskeyvalues = [] # values of FITS keywords (from data file)  
+        
         # dark values
         self.darkloaded = False # indicates if dark has been loaded
-        self.dark = None # CCD data object containing arrays with dark values
-        self.darkdata = DataFits() # Pipedata object containing the dark file
-        # dark file info and header keywords to fit
+        self.dark = None # Numpy array object containing dark values
         self.darkname = '' # name of selected dark file
-        self.darkfitkeys = [] # FITS keywords that have to fit for dark     
-        self.darkkeyvalues = [] # values of FITS keywords (from data file)  
+        
         # flat values
         self.flatloaded = False # indicates if flat has been loaded
-        self.flat = None # CCD data object containing arrays with flat values
-        self.flatdata = DataFits() # Pipedata object containing the flat file
-        # flat file info and header keywords to fit
+        self.flat = None # Numpy array object containing flat values
         self.flatname = '' # name of selected flat file
-        self.flatfitkeys = [] # FITS keywords that have to fit for flat
-        self.flatkeyvalues = [] # values of flat keywords (from data file)
+        
         # set configuration
         self.log.debug('Init: done')
     
@@ -79,7 +67,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         self.name='biasdarkflat'
         # Shortcut for pipeline reduction step and identifier for
         # saved file names.
-        self.procname = 'bdf'
+        self.procname = 'BDF'
         # Set Logger for this pipe step
         self.log = logging.getLogger('stoneedge.pipe.step.%s' % self.name)
         ### Set Parameter list
@@ -89,7 +77,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         self.paramlist.append(['reload', False,
             'Set to True to look for new bias files for every input'])
         self.paramlist.append(['intermediate', False,
-            'Set to True to include the result of bias, dark, and flat'
+            'Set to T to include the result of bias, dark, and flat'
             'subtraction'])
         # Get parameters for StepLoadAux, replace auxfile with biasfile
         self.loadauxsetup('bias')
@@ -375,11 +363,6 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             self.dataout.setheadval('HISTORY','FLAT: %s' % self.flatname)
 
         self.dataout.filename = self.datain.filename
-
-
-    
-        
-    
             
     def reset(self):
         """ Resets the step to the same condition as it was when it was
