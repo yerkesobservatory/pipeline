@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 """ 
 	Pipestep BiasDarkFlat
+	
     This module defines the pipeline step that corrects raw image files by subtracting
     a bias image, subtracting a dark-charge image, and dividing by a flat image.
+    
     It uses StepLoadAux functions to call the following files:
         - masterbias: a median or mean average of zero-exposure dark images
         - masterdark : the difference between a median or mean average of  dark images
@@ -26,7 +28,7 @@ from darepype.drp import StepParent # pipestep stepparent object
 from darepype.tools.steploadaux import StepLoadAux # pipestep steploadaux object
 
 class StepBiasDarkFlat(StepLoadAux, StepParent):
-    """ Pipeline Step Object to calibrate Bias/Dark/Flat files
+    """ Pipeline Step Object to correct using Bias/Dark/Flat files
     """
     
     stepver = '0.2' # pipe step version
@@ -233,7 +235,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         return result
     
     def flat_correct(self, image, flat):
-        """Correct the image for flat fielding.
+        """Correct the image with a flat field.
         ----------
         Parameters
         ----------
