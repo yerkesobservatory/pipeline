@@ -42,8 +42,6 @@
     filternames = 'gprime', 'rprime', 'iprime', 'zprime', 'Halpha', 'OIII', 'Clear'
 
 [astrometry]
-    ra = '13:42:11.1568'
-    dec = '+28:22:25.0935'
 
 [fluxcalsex]
     filtermap = 'gprime=g|rprime=r|iprime=i|zprime=z|Clear=r'
