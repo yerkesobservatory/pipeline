@@ -23,18 +23,18 @@ import sys # sys library
 import numpy # numpy library
 import logging # logging object library
 from astropy.io import fits #package to recognize FITS files
-from darepype.drp import DataFits # pipeline data object
-from darepype.drp import StepParent # pipestep stepparent object
-from darepype.tools.steploadaux import StepLoadAux # pipestep steploadaux object
+from darepype.drp import DataFits # pipeline data object class
+from darepype.drp import StepParent # pipestep stepparent object class
+from darepype.tools.steploadaux import StepLoadAux # pipestep steploadaux object class
 
 class StepBiasDarkFlat(StepLoadAux, StepParent):
-    """ Pipeline Step Object to correct raw image using Bias/Dark/Flat files
+    """ Pipeline step object to correct raw image using bias, dark, and flat files.
     """
     
-    stepver = '0.2' # pipe step version
+    stepver = '0.2' # pipe step version    ????
     
     def __init__(self):
-        """ Constructor: Initialize data objects and variables
+        """ Constructor: Initialize data objects and variables.
         """
         # Call superclass constructor (calls setup)
         super(StepBiasDarkFlat,self).__init__()
@@ -53,11 +53,8 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         self.flatloaded = False # indicates if flat has been loaded
         self.flat = None # Numpy array object containing flat values
         self.flatname = '' # name of selected flat file
-        
-        # Initialize output object
-        self.dataout = DataFits(config=self.datain.config)
-        
-        # set configuration
+                
+        # set configuration  ????
         self.log.debug('Init: done')
     
     
@@ -72,12 +69,12 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             - procname: Used to identify the step in saved output files.
                     The procname should be upper case.
                         
-            Also defines the input parameters for the current pipe step.
+            Defines the input parameters for the current pipe step.
             The parameters are stored in a list containing the following
             information:
             - parameter name
             - default: A default value for the parameter. If nothing, set
-                       to '', for strings, set to 0 for integers and 0.0 for floats.
+                       to '', for strings, to 0 for integers and to 0.0 for floats.
             - help: A short description of the parameter.
         """
         ## Set Names
@@ -85,7 +82,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         self.name='biasdarkflat'
         # Set procname.
         self.procname = 'BDF'
-        # Set Logger for this pipe step
+        # Set Logger for this pipe step.
         self.log = logging.getLogger('stoneedge.pipe.step.%s' % self.name)
         
         ## Create parameter list.
@@ -118,7 +115,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         name = self.loadauxname('bias', multi = False)
         self.log.info('File loaded: %s' % name)
         if(name == None):
-            self.log.error('Bias calibration frame not found.')
+            self.log.error('Bias calibration image not found.')
             raise RuntimeError('No bias file loaded')
             
         # Load bias object.
@@ -156,8 +153,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         self.dark = dark.imageget()
 
         # Get the dark exposure time from the header of the DataFits object.
-        # dark.loadhead()  # This is not needed-- dark=DataFits() loads header.
-        self.dark_exp_length = dark.getheadval('EXPTIME') # or = dark.header['EXPTIME'] ????
+        self.dark_exp_length = dark.getheadval('EXPTIME')
         
         # Finish up 
         self.darkloaded = True 
@@ -196,7 +192,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         Arguments:
         - image: `~numpy.ndarray`, raw image from which bias will be subtracted
        -  bias : `~astropy.ndarray`, master bias image to subtract
-        {log}
+        {log}  #????
         Returns: numpy.ndarray, bias-subtracted image
         """
         self.log.debug('Subtracting bias...')
@@ -217,13 +213,12 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         {log}
         Returns: numpy.ndarray, dark-subtracted image.
         """
-        
         self.log.debug('Subtracting dark...')
         
         # If dark current is linear, then this first step scales the
         # provided dark to match the exposure time of the raw image.
         if scale:
-            dark_scaled = dark.copy()
+            # dark_scaled = dark.copy()  #????
             dark_scaled = dark_scaled * img_exposure / dark_exposure
             result = image - dark_scaled
         else:
@@ -234,16 +229,15 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
    
     
     def flat_correct(self, image, flat):
-        """Correct the image with a flat field.
-         Arguments:
-        - image : `~numpy.ndarray`, Data to be corrected.
-        - flat : `~numpy.ndarray`, Flat-field to be applied to the data.
-        {log}
-        Returns:
-        flat_corrected: `~numpy.ndarray`, flat-corrected image.
         """
-        self.log.debug('Correcting flat...')
-
+        Correct the image with a flat field.
+        Arguments:
+        - image : numpy.ndarray, data to be corrected.
+        - flat : numpy.ndarray, flat-field image normalized to its mean or median.
+        {log}
+        Returns: numpy.ndarray, flat-corrected image.
+        """
+        
         # Divide by the flat.
         flat_corrected = image / flat
 
@@ -253,33 +247,40 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
 
     def run(self):
         """ Runs the correction algorithm. The corrected data is
-            returned in self.dataout
+            returned in self.dataout.
         """
         
         ## Preparation
+        
+        # Load auxiliary files, unless they have already been loaded.
+        # Warn the user if any keywords listed in biasfitkeys are different
+        # in the current data than in the loaded file. The warning code
+        # is only used if multiple files are reduced and reload==False.
+        
         # Load bias file.
         if not self.biasloaded or self.getarg('reload'):
             self.loadbias()
-        # Else: check data for correct instrument configuration
-        # - currently not in use(need improvement) ????
+        # Else: check data for correct instrument configuration.
         else:
             for keyind in range(len(self.biasfitkeys)):
                 if self.biaskeyvalues[keyind] != self.datain.getheadval(self.biasfitkeys[keyind]):
                     self.log.warn('New data has different FITS key value for keyword %s' %
                                   self.biasfitkeys[keyind])
+                                  
         # Load dark file.
         if not self.darkloaded or self.getarg('reload'):
             self.loaddark()
-        # Else: check data for correct instrument configuration
+        # Else: check data for correct instrument configuration.
         else:
             for keyind in range(len(self.darkfitkeys)):
                 if self.darkkeyvalues[keyind] != self.datain.getheadval(self.darkfitkeys[keyind]):
                     self.log.warn('New data has different FITS key value for keyword %s' %
                                   self.darkfitkeys[keyind])
+                                  
         # Load flat file.
         if not self.flatloaded or self.getarg('reload'):
             self.loadflat()
-        # Else: check data for correct instrument configuration
+        # Else: check data for correct instrument configuration.
         else:
             for keyind in range(len(self.flatfitkeys)):
                 if self.flatkeyvalues[keyind] != self.datain.getheadval(self.flatfitkeys[keyind]):
@@ -290,18 +291,22 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         # to enable or disable saving of intermediate steps as additional HDUs.
         save_intermediate_steps = self.getarg('intermediate')
         
+        # Set self.dataout with configuration object of self.datain.
+        self.dataout = DataFits(config=self.datain.config)
+        
+        # Get the image to be corrected and find its exposure time.        
         image = self.datain.image
-        image_exp = self.datain.header['EXPTIME']    # ????
+        image_exp = self.datain.getheadval('EXPTIME')
+        
+        ## Correct the image.
         
         # Subtract bias from image.
         image = self.subtract_bias(image, self.bias)
         if (save_intermediate_steps == True):
-            dataName = "BIAS_SUBTRACT"  # ????
-            self.dataout.imageset(image, imagename=dataName)
-            self.dataout.setheadval('DATATYPE', 'IMAGE',
-                                    dataname=dataName)
+            dataname = "BIAS_SUBTRACT"
+            self.dataout.imageset(image, imagename=dataname)
             self.dataout.setheadval('HISTORY', 'BIAS: %s' % self.biasname,
-                                    dataname=dataName)
+                                    dataname=dataname)
         
         # Subtract dark from image.
         image = self.subtract_dark(image, self.dark, scale=True,
@@ -310,26 +315,21 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
                                    
         # If input parameter "intermediate" is True, save dark-subtraced image as HDU.
         if (saveIntermediateSteps == True):
-            dataName = "DARK_SUBTRACT"
-            self.dataout.imageset(image, imagename=dataName)
-            self.dataout.setheadval('DATATYPE', 'IMAGE',
-                                    dataname=dataName)
+            dataname = "DARK_SUBTRACT"
+            self.dataout.imageset(image, imagename=dataname)
             self.dataout.setheadval('HISTORY', 'BIAS: %s' % self.biasname,
-                                    dataname=dataName)
+                                    dataname=dataname)
             self.dataout.setheadval('HISTORY', 'DARK: %s' % self.darkname,
-                                    dataname=dataName)
+                                    dataname=dataname)
         
-        # Apply flat field correction to image
+        # Apply flat field correction to image.
         image = self.flat_correct(image, self.flat)
         
         # Copy corrected image into self.dataout
         self.dataout.image = image
         self.dataout.header = self.datain.header
         
-        ## Finish and cleanup
-        
-        # Update DATATYPE    ????
-        self.dataout.setheadval('DATATYPE', 'IMAGE')
+        ## Finish and clean up.
         
         # Add bias, dark files to History
         self.dataout.setheadval('HISTORY', 'BIAS: %s' % self.biasname)
@@ -358,13 +358,14 @@ if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
         Command: python stepparent.py input.fits -arg1 -arg2 . . .
         Standard arguments:
-        - config=ConfigFilePathName.txt : name of the configuration file
-        - test : runs the functionality test i.e. pipestep.test()
-        - loglevel=LEVEL : configures the logging output for a particular level
+        --config=ConfigFilePathName.txt : name of the configuration file
+        --test : runs the functionality test i.e. pipestep.test()
+        --loglevel=LEVEL : configures the logging output for a particular level
     """
     StepBiasDarkFlat().execute()
     
 '''HISTORY:
+2020-09-22 - Eliiminate unnecesary code and update documentation - Al Harper
 2020-09-19 - Removed code to normalize flat and made other minor edits - Al Harper
 2020-07-26 - Saving intermediate BDF steps and removal of CCDProc code - Lorenzo Orders
 2018-08-02 - Bias/Dark correction of darks/flats moved to stepmasterbias/dark/flat - Matt Merz
