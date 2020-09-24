@@ -118,7 +118,7 @@
     # Reload: Set to True to look for new bias files for every input
     reload = T
     # Intermediate: Set to T to return a fits file with intermediate BDF steps
-    intermediate = F
+    intermediate = T
 
 
 
