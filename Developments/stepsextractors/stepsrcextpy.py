@@ -123,8 +123,10 @@ class StepSrcExtPy(StepParent):
                                 'deblend threshold for source extration'])
         self.paramlist.append(['phot_kronf', 2.5,
                                 'factor multiplied into kronrad to get radius for integration'])
-
-
+        self.paramlist.append(['save_background', False,
+                                'option to save the background as a seprate hdu'])
+        self.paramlist.append(['save_imagesub', False,
+                                'option to save the background subtracted image as a seprate hdu'])
         # confirm end of setup
         self.log.debug('Setup: done')
 
@@ -311,8 +313,6 @@ class StepSrcExtPy(StepParent):
                                 unit='flux'))
         colsb.append(fits.Column(name='Half-light Radius', format='D',
                                 array=rhb[seo_SNB], unit='pixel'))
-
-
         # Make table
         c = fits.ColDefs(cols)
 
@@ -321,8 +321,6 @@ class StepSrcExtPy(StepParent):
         sources_table = fits.BinTableHDU.from_columns(c)
 
         sourceb_table= fits.BinTableHDU.from_columns(cb)
-
-        
         ### Make output data
         # Copy data from datain
         self.dataout = self.datain
@@ -332,6 +330,17 @@ class StepSrcExtPy(StepParent):
         self.dataout.tableaddcol('kflux', flux_elip, 'SEP_objects')
         self.dataout.tableaddcol('a2b', a2b, 'SEP_Objects')
 
+        #If save Image_Sub and Background are true, this saves them as an HDU
+        if self.getarg('save_background'):
+            dataname = "BACKGROUND"
+            self.dataout.imageset(bkg_image, imagename=dataname)
+            self.dataout.setheadval('HISTORY', 'BACKGROUND', 
+                                    dataname=dataname)
+        if self.getarg('save_imagesub'):
+            dataname = "IMSUB"
+            self.dataout.imageset(image_sub, imagename=dataname)
+            self.dataout.setheadval('HISTORY', 'IMSUB',
+                                    dataname=dataname)
         #Add other headers and tables
         self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)') 
         self.dataout.setheadval ('RHALFSTD', rhstd, 'STD of masked mean of half-power radius')
