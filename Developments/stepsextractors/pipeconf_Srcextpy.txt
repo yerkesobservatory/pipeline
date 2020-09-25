@@ -167,7 +167,10 @@
     ext_deblend= 256
     #Kron Factor, value multiplied by kron radius to get the radius of integration.
     phot_kronf = 2.5
-
+    #Option to save the extracted background image as an extra HDU
+    save_background = true
+    #Option to save the background subtracted image as an extra HDU
+    save_imagesub = true
 
 
 ### Data Handling Section
