@@ -31,7 +31,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
     """ Pipeline step object to correct raw image using bias, dark, and flat files.
     """
     
-    stepver = '0.2' # pipe step version    ????
+    stepver = '0.2' # Pipe step version
     
     def __init__(self):
         """ Constructor: Initialize data objects and variables.
@@ -77,16 +77,15 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
                        to '', for strings, to 0 for integers and to 0.0 for floats.
             - help: A short description of the parameter.
         """
-        ## Set names.
+        ## SET NAMES
+        
         # Set internal name of the pipeline reduction step.
         self.name='biasdarkflat'
         # Set procname.
         self.procname = 'BDF'
         
-        # Set Logger for this pipe step.
-        self.log = logging.getLogger('stoneedge.pipe.step.%s' % self.name)
+        ## SET UP PARAMETER LIST AND DEFAULT VALUES
         
-        ## Set up parameter list and default values.
         # Clear Parameter list.
         self.paramlist = []
         # Append parameters.
@@ -100,7 +99,11 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         self.loadauxsetup('dark')
         self.loadauxsetup('flat')
         
-        # confirm end of setup.
+         ## SET LOGGER AND FINISH UP
+        
+        # Set Logger for this pipe step.
+        self.log = logging.getLogger('stoneedge.pipe.step.%s' % self.name)  
+        # Confirm end of setup.
         self.log.debug('Setup: done')
          
             
@@ -110,8 +113,9 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             If an appropriate file can not be found or the file is invalid
             various warnings and errors are returned.
         """
-        # Search for closest master bias image.
         self.log.debug('LoadBias: Start')
+
+        # Search for closest master bias image.
         name = self.loadauxname('bias', multi = False)
         self.log.info('File loaded: %s' % name)
         if(name == None):
@@ -167,8 +171,9 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             It is assumed that the flat image has had bias and dark images subtracted
             and that the flat image has been normalized to its median or mean.
         """
-        # Find closest master flat image.
         self.log.debug('LoadFlat: Start')
+
+        # Find closest master flat image.
         name = self.loadauxname('flat', multi = False)
         if(name == None):
             self.log.error('Flat calibration frame not found.')
@@ -194,6 +199,8 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         Returns: numpy.ndarray, bias-subtracted image
         """
         self.log.debug('Subtracting bias...')
+        
+        # Subtract bias.
         result = image - bias
         self.log.debug('Subtracted bias.')
         return result
@@ -212,13 +219,14 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         """
         self.log.debug('Subtracting dark...')
         
-        # If dark current is linear, then this first step scales the
-        # provided dark to match the exposure time of the raw image.
+        # If scale = True, scale the dark to match exposure time of raw image.
+        # Assumes dark current is linear.
         if scale:
             dark_scaled = dark_scaled * img_exposure / dark_exposure
             result = image - dark_scaled
         else:
             result = image - dark
+        # Finish up.
         self.log.debug('Subtracted dark.')
         return result
    
@@ -231,9 +239,12 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         - flat:  numpy.ndarray, flat-field image normalized to its mean or median.
         Returns: numpy.ndarray, flat-corrected image.
         """
+        self.log.debug('Beginning flat-correction...')
+        
         # Divide by the flat-field.
         flat_corrected = image / flat
-        self.log.debug('Corrected flat.')
+        # Finish up.
+        self.log.debug('Flat-correction completed.')
         return flat_corrected
 
 
@@ -245,6 +256,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         ## Warn the user if any keywords listed in biasfitkeys are different
         ## in the current data than in the loaded file. The warning code
         ## is only used if multiple files are reduced and reload==False.
+        
         # Load bias file.
         if not self.biasloaded or self.getarg('reload'):
             self.loadbias()
@@ -273,7 +285,8 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
                     self.log.warn('New data has different FITS key value for keyword %s' %
                                   self.flatfitkeys[keyind])
                                   
-        ## PREPARE TO CORRCT IMAGE                        
+        ## PREPARE TO CORRCT IMAGE 
+                               
         # In the config file, set the 'intermediate' variable to either True or False
         # to enable or disable saving of intermediate steps as additional HDUs.
         save_intermediate_steps = self.getarg('intermediate')
@@ -286,6 +299,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         self.dataout.image = image
         
         ## CORRECT THE IMAGE
+        
         # Subtract bias from image.
         image = self.subtract_bias(image, self.bias)
         if (save_intermediate_steps == True):
@@ -312,12 +326,15 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         self.dataout.header = self.datain.header
         
         ## FINISH AND CLEAN UP
+        
+        self.log.debug('Adding HISTORY to FITS header......')
         # Add bias, dark files to History
         self.dataout.setheadval('HISTORY', 'BIAS: %s' % self.biasname)
         self.dataout.setheadval('HISTORY', 'DARK: %s' % self.darkname)
         self.dataout.setheadval('HISTORY', 'FLAT: %s' % self.flatname)
         # Set the base filename for the DataFits output object.
         self.dataout.filename = self.datain.filename
+        self.log.debug('BDF correction completed.')
            
             
     def reset(self):
