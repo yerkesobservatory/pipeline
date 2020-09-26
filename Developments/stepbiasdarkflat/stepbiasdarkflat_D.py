@@ -285,7 +285,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
                     self.log.warn('New data has different FITS key value for keyword %s' %
                                   self.flatfitkeys[keyind])
                                   
-        ## PREPARE TO CORRCT IMAGE 
+        ## PREPARE TO CORRECT IMAGE 
                                
         # In the config file, set the 'intermediate' variable to either True or False
         # to enable or disable saving of intermediate steps as additional HDUs.
