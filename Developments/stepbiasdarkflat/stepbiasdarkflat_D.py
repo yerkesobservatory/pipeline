@@ -296,7 +296,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         image_exp = self.datain.getheadval('EXPTIME')
 
         # Create self.dataout by copying self.datain. This loads the output object
-        # with the config and header of the input file, and a placeholder image
+        # with the config and header of the input file and a placeholder image
         # for the eventual output image.
         self.dataout = self.datain.copy()
         
@@ -329,7 +329,6 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         
         ## FINISH AND CLEAN UP
         
-        self.log.debug('Adding HISTORY to FITS header......')
         # Add bias, dark, and flat filenames to History.
         self.dataout.setheadval('HISTORY', 'BIAS: %s' % self.biasname)
         self.dataout.setheadval('HISTORY', 'DARK: %s' % self.darkname)
