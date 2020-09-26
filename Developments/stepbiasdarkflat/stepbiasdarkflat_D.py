@@ -54,7 +54,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         self.flat = None # Numpy array object containing flat values
         self.flatname = '' # name of selected flat file
                 
-        # set configuration  ????
+        # Finish up.
         self.log.debug('Init: done')
     
     
@@ -122,7 +122,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             self.log.error('Bias calibration image not found.')
             raise RuntimeError('No bias file loaded')
             
-        # Load bias object.
+        # Load bias data.
         bias = DataFits(name)        # Create DataFits object.
         bias.load()                  # Load the object.
         self.bias = bias.imageget()  # Assign image data from bias to self.bias.
@@ -290,18 +290,21 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         # In the config file, set the 'intermediate' variable to either True or False
         # to enable or disable saving of intermediate steps as additional HDUs.
         save_intermediate_steps = self.getarg('intermediate')
-        # Create self.dataoutand and set with configuration object of self.datain.
-        self.dataout = DataFits(config=self.datain.config)
-        # Get the image to be corrected and find its exposure time.        
-        image = self.datain.image
+
+        # Get the image to be corrected, convert to float, and find exposure time.        
+        image = self.datain.image * 1.0
         image_exp = self.datain.getheadval('EXPTIME')
-        # Set input image as temporary primary image in self.dataout.
-        self.dataout.image = image
+
+        # Create self.dataout by copying self.datain. This loads the output object
+        # with the config and header of the input file, and a placeholder image
+        # for the eventual output image.
+        self.dataout = self.datain.copy()
         
         ## CORRECT THE IMAGE
         
         # Subtract bias from image.
         image = self.subtract_bias(image, self.bias)
+        # If input parameter "intermediate" is True, save bias-subtracted image as HDU.
         if (save_intermediate_steps == True):
             dataname = "BIAS_SUBTRACTED"
             self.dataout.imageset(image, imagename=dataname)
@@ -323,18 +326,16 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         image = self.flat_correct(image, self.flat)
         # Copy corrected image into self.dataout.
         self.dataout.image = image
-        self.dataout.header = self.datain.header
         
         ## FINISH AND CLEAN UP
         
         self.log.debug('Adding HISTORY to FITS header......')
-        # Add bias, dark files to History
+        # Add bias, dark, and flat filenames to History.
         self.dataout.setheadval('HISTORY', 'BIAS: %s' % self.biasname)
         self.dataout.setheadval('HISTORY', 'DARK: %s' % self.darkname)
         self.dataout.setheadval('HISTORY', 'FLAT: %s' % self.flatname)
         # Set the base filename for the DataFits output object.
         self.dataout.filename = self.datain.filename
-        self.log.debug('BDF correction completed.')
            
             
     def reset(self):
