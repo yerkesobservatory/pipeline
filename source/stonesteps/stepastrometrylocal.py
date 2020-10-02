@@ -26,7 +26,7 @@ import astropy.units as u
 from darepype.drp import DataFits
 from darepype.drp import StepParent
 
-class StepLocalAstrometry(StepParent):
+class StepAstrometryLocal(StepParent):
     """ HAWC Pipeline Step Parent Object
         The object is callable. It requires a valid configuration input
         (file or object) when it runs.
@@ -50,7 +50,7 @@ class StepLocalAstrometry(StepParent):
         """
         ### Set Names
         # Name of the pipeline reduction step
-        self.name='localastrometry'
+        self.name='astrometrylocal'
         # Shortcut for pipeline reduction step and identifier for
         # saved file names.
         self.procname = 'WCS'

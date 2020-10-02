@@ -22,7 +22,7 @@ from astroquery.astrometry_net import AstrometryNet
 import pandas as pd
 import numpy as np
 
-class StepWebAstrometry(StepParent):
+class StepAstrometryWeb(StepParent):
     """ HAWC Pipeline Step Parent Object
         The object is callable. It requires a valid configuration input
         (file or object) when it runs.
@@ -46,7 +46,7 @@ class StepWebAstrometry(StepParent):
         """
         ### Set Names
         # Name of the pipeline reduction step
-        self.name='webastrometry'
+        self.name='astrometryweb'
         # Shortcut for pipeline reduction step and identifier for
         # saved file names.
         self.procname = 'WCS'
