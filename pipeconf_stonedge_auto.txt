@@ -143,7 +143,7 @@
     searchradius = 5
 
 # Web Astrometry Step Configuration
-[webastrometry]
+[astrometryweb]
     # Timeout for running astrometry (seconds)
     timeout = 900
     # Search within this many degrees of the center RA and Dec
@@ -156,6 +156,8 @@
     scale_units = 'arcsecperpix'
     # API key used for interfacing with Astrometry.net
     api_key = 'XXXXXXXX'
+    # Name of table that should be used when solving
+    table_name = ''
 
 # ADDKEYS step configuration
 [addkeys]
