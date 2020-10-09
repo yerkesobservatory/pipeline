@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" PIPE STEP WEBASTROMETRY- Version 1.2.0
+""" PIPE STEP ASTROMETRYWEB- Version 1.2.0
 
     This pipe step uploads source tables or image data to the
     website Astrometry.net to update the WCS information of the data.
@@ -73,19 +73,29 @@ class StepAstrometryWeb(StepParent):
                                'Image plate scale units'])
         self.paramlist.append(['api_key', 'XXXXXXXX',
                                'API key used for interfacing with Astrometry.net'])
+        self.paramlist.append(['table_name', '',
+                               'Name of table that should be used when solving'])
         # confirm end of setup
         self.log.debug('Setup: done')
 
+<<<<<<< HEAD
     def run(self):
         """ Runs the data reduction algorithm. The self.datain is run
             through the code, the result is in self.dataout.
         """
         # Setup
         self.dataout = self.datain.copy()
+=======
+    def astrometrymaster(self):
+        ''' Runs Astrometry.net on the inputted image/sources table
+        '''
+
+>>>>>>> branch 'dev' of https://github.com/yerkesobservatory/pipeline.git
         ast = AstrometryNet()
         ast.api_key = self.getarg('api_key')
 
         # Check whether the file contains image or table data, prefer table data
+<<<<<<< HEAD
         nosourcetable = True
         for hdu in fits.open(self.datain.filename):
             try:
@@ -106,8 +116,27 @@ class StepAstrometryWeb(StepParent):
                     pass
                 else:
                     nosourcetable = False
+=======
+        upload = True
+        try:
+            ### This try statement works with source extracted files containing image data (...SEXT.fits)
+            tb_name = self.getarg('table_name')
+            if not tb_name == '':
+                hdu = self.datain.tableget(tb_name)
+>>>>>>> branch 'dev' of https://github.com/yerkesobservatory/pipeline.git
             else:
+<<<<<<< HEAD
                 nosourcetable = False
+=======
+                hdu = self.datain.tableget()
+            tbl = pd.DataFrame(np.array(hdu).byteswap(inplace=True).newbyteorder())
+            tbl.columns = ['ID', 'X_IMAGE', 'Y_IMAGE', 'FLUX', 'HL_RADIUS']
+            tbl = tbl.sort_values(by='FLUX', axis=0, ascending=False)
+        except:
+            pass
+        else:
+            upload = False
+>>>>>>> branch 'dev' of https://github.com/yerkesobservatory/pipeline.git
 
         # Message is source table has been found
         if nosourcetable:
@@ -204,7 +233,7 @@ if __name__ == '__main__':
           --loglevel=LEVEL : configures the logging output for a particular level
           -h, --help : Returns a list of 
     """
-    StepWebAstrometry().execute()
+    StepAstrometryWeb().execute()
 
 """ === History ===
 2020-08-17  -Compatibility for files source extracted using sextractor 
