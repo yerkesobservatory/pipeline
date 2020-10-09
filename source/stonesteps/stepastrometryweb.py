@@ -78,56 +78,23 @@ class StepAstrometryWeb(StepParent):
         # confirm end of setup
         self.log.debug('Setup: done')
 
-<<<<<<< HEAD
     def run(self):
         """ Runs the data reduction algorithm. The self.datain is run
             through the code, the result is in self.dataout.
         """
         # Setup
         self.dataout = self.datain.copy()
-=======
-    def astrometrymaster(self):
-        ''' Runs Astrometry.net on the inputted image/sources table
-        '''
-
->>>>>>> branch 'dev' of https://github.com/yerkesobservatory/pipeline.git
         ast = AstrometryNet()
         ast.api_key = self.getarg('api_key')
 
         # Check whether the file contains image or table data, prefer table data
-<<<<<<< HEAD
         nosourcetable = True
-        for hdu in fits.open(self.datain.filename):
-            try:
-                ### This try statement works with sextractor catalog files (...sex_cat.fits)
-                # FITS files use big endian, so it must be converted to little endian before it can be used by numpy/pandas
-                tbl = pd.DataFrame(np.array(hdu.data).byteswap(inplace=True).newbyteorder())
-                # tbl.columns = ['X_IMAGE', 'Y_IMAGE', 'a', 'b', 'c', 'd', 'FLUX']
-                tbl.columns = ['NUMBER', 'FLUX_APER', 'FLUX_AUTO', 'FLUXERR_AUTO', 'X_IMAGE', 'Y_IMAGE']
-                # Astrometry.net requires the source table be sorted in descending order of flux
-                tbl = tbl.sort_values(by='FLUX_APER', axis=0, ascending=False)
-            except:
-                try:
-                    ### This try statement works with source extracted files containing image data (...SEXT.fits)
-                    tbl = pd.DataFrame(np.array(hdu.data).byteswap(inplace=True).newbyteorder())
-                    tbl.columns = ['ID', 'X_IMAGE', 'Y_IMAGE', 'FLUX', 'FLUX_ERR']
-                    tbl = tbl.sort_values(by='FLUX', axis=0, ascending=False)
-                except:
-                    pass
-                else:
-                    nosourcetable = False
-=======
-        upload = True
         try:
             ### This try statement works with source extracted files containing image data (...SEXT.fits)
             tb_name = self.getarg('table_name')
             if not tb_name == '':
                 hdu = self.datain.tableget(tb_name)
->>>>>>> branch 'dev' of https://github.com/yerkesobservatory/pipeline.git
             else:
-<<<<<<< HEAD
-                nosourcetable = False
-=======
                 hdu = self.datain.tableget()
             tbl = pd.DataFrame(np.array(hdu).byteswap(inplace=True).newbyteorder())
             tbl.columns = ['ID', 'X_IMAGE', 'Y_IMAGE', 'FLUX', 'HL_RADIUS']
@@ -135,8 +102,7 @@ class StepAstrometryWeb(StepParent):
         except:
             pass
         else:
-            upload = False
->>>>>>> branch 'dev' of https://github.com/yerkesobservatory/pipeline.git
+            nosourcetable = False
 
         # Message is source table has been found
         if nosourcetable:
