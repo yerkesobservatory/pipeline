@@ -49,7 +49,7 @@ class StepMasterFlat(StepLoadAux, StepMIParent):
         self.name='masterflat'
         # Shortcut for pipeline reduction step and identifier for
         # saved file names.
-        self.procname = 'mflat'
+        self.procname = 'MFLAT'
         # Set Logger for this pipe step
         self.log = logging.getLogger('pipe.step.%s' % self.name)
         ### Set Parameter list
@@ -57,9 +57,11 @@ class StepMasterFlat(StepLoadAux, StepMIParent):
         self.paramlist = []
         # Append parameters !!!! WHAT PARAMETERS ARE NEEDED ????? !!!!!
         self.paramlist.append(['combinemethod','median',
-                               'Specifies how the files should be combined - options are median, average, sum'])
+                               'Specifies how the files should be combined - options are\
+                                median , average, sum'])
         self.paramlist.append(['outputfolder','',
-                               'Output directory location - default is the folder of the input files'])
+                               'Output directory location - default is the folder of \
+                               the input files'])
         # Get parameters for StepLoadAux, replace auxfile with biasfile
         self.loadauxsetup('bias')
         # Get parameters for StepLoadAux, replace auxfile with darkfile
@@ -69,6 +71,51 @@ class StepMasterFlat(StepLoadAux, StepMIParent):
         """ Runs the combining algorithm. The self.datain is run
             through the code, the result is in self.dataout.
         """
+        ### In current usage, this step looks for a single mbias and a single mdark.
+        ### Since multi=False in loadauxname, there will only be one filename returned.
+        ### The only reason to use ccdproc in the definition of self.bias and self.dark
+        ### is to put the single file into ccdproc.CCDData format for later use. If
+        ### the ccdproc code is not used to make the flat, the code could be, e.g.,
+        ### biasname = self.loadauxname('dark', multi = False)
+        ### df_dark, = DataFits(darkname)
+        ### df_dark.load(darkname)
+        ### self.dark = df_dark.image
+        ### or, perhaps(??)
+        ### self.dark = df_dark.load(darkname).image
+        ###
+        ### The loadauxname code will find the first example of a file for which
+        ### the config requirements are satisfied. If the first file in self.datain
+        ### has a short exposure time, the selected dark will also have a short exposure
+        ### time. Scaling off that file may not give as accurate an estimate of the
+        ### actual dark charge as if one used a longer exposure dark to scale from.
+        ### How could one force the selection of a longer exposure dark, and which
+        ### dark exposure time should give the best estimate of dark charge when
+        ### scaling to the exposure times of the flat images?
+        ###
+        ### Because the current code uses a median average in ccdproc, the returned
+        ### data will be integer. Could one get a more accurate estimate by using
+        ### a mean with some sort of sigma clipping? Might depend on how many 
+        ### flats are in the list of input files. One strong reason for using a median
+        ### is that there will generally be stars in the flat images, so those image
+        ### areas will result in strong outliers. If there are only 5 to 10 images
+        ### being analyzed, is it worth the effort to go beyond just doing the
+        ### median? How accurate does the flat have to be to give the desired photometric
+        ### accuracy over the image area? If one turned the data into floats and took the
+        ### mean of mflat images from multiple days, could one get a better estimate?
+        ### How stable are the flats over periods of days to weeks to months? That
+        ### that might be worth some further study. Is there a point of diminishing
+        ### returns at which getting more accurate flats is, for example, less effective
+        ### than dithering images so a final combined image will be more uniformly
+        ### sampled by different regions of the CCD?
+        ###
+        ### It should be relatively straightforward to re-write this step so that
+        ### it doesn't depend on ccdproc. The procedure would be to write a for loop
+        ### that creates a 3D numpy array (stack) of flat images and a list of
+        ### exposure times, does bias subtraction and scaled dark subtraction on each
+        ### of the 2D images in the stack, then takes the median along the third
+        ### dimension of the stack.
+
+        
         # Find master dark to subtract from master dark
         biaslist = self.loadauxname('bias', multi = False)
         darklist = self.loadauxname('dark', multi = False)
@@ -78,11 +125,11 @@ class StepMasterFlat(StepLoadAux, StepMIParent):
             self.log.error('No bias calibration frames found.')
         self.bias = ccdproc.CCDData.read(biaslist, unit='adu', relax=True)
         self.dark = ccdproc.CCDData.read(darklist, unit='adu', relax=True)
-        # Create empy list for filenames of loaded frames
+        # Create empty list for filenames of loaded frames
         filelist=[]
         for fin in self.datain:
             self.log.debug("Input filename = %s" % fin.filename)
-            filelist.append(fin.filename)
+             and.append(fin.filename)
         # Make a dummy dataout
         self.dataout = DataFits(config = self.config)
         if len(self.datain) == 0:

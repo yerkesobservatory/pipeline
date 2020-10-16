@@ -4,23 +4,21 @@
 # 2012 Marc Berthoud: Numerous updates
 # 2013-10-09 Nicholas Chapman: Made a config validation file
 # 2017-07-28 Atreyo Pal config file (added bdf section, removed KEYS)
+# 2020-09-17 Daniel Sharkey: Added SrcExtPy Config, and updated params.
 
 # General Section: configuration of the pipeline
 [general]
     # list of packages to look for pipe step modules (order matters)
-    steppacks = stonesteps, darepype.drp, darepype.utils
+    steppacks = darepype.drp, darepype.utils
     # list of steps for unknown instrument mode
     stepslist = StepLoadStoneedge, StepDemod
 
 # Environment Variables
 [envars]
-    # Master Bias, Dark, Flat Folder
-    MASTER_BDF_FOLDER = C:\\Users\\ordelore\\Documents\\SEO\\content\\data\\masterset
-    # Date for reducing BDF files from a certain day
-    BDF_DATE = 2015-01-31
+   
+    
     # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
-    SEO_AUXFOLDER = /data/scripts/DataReduction/auxfiles
-
+    SEO_AUXFOLDER = /Users/dsharkey/Documents/SEO/Stepfluxcalsex/auxfiles
 # Data Section: information on data objects and file names -h
 [data]
     # Regexp for part of the filename before the file step identifier
@@ -51,47 +49,7 @@
     stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometry, save, StepFluxCalSex, save, StepRGB
     #stepslist = load, StepAddKeys, save, StepBiasDarkFlat, StepHotpix, StepRGB
 
-[mode_masterbias]
-    stepslist = StepLoadInput, StepDataGroup, save
-    # BDF load step configuration
-    [[loadinput]]
-        # location of bdf folder(s)/file(s) to be reduced
-        filelocation = '/data/images/StoneEdge/0.5meter/2019/%Y-%m-%d/bias/bias*.fits' # for current date
-        #filelocation = '/data/images/StoneEdge/0.5meter/2019/$BDF_DATE/bias/bias*.fits'
-        # strings which must not be present in the filename for the file to be loaded, separate with |
-        fileexclude = MBIAS|UNK|LOAD
-    # Data group step configuration
-    [[datagroup]]
-        redstepname = StepMasterBias
-        groupkeys = XBIN
 
-[mode_masterdark]
-    stepslist = StepLoadInput, StepDataGroup, save
-    # BDF load step configuration
-    [[loadinput]]
-        # location of bdf folder(s)/file(s) to be reduced
-        #filelocation = '/data/images/StoneEdge/0.5meter/2015/$BDF_DATE/*/dark*.fits'
-        filelocation = '/data/images/StoneEdge/0.5meter/2019/%Y-%m-%d/dark/dark*.fits' # for current date
-        # strings which must not be present in the filename for the file to be loaded, separate with |
-        fileexclude = MDARK|UNK|LOAD
-    # Data group step configuration
-    [[datagroup]]
-        redstepname = StepMasterDark
-        groupkeys = XBIN|EXPTIME
-
-[mode_masterflat]
-    stepslist = StepLoadInput, StepDataGroup, save
-    # BDF load step configuration
-    [[loadinput]]
-        # location of bdf folder(s)/file(s) to be reduced
-        #filelocation = '/data/images/StoneEdge/0.5meter/2019/$BDF_DATE/flat/flat*.fits'
-        filelocation = '/data/images/StoneEdge/0.5meter/2019/%Y-%m-%d/flat/flat*.fits' # for current date
-        # strings which must not be present in the filename for the file to be loaded, separate with |
-        fileexclude = MFLAT|UNK|LOAD
-    # Data group step configuration
-    [[datagroup]]
-        redstepname = StepMasterFlat
-        groupkeys = XBIN|FILTER
 
 ### Pipe Step Section
 
@@ -117,8 +75,8 @@
     #datalist = R array, T array
     # Reload: Set to True to look for new bias files for every input
     reload = T
-    # Intermediate: Set to T to return a fits file with intermediate BDF steps
-    intermediate = T
+    # Intermediate: Set to true to return a fits file with intermediate BDF steps
+    intermediate = false
 
 
 
@@ -157,43 +115,7 @@
     # percentile value for maximum scaling
     maxpercent = 0.999
 
-# MasterBias step configuration
-[masterbias]
-    # Combination method: Specifies how the files should be combined - options are median, average, sum
-    combinationmethod = median
-    # Outputfolder: Output directory location - default is the folder of the input files
-    outputfolder = $MASTER_BDF_FOLDER/Bias
 
-# MasterDark step configuration
-[masterdark]
-    # filename that overrules the fit keys
-    biasfile = '$MASTER_BDF_FOLDER/Bias/*MBIAS.fits'
-    daterange = 0.5
-    # list of keys that need to match bias and data file
-    #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
-    biasfitkeys = XBIN, DATE-OBS
-    # list of input file datasets to flatten
-    # - Expects None or a list of image HDU 
-    #datalist = R array, T array
-    # Outputfolder: Output directory location - default is the folder of the input files
-    outputfolder = $MASTER_BDF_FOLDER/Dark
-    #outputfolder = /data/images/StoneEdge/0.5meter/2018/Masters/Dark
-
-# MasterFlat step configuration
-[masterflat]
-    # filename that overrules the fit keys
-    biasfile = $MASTER_BDF_FOLDER/Bias/*MBIAS.fits    
-    darkfile = $MASTER_BDF_FOLDER/Dark/*MDARK.fits
-    daterange = 0.5
-    # list of keys that need to match bias and data file
-    #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
-    biasfitkeys = XBIN, DATE-OBS
-    darkfitkeys = XBIN, DATE-OBS
-    # list of input file datasets to flatten
-    # - Expects None or a list of image HDU 
-    #datalist = R array, T array
-    # Outputfolder: Output directory location - default is the folder of the input files
-    outputfolder = $MASTER_BDF_FOLDER/Flat
     
 # Loadinput step configuration
 [loadinput]
@@ -222,35 +144,34 @@
     #     (default is '' indicating all data has to be re-reduced)
     fileidkey = ''
     
-# FluxCalSex step configuration
-[fluxcalsex]
-	# Command to call source extractor, should contain 1 string placeholder for intput filepathname
-	sx_cmd = 'sex %s'
-	# Command line options for source extractor
-	#     (This step overwrites the -c CATALOG_NAME PARAMETERS_NAME and FILTER_NAME )
-	sx_options = ''
-    #sx_options = '-c /usr/local/share/sextractor/default.sex -CATALOG_NAME test.cat -CATALOG_TYPE FITS_LDAC -PARAMETERS_NAME default.param'
-    #sx_options = '-c /usr/local/share/sextractor/default.sex -CATALOG_NAME test.cat -CATALOG_TYPE FITS_LDAC -PARAMETERS_NAME default.param -BACKPHOTO_TYPE GLOBAL -MASK_TYPE CORRECT -DETECT_MINAREA 5'
-	# Filepathname for SourceExtractor configuration file
-	sx_confilename = $SEO_AUXFOLDER/sourcextractor_config.sex
-	# Filepathname for SourceExtractor parameter list file
-	sx_paramfilename = $SEO_AUXFOLDER/sourcextractor_params.param
-	# Filepathname for SourceExtractor filter file
-	sx_filterfilename = $SEO_AUXFOLDER/sourcextractor_filter.conv
-	# Flag to log full source extractor output at DEBUG level
-	verbose = False
-	# Flag to delete catalog file generated by source extractor
-	delete_cat = True #False
-	# Percentile for BZERO value
-	zeropercent = 45.0
-	# Flag for making png plot of the fit
-	fitplot = True
-	# Flag for making txt table of all sources
-	sourcetable = True
-	# Format for text table of all sources (see astropy.io.ascii for options)
-	sourcetableformat = csv
-	# Flag for saving a background image
-	savebackground = False
+
+# SrcExtPy step configuration
+[srcextpy]
+    # Flag for making txt table of all sources
+    sourcetable = false
+    # Format for text table of all sources (see astropy.io.ascii for options)
+    sourcetableformat = csv
+    #Mask Threshold, a variable for the background detection that we don't use
+    maskthreshold = 0.0
+    #Background width and height, controls size of background boxes)
+    bkg_wh = 16, 16
+    #Filter width and height, controls filter width and height in boxes
+    bkg_filterwh = 3, 3
+    #Filter Threshold, a variable currently unused in background detection
+    bkg_fthreshold = 0.0
+    #Extraction Threshold, used during source extraction as the signal to noise ratio required to be recorded
+    ext_thresh = 2.0
+    #Brightness Factor, A factor used to multiply by the extract thresh to determine the threshold for the heigh pass list
+    ext_bfactor=10.0
+    #Number of objects used for threshold deblending during source extraction
+    ext_deblend= 256
+    #Kron Factor, value multiplied by kron radius to get the radius of integration.
+    phot_kronf = 2.5
+    #Option to save the extracted background image as an extra HDU
+    save_background = true
+    #Option to save the background subtracted image as an extra HDU
+    save_imagesub = true
+
 
 ### Data Handling Section
 
