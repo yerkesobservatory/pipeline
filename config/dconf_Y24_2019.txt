@@ -1,7 +1,7 @@
 ### Delta Config file to Reduce Yerkes 24 Data
 #
-#   Use this with pipeconf_stoneedge_auto.txt to reduce
-#   Yerkes 24inch data.
+#   Use this with pipeconf_SEO.txt to reduce
+#   Yerkes 24inch data on STARS.
 #
 #   To learn more about Delta Config files, read the
 #   darepype manual at https://darepype.readthedocs.io

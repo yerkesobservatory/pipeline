@@ -1,9 +1,12 @@
-# Stoneedge Pipeline Configuration File - For Automatic Data Reduction
+### Stoneedge Pipeline Configuration File - Base file for all reductions
 #
-# 2008-11-3 Marc Berthoud Version 0.1: Configuration file for Pipeline Testing
-# 2012 Marc Berthoud: Numerous updates
-# 2013-10-09 Nicholas Chapman: Made a config validation file
-# 2017-07-28 Atreyo Pal config file (added bdf section, removed KEYS)
+#   Use this configuration file to reduct SEO data. To adapt it to your settings
+#   either make your own copy of this file and change it or make a deltaconfig.
+#
+#   2008-11-3 Marc Berthoud Version 0.1: Configuration file for Pipeline Testing
+#   2013-10-09 Nicholas Chapman: Made a config validation file
+#   2017-07-28 Atreyo Pal: added bdf section, removed KEYS)
+#   2020-08 Josh Garza, Lorenzo Orders: Added new keywords for Astrometry* and BiasDarkFlat
 
 # General Section: configuration of the pipeline
 [general]
@@ -12,27 +15,28 @@
     # list of steps for unknown instrument mode
     stepslist = StepLoadStoneedge, StepDemod
 
-# Environment Variables
+### Environment Variables
+#   Instead of using environment variables you can also enter the information
+#   in the corresponding configuration parameters below (but this makes life easier)
 [envars]
-    # Master Bias, Dark, Flat Folder
-    MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2020/Masters 
-    # Date for reducing BDF files from a certain day
-    BDF_DATE = 2020-02-17
+    # Master and Raw Bias, Dark, Flat Folder - use with [biasdarkflat] below
+    MASTER_BDF_FOLDER = /path/to/master/bias/dark/flats 
+    RAW_BDF_FOLDER = /path/to/raw/bias/dark/flats
     # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
-    SEO_AUXFOLDER = /data/scripts/DataReduction/auxfiles
+    SEO_AUXFOLDER = /path/to/auxfiles
 
-# Data Section: information on data objects and file names -h
+### Data Section: information on data objects and file names -h
 [data]
     # Regexp for part of the filename before the file step identifier
     # - default is '\A.+\.' for all filename before the last '.' including the '.'
     filenamebegin = "\A.+_" # Stonedge: All before and including the last '_'
     #filenamebegin = "\A.+_[A-Za-z0-9]+\." # Stonedge: All before last '_', one more word and following '.'
-    #filenamebegin = 'not-appl' # Uses bla.TypeID.fits
     # Regexp for part of the filename after the file step identifier
     # - default is '\.[A-Za-z0-9]+\Z' for alphanum characters after last '.'
     filenameend = '\.fits(\.gz)?\Z' # .fits with optional .gz
-    #filenameend = 'not-applicable-use-fallback' # Uses .f* as filenameend
+    # What pipedata objects to use for opening files with DataParent.load()
     dataobjects = DataFits, DataText
+    # Regexp to specify file number in a file (not used for SEO)
     filenum = ''
 
 # Pipeline Section: Configuration of the pipeline
@@ -42,22 +46,42 @@
 
 ### Pipelines Section: configuration for individual pipeline modes
 
-# Stoneedge Mode Configuration
-[mode_stoneedge]
+# Stoneedge User Mode - for reducing data on your own computer
+#     Use this if you don't have sextractor and astrometry installed
+[mode_seo_user]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometry, save, StepFluxCalSex, save, StepRGB
-    #stepslist = load, StepAddKeys, save, StepBiasDarkFlat, StepHotpix, StepRGB
+    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryWeb, save, StepFluxCalSex, save, StepRGB
 
+# Stoneedge Short Mode - for reducing data on your own computer
+#     Use this to test the pipeline without making any changes to the config file
+#     This will skip several steps which require configuration settings for
+#     the computer you're running the pipeline on.
+[mode_seo_short]
+# List of keyword=values required in file header to select this pipeline mode
+    #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
+    datakeys = "OBSERVAT=StoneEdge"
+    # list of steps
+    #stepslist = load, StepAddKeys, save, StepHotpix, save, StepRGB
+
+# Stoneedge Server Mode - for reducing data on the server
+#     Use this if you have sextractor and astrometry installed
+[mode_seo_server]
+# List of keyword=values required in file header to select this pipeline mode
+    #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
+    datakeys = "OBSERVAT=StoneEdge"
+    # list of steps
+    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepRGB
+
+# Master Bias Mode - to make master bias files
 [mode_masterbias]
     stepslist = StepLoadInput, StepDataGroup, save
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        filelocation = '/data/images/StoneEdge/0.5meter/2020/%Y-%m-%d/bias/bias*.fits' # for current date
-        #filelocation = '/data/images/StoneEdge/0.5meter/2020/$BDF_DATE/bias/bias*.fits'
+        filelocation = '$RAW_BDF_FOLDER/bias/bias*.fits'
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MBIAS|UNK|LOAD
     # Data group step configuration
@@ -65,13 +89,13 @@
         redstepname = StepMasterBias
         groupkeys = XBIN
 
+# Master Dark Mode - to make master dark files
 [mode_masterdark]
     stepslist = StepLoadInput, StepDataGroup, save
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        #filelocation = '/data/images/StoneEdge/0.5meter/2020/$BDF_DATE/*/dark*.fits'
-        filelocation = '/data/images/StoneEdge/0.5meter/2020/%Y-%m-%d/dark/dark*.fits' # for current date
+        filelocation = '$RAW_BDF_FOLDER/*/dark*.fits'
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MDARK|UNK|LOAD
     # Data group step configuration
@@ -79,13 +103,13 @@
         redstepname = StepMasterDark
         groupkeys = XBIN|EXPTIME
 
+# Master Flat Mode - to make master flat files
 [mode_masterflat]
     stepslist = StepLoadInput, StepDataGroup, save
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        #filelocation = '/data/images/StoneEdge/0.5meter/2020/$BDF_DATE/flat/flat*.fits'
-        filelocation = '/data/images/StoneEdge/0.5meter/2020/%Y-%m-%d/flat/flat*.fits' # for current date
+        filelocation = '$RAW_BDF_FOLDER/flat/flat*.fits'
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MFLAT|UNK|LOAD
     # Data group step configuration
@@ -93,12 +117,8 @@
         redstepname = StepMasterFlat
         groupkeys = XBIN|FILTER
 
-### Pipe Step Section
-
-# Parent step configuration
-[parent]
-    # Sample parameter - no practical use
-    sampar = 0.25
+### Pipe Steps Section
+#   One entry for each pipe step which is used
 
 # BiasDarkFlat step configuration
 [biasdarkflat]
@@ -122,14 +142,10 @@
 [hotpix]
 
 # Local Astrometry Step Configuration
-[localastrometry]
+[astrometrylocal]
     # Command to call astrometry, should contain 2 string
     # placeholders for intput and output file (default: cp %s %s)
-    #astrocmd = '/data/scripts/astrometry/install/bin/solve-field --batch --no-plots --overwrite --continue --skip-solved --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none --pnm none --downsample 2 --scale-units arcsecperpix --scale-low 0.9 --scale-high 1.1 %s --out %s' # for 2016 camera 1536x1023 pixels
-    #astrocmd = '/data/scripts/astrometry/install/bin/solve-field --batch --no-plots --overwrite --continue --skip-solved --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none --pnm none --scale-units arcsecperpix --cpulimit 300 --guess-scale %s --out %s' # for 2017 camera 1024x1024 pixels
-    #astrocmd = '/data/scripts/astrometry/install/bin/solve-field --batch --no-verify --crpix-center --no-plots --overwrite --continue --skip-solved --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none --pnm none --scale-units arcsecperpix --cpulimit 300 --guess-scale %s --out %s' # for 2017 camera 1024x1024 pixels with changes by Matt
-    #astrocmd = '/data/scripts/astrometry/install/bin/solve-field         --no-verify --crpix-center --no-plots --overwrite --continue               --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none --pnm none --scale-units arcsecperpix --cpulimit 300 --scale-low 0.5 --scale-high 2.0 --sort-column FLUX %s --out %s' # same as above with changes as suggested by Emil (see projects page) - didn't use --no-fits2fits since our solve-field doesn't know this option
-    astrocmd = '/data/scripts/astrometry/install/bin/solve-field         --no-verify --crpix-center --no-plots --overwrite --continue               --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none            --scale-units arcsecperpix --cpulimit 300 --scale-low 0.5 --scale-high 2.0 --sort-column FLUX %s --out %s' # removed --pnm option since it treats "none" as a filename
+    astrocmd = '/path/to/astrometry/install/bin/solve-field         --no-verify --crpix-center --no-plots --overwrite --continue               --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none            --scale-units arcsecperpix --cpulimit 300 --scale-low 0.5 --scale-high 2.0 --sort-column FLUX %s --out %s' # removed --pnm option since it treats "none" as a filename
     # List of downsample factors and parameters to try
     downsample = 4, 2, 6, 8, 10
     paramoptions = '--guess-scale', '--scale-low 0.5 --scale-high 2.0 --sort-column FLUX'
@@ -155,6 +171,7 @@
     # Image plate scale units
     scale_units = 'arcsecperpix'
     # API key used for interfacing with Astrometry.net
+    # ENTER YOUR KEY HERE OR IN DELTA-CONFIG FILE
     api_key = 'XXXXXXXX'
     # Name of table that should be used when solving
     table_name = ''
@@ -191,7 +208,6 @@
     #datalist = R array, T array
     # Outputfolder: Output directory location - default is the folder of the input files
     outputfolder = $MASTER_BDF_FOLDER/Dark
-    #outputfolder = /data/images/StoneEdge/0.5meter/2018/Masters/Dark
 
 # MasterFlat step configuration
 [masterflat]
@@ -212,7 +228,7 @@
 # Loadinput step configuration
 [loadinput]
     # location of bdf folder(s)/file(s) to be reduced
-    filelocation = /data/images/StoneEdge/0.5meter/2019/%Y-%m-%d/flat/flat*.fits' # for current date
+    filelocation = /path/to/images/to/load/*.fits' # for current date
     # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must be present in the .fits header for the file to be loaded, separate with |
     includeheadvals =
     # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |
