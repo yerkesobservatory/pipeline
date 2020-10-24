@@ -168,7 +168,7 @@ for source_folder in source_folders:
 pythonpath = /data/scripts/DataReduction/source
 pipeconf = /data/scripts/DataReduction/config/pipeconf_SEO.txt
 /data/scripts/DataReduction/config/dconf_stars.txt
-pipemode = stoneedge
+pipemode = seo_server
 loglevel = DEBUG
 logfile = /data/scripts/DataReduction/PipeLineLog.txt
 """ % (runame)
