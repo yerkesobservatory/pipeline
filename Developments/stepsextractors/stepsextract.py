@@ -29,6 +29,7 @@ from astropy.io import fits
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord # To make RA/Dec as float
 from astropy import units as u # To help with SkyCoord
+from astropy.stats import mad_std #to calculate STD for Rh
 import matplotlib # to make plots
 matplotlib.use('Agg') # Set pixel image
 import pylab as plt # pylab library for plotting
@@ -145,7 +146,7 @@ class StepSextract(StepParent):
         seo_MagErr = (2.5/np.log(10)*seo_catalog['FLUXERR_AUTO']/seo_catalog['FLUX_AUTO'])
 
 
-                # Select only the stars in the image: circular image and S/N > 10
+        # Select only the stars in the image: circular image and S/N > 10
         elongation = (seo_catalog['FLUX_APER']-seo_catalog['FLUX_AUTO'])<250
         seo_SN = ((seo_catalog['FLUX_AUTO']/seo_catalog['FLUXERR_AUTO'])>10)
         seo_SN = (seo_SN) & (elongation) & ((seo_catalog['FLUX_AUTO']/seo_catalog['FLUXERR_AUTO'])<1000)
@@ -154,6 +155,14 @@ class StepSextract(StepParent):
         if self.getarg('delete_cat'):
             os.remove(catfilename)
 
+        #Calculate Mean and STD for Rh to report
+        rhmean, rhstd = np.nanmean(seo_catalog['FLUX_RADIUS']), mad_std(seo_catalog['FLUX_RADIUS'], ignore_nan = True)
+
+
+        ind = np.argsort(seo_Flux)
+        reverser = np.arange(len(ind) - 1,-1,-1)
+        rev_ind = np.take_along_axis(ind, reverser, axis = 0)
+        seo_catalog = np.take_along_axis(seo_catalog, rev_ind, axis = 0)
         ### Make table with all data from source extractor
         # Collect data columns
         cols = []
@@ -170,7 +179,11 @@ class StepSextract(StepParent):
                                 array=seo_Flux[seo_SN],
                                 unit='flux'))
         cols.append(fits.Column(name='Uncalibrated Fluxerr', format='D',
-                                array=seo_Fluxerr[seo_SN], unit='flux'))
+                                array=seo_Fluxerr[seo_SN],
+                                 unit='flux'))
+        cols.append(fits.Column(name='Half Light Radius', format='D',
+                                array=seo_catalog['FLUX_RADIUS'],
+                                unit='pixel'))
         # Make table
         c = fits.ColDefs(cols)
         sources_table = fits.BinTableHDU.from_columns(c)
@@ -179,9 +192,11 @@ class StepSextract(StepParent):
         # Copy data from datain
         self.dataout = self.datain
 
-        # Add sources and fitdata table
+        # Add sources table
         self.dataout.tableset(sources_table.data,'Sources',sources_table.header)
-        
+        #Add RH mean and STD to header
+        self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)')
+        self.dataout.setheadval ('RHALFSTD', rhstd, 'STD of masked mean of half-power radius')
         
         # Remove background file if it's not needed
         if not self.getarg('savebackground'):

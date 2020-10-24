@@ -432,4 +432,5 @@ if __name__ == '__main__':
     2014-07-29 Code has been improved by adding better scaling and image labels
     2014-08-06 Added 'if' functions to the label printing so that if keywords do not exist in the header(s), they are skipped rather than raising an error --NS
     2014-08-11 This file was essentially just renamed. The file called steprgb.py now uses raw inputs to determine the scaling values.  --NS
+    2020-09-21 Major changes made to image selection algorithm and image scaling algorithm, new options for image alignment and saving JPEGs to other folders added. --JL
 """
