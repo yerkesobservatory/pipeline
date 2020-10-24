@@ -1,0 +1,30 @@
+### Delta Configration file to reduce data on STARS
+#
+#   Use with pipeconf_SEO.txt to reduce data on the
+#   STARS server.
+#
+
+# Environment Variables
+[envars]
+    # Master Bias, Dark, Flat Folder
+    MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2020/ Masters 
+    # Path for reducing BDF Files (use one of them)
+    #RAW_BDF_FOLDER = '/data/images/StoneEdge/0.5meter/2020/2020-02-17' # for given date
+    RAW_BDR_FOLDER = '/data/images/StoneEdge/0.5meter/2020/%Y-%m-%d' # for current date
+    # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
+    SEO_AUXFOLDER = /data/scripts/DataReduction/auxfiles
+    
+# Local Astrometry section
+[astrometrylocal]
+    #astrocmd = '/data/scripts/astrometry/install/bin/solve-field --batch --no-plots --overwrite --continue --skip-solved --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none --pnm none --downsample 2 --scale-units arcsecperpix --scale-low 0.9 --scale-high 1.1 %s --out %s' # for 2016 camera 1536x1023 pixels
+    #astrocmd = '/data/scripts/astrometry/install/bin/solve-field --batch --no-plots --overwrite --continue --skip-solved --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none --pnm none --scale-units arcsecperpix --cpulimit 300 --guess-scale %s --out %s' # for 2017 camera 1024x1024 pixels
+    #astrocmd = '/data/scripts/astrometry/install/bin/solve-field --batch --no-verify --crpix-center --no-plots --overwrite --continue --skip-solved --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none --pnm none --scale-units arcsecperpix --cpulimit 300 --guess-scale %s --out %s' # for 2017 camera 1024x1024 pixels with changes by Matt
+    #astrocmd = '/data/scripts/astrometry/install/bin/solve-field         --no-verify --crpix-center --no-plots --overwrite --continue               --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none --pnm none --scale-units arcsecperpix --cpulimit 300 --scale-low 0.5 --scale-high 2.0 --sort-column FLUX %s --out %s' # same as above with changes as suggested by Emil (see projects page) - didn't use --no-fits2fits since our solve-field doesn't know this option
+    astrocmd = '/data/scripts/astrometry/install/bin/solve-field         --no-verify --crpix-center --no-plots --overwrite --continue               --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none            --scale-units arcsecperpix --cpulimit 300 --scale-low 0.5 --scale-high 2.0 --sort-column FLUX %s --out %s' # removed --pnm option since it treats "none" as a filename
+
+# Web Astrometry Step Configuration
+[astrometryweb]
+    # API key used for interfacing with Astrometry.net
+    # USE THE API KEY BELOW ONLY FOR THE STARS SERVER
+    # Enter your own API key from your astrometry.net account
+    api_key = 'aavwhfejgcgqazqd'

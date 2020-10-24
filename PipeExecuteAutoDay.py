@@ -55,7 +55,8 @@ datefilepath = '/data/images/StoneEdge/0.5meter/'+year+'/'+date
 def execute():
     # Call the pipeline configuration
     #pipe = PipeLine(config = '/Users/atreyopal/Desktop/pipeline/pipeconf_stonedge_remote.txt')
-    pipe = PipeLine(config = '/data/scripts/DataReduction/pipeconf_stonedge_auto.txt')
+    pipe = PipeLine(config = ['/data/scripts/DataReduction/config/pipeconf_SEO.txt',
+                              '/data/scripts/DataReduction/config/dconf_stars.txt'])
     # This version only needs to be executed from a terminal. A specific image folder
     # (like the ones on the stars base) is specified for the pipeline.  The pipeline
     # will look in the folder and find any of the sub-folders that contain the FITS images.
@@ -109,7 +110,7 @@ def execute():
         #result = pipe(imagelist)
         try:
             #pass
-            result = pipe(imagelist)
+            result = pipe(imagelist, pipemode = 'seo_server')
         except Exception as e:
             log.warning("Pipeline for object = %s returned Error" % entry)
             log.warning('Found Error = %s' % repr(e))

@@ -166,8 +166,9 @@ for source_folder in source_folders:
 
 # !!! Auto-generated Pipeconf file - may be overwritten !!!
 pythonpath = /data/scripts/DataReduction/source
-pipeconf = /data/scripts/DataReduction/pipeconf_stonedge_auto.txt
-pipemode = stoneedge
+pipeconf = /data/scripts/DataReduction/config/pipeconf_SEO.txt
+/data/scripts/DataReduction/config/dconf_stars.txt
+pipemode = seo_server
 loglevel = DEBUG
 logfile = /data/scripts/DataReduction/PipeLineLog.txt
 """ % (runame)
