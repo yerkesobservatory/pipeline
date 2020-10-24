@@ -150,9 +150,11 @@
 # RGB step configuration
 [makergb]
     # percentile value for miniumum scaling (in decimal form)
-    minpercent = 0.5
+    minpercent = 0.05
     # percentile value for maximum scaling
     maxpercent = 0.999
+    # Flag to enable trilogy image scaling
+    usetrilogy = True
 
 # MasterBias step configuration
 [masterbias]
