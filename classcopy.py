@@ -30,7 +30,8 @@ logfile = '/data/scripts/DataReduction/PipeLineLog.txt'
 # pythonpath
 pypath = '/data/scripts/DataReduction/source'
 # Pipeline configuration file
-pipeconf = '/data/scripts/DataReduction/pipeconf_stonedge_auto.txt'
+pipeconf = ['/data/scripts/DataReduction/config/pipeconf_SEO.txt',
+            '/data/scripts/DataReduction/config/dconf_stars.txt']
 # Folder for image database (for images to end up in)
 #     program will add yyyy/yyyy-mm-dd
 databasefolder = '/data/images/StoneEdge/0.5meter'

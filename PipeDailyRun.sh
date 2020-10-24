@@ -15,9 +15,9 @@ DRPath=/usr/local/lib/python3.6/site-packages/darepype
 
 ### Run Masters
 cd /data/scripts/DataReduction
-/usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode masterbias pipeconf_stonedge_auto.txt >> AstroLog.txt 2>&1
-/usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode masterdark pipeconf_stonedge_auto.txt >> AstroLog.txt 2>&1
-/usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode masterflat pipeconf_stonedge_auto.txt >> AstroLog.txt 2>&1
+/usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode masterbias -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1
+/usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode masterdark -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1
+/usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode masterflat -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1
 
 ### Run Pipeline
 ./PipeExecuteAutoDay.py >> AstroLog.txt 2>&1
