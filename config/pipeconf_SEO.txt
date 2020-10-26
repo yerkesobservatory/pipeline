@@ -64,7 +64,7 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    #stepslist = load, StepAddKeys, save, StepHotpix, save, StepRGB
+    stepslist = load, StepAddKeys, save, StepHotpix, save, StepRGB
 
 # Stoneedge Server Mode - for reducing data on the server
 #     Use this if you have sextractor and astrometry installed
