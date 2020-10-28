@@ -328,7 +328,7 @@ class StepSrcExtPy(StepParent):
         self.dataout.tableset(objects, tablename='SEP_objects')
         self.dataout.tableaddcol('rh', rh, 'SEP_objects')
         self.dataout.tableaddcol('kflux', flux_elip, 'SEP_objects')
-        self.dataout.tableaddcol('a2b', a2b, 'SEP_Objects')
+        self.dataout.tableaddcol('a2b', a2b, 'SEP_objects')
 
         #If save Image_Sub and Background are true, this saves them as an HDU
         if self.getarg('save_background'):
