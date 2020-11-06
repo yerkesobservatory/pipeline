@@ -84,58 +84,13 @@ class StepFluxCal(StepParent):
         """
         ### Preparation
         binning = self.datain.getheadval('XBIN')
-        '''
-        ### Run Source Extractor
-        # Make sure input data exists as file
-        if not os.path.exists(self.datain.filename) :
-            self.datain.save()
-        # Make catalog filename
-        catfilename = self.datain.filenamebegin
-        if catfilename[-1] in '._-': catfilename += 'sex_cat.fits'
-        else: catfilename += '.sex_cat.fits'
-        # Make background filename (may not be used - see below)
-        bkgdfilename = self.datain.filenamebegin
-        if bkgdfilename[-1] in '._-': bkgdfilename += 'SxBkgd.fits'
-        else: bkgdfilename += '_SxBkgd.fits'
-        self.log.debug('Sextractor catalog filename = %s' % catfilename)
-        # Make command string
-        command = self.getarg('sx_cmd') % (self.datain.filename)
-        command += ' ' + self.getarg('sx_options')
-        command += ' -c ' + os.path.expandvars(self.getarg('sx_confilename'))
-        command += ' -CATALOG_NAME ' + catfilename
-        command += ' -PARAMETERS_NAME ' + os.path.expandvars(self.getarg('sx_paramfilename'))
-        command += ' -FILTER_NAME ' + os.path.expandvars(self.getarg('sx_filterfilename'))
-        # Still make backgroundimage so you can subtract it below
-        command += ' -CHECKIMAGE_TYPE BACKGROUND'
-        command += ' -CHECKIMAGE_NAME ' + bkgdfilename
-        # Call process
-        self.log.debug('running command = %s' % command)
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT)
-        output, error = process.communicate()
-        if self.getarg('verbose'):
-            self.log.debug(output)
-        #subprocess.check_call(command)
-        ### Extract catalog from source extractor and clean up dataset
-        # Use catalog from sourse extrator (test.cat)
-        seo_catalog = astropy.table.Table.read(catfilename, format="fits", hdu='LDAC_OBJECTS')
-        seo_Mag = -2.5*np.log10(seo_catalog['FLUX_AUTO'])
-        seo_MagErr = (2.5/np.log(10)*seo_catalog['FLUXERR_AUTO']/seo_catalog['FLUX_AUTO'])
-        # Select only the stars in the image: circular image and S/N > 10
-        elongation = (seo_catalog['FLUX_APER']-seo_catalog['FLUX_AUTO'])<250
-       = ((seo_catalog['FLUX_AUTO']/seo_catalog['FLUXERR_AUTO'])>10)
-       =  & (elongation) & ((seo_catalog['FLUX_AUTO']/seo_catalog['FLUXERR_AUTO'])<1000)
-        self.log.debug('Selected %d stars from Source Extrator catalog' % np.count_nonzero)
-        # Delete source extractor catalog is needed
-        if self.getarg('delete_cat'):
-            os.remove(catfilename)
-        '''
+
         # Import Values from Table created during Source Extraction
-        sep_catalog = self.datain.getarg('Low Threshold Sources')
+        sep_catalog = self.datain.tableget('Low Threshold Sources')
         X = sep_catalog['X']
         Y = sep_catalog['Y']
         seo_Mag = -2.5*np.log10(sep_catalog['Uncalibrated Flux'])
-        seo_MagErr = (2.5/np.log(10)*sep_catalog['Uncalibrated Flux Error']/seo_catalog['Unclaibrated Flux'])
+        seo_MagErr = (2.5/np.log(10)*sep_catalog['Uncalibrated Flux Error']/sep_catalog['Uncalibrated Flux'])
 
         ### Query and extract data from Guide Star Catalog
         # Get RA / Dec
