@@ -330,6 +330,8 @@ class StepSrcExtPy(StepParent):
         ### Make output data
         # Copy data from datain
         self.dataout = self.datain
+        #Use the BKG Subtracted Image as the new image, this is a cleaner image overall
+        self.dataout.image = image_sub
         #This is making a third table which includes all of objects and more for future use
         self.dataout.tableset(objects, tablename='SEP_objects')
         self.dataout.tableaddcol('rh', rh, 'SEP_objects')
