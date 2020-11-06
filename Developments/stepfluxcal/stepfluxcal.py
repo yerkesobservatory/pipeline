@@ -76,13 +76,6 @@ class StepFluxCal(StepParent):
                                'Percentile for BZERO value'])
         self.paramlist.append(['fitplot',False,
                                'Flag for making png plot of the fit'])
-        self.paramlist.append(['sourcetable',False,
-                               'Flag for making txt table of all sources'])
-        self.paramlist.append(['sourcetableformat','csv',
-                               'txt table format (see astropy.io.ascii for options)'])
-        self.paramlist.append(['savebackground',False,
-                               'Flag for saving a background image'])
-        # confirm end of setup
         self.log.debug('Setup: done')
 
     def run(self):
@@ -139,7 +132,7 @@ class StepFluxCal(StepParent):
         '''
         # Import Values from Table created during Source Extraction
         sep_catalog = self.datain.getarg('Low Threshold Sources')
-        X = sep_catalog.['X']
+        X = sep_catalog['X']
         Y = sep_catalog['Y']
         seo_Mag = -2.5*np.log10(sep_catalog['Uncalibrated Flux'])
         seo_MagErr = (2.5/np.log(10)*sep_catalog['Uncalibrated Flux Error']/seo_catalog['Unclaibrated Flux'])
@@ -256,13 +249,10 @@ class StepFluxCal(StepParent):
         #-bzero = np.median(image_array[mask])
         
         bscale = 3631. * 10 ** (b_ml_corr/2.5)
-        self.dataout.image = bscale * (self.dataout.image - bzero)
-        # Add sources and fitdata table
-        self.dataout.tableset(sources_table.data,'Sources',sources_table.header)
+        self.dataout.image = bscale * (self.datain.image)
+        # Add fitdata table
         self.dataout.tableset(fitdata_table.data,'Fit Data',fitdata_table.header)
-        # Remove background file if it's not needed
-        if not self.getarg('savebackground'):
-            os.remove(bkgdfilename)
+
         ### If requested make a plot of the fit and save as png
         if self.getarg('fitplot'):
             # Set up plot
@@ -291,24 +281,6 @@ class StepFluxCal(StepParent):
             pngname = self.dataout.filenamebegin + 'FCALplot.png'
             plt.savefig(pngname)
             self.log.debug('Saved fit plot under %s' % pngname)
-        ### If requested make a text file with the sources list
-        if self.getarg('sourcetable'):
-
-            # Save region file
-
-            filename = self.dataout.filenamebegin + 'FCALsources.reg'
-            with open(filename, 'w+') as f:
-                f.write("# Region file format: DS9 version 4.1\n")
-                f.write("""global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 image\n""")
-                for i in range(len(seo_catalog['ALPHA_J2000'])):
-                    f.write("circle(%.7f,%.7f,0.005) # text={%i}\n"%(seo_catalog['ALPHA_J2000'][i],seo_catalog['DELTA_J2000'][i],num[i]))
-
-            # Save the table
-            txtname = self.dataout.filenamebegin + 'FCALsources.txt'
-            ascii.write(self.dataout.tableget('Sources'),txtname,
-                        format = self.getarg('sourcetableformat'))
-            self.log.debug('Saved sources table under %s' % txtname)
-
 
 def residual(params, x, data, errors):
     """ Fitting function for lmfit
@@ -329,7 +301,7 @@ if __name__ == '__main__':
         --test : runs the functionality test i.e. pipestep.test()
         --loglevel=LEVEL : configures the logging output for a particular level
     """
-    StepFluxCalSex().execute()
+    StepFluxCal().execute()
 
 '''HISTORY:
 2018-09-019 - Started based on Amanda's code. - Marc Berthoud
