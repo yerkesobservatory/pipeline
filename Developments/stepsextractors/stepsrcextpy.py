@@ -292,6 +292,9 @@ class StepSrcExtPy(StepParent):
         cols.append(fits.Column(name='Uncalibrated Flux', format='D',
                                 array=flux_elip[seo_SN],
                                 unit='flux'))
+        cols.append(fits.Column(name='Uncalibrated Flux Error', format='D',
+                                array=fluxerr_elip[seo_SN],
+                                unit='flux'))
         cols.append(fits.Column(name='Half-light Radius', format='D',
                                 array=rh[seo_SN], unit='pixel'))
 
@@ -310,6 +313,9 @@ class StepSrcExtPy(StepParent):
                                 unit='pixel'))
         colsb.append(fits.Column(name='Uncalibrated Flux', format='D',
                                 array=flux_elipb[seo_SNB],
+                                unit='flux'))
+        colsb.append(fits.Column(name='Uncalibrated Flux Error', format='D',
+                                array=fluxerr_elipb[seo_SNB],
                                 unit='flux'))
         colsb.append(fits.Column(name='Half-light Radius', format='D',
                                 array=rhb[seo_SNB], unit='pixel'))
