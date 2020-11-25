@@ -20,7 +20,7 @@
 """
 import os # os library
 import sys # sys library
-import numpy # numpy library
+import numpy as np # numpy library
 import logging # logging object library
 from astropy.io import fits #package to recognize FITS files
 from darepype.drp import DataFits # pipeline data object class
@@ -240,10 +240,10 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         # Divide by the flat
         flat_corrected = image.copy()
         
-        flat_mean = flat.mean()
+        flat_median = np.median(flat)
 
         # Normalize the flat.
-        flat_normed = flat / flat_mean
+        flat_normed = flat / flat_median
 
         # divide through the flat
         flat_corrected = image / flat_normed
@@ -292,9 +292,6 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         # in the config file, set the 'intermediate' variable to either T or F
         # to enable saving of intermediate steps as additional HDUs
         save_intermediate_steps = self.getarg('intermediate')
-
-        # # Set self.dataout with configuration object of self.datain.
-        # self.dataout = DataFits(config=self.datain.config)
         
         # Get the image to be corrected, convert to float, and find exposure time.        
         image = self.datain.image * 1.0
@@ -318,18 +315,17 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         # Apply flat correction to image
         flat_correct = self.flat_correct(dark_subtracted, self.flat)
         
+        # Copy corrected image into self.dataout
+        self.dataout.image = flat_correct
+        
+        # Add bias, dark, and flat files to History
+        self.dataout.setheadval('HISTORY', 'BIAS: %s' % self.biasname)
+        self.dataout.setheadval('HISTORY', 'DARK: %s' % self.darkname)
+        self.dataout.setheadval('HISTORY', 'FLAT: %s' % self.flatname)
+
         # if saving intermediate steps, save as individual HDUs
         # if not, the final image should be saved as the primary image
-        if (save_intermediate_steps):
-            dataname = "FLAT_CORRECT"
-            self.dataout.imageset(flat_correct, imagename=dataname)
-            self.dataout.setheadval('HISTORY','BIAS: %s' % self.biasname,
-                                dataname=dataname)
-            self.dataout.setheadval('HISTORY','DARK: %s' % self.darkname,
-                                dataname=dataname)
-            self.dataout.setheadval('HISTORY','FLAT: %s' % self.flatname,
-                                dataname=dataname)
-            
+        if (save_intermediate_steps):         
             dataname = "DARK_SUBTRACT"
             self.dataout.imageset(dark_subtracted, imagename=dataname)
             self.dataout.setheadval('HISTORY','BIAS: %s' % self.biasname,
@@ -341,17 +337,6 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
             self.dataout.imageset(bias_subtracted, imagename=dataname)
             self.dataout.setheadval('HISTORY','BIAS: %s' % self.biasname,
                                     dataname=dataname)
-            
-
-        else:
-            # Copy corrected image into self.dataout
-            self.dataout.image = flat_correct
-            self.dataout.header = self.datain.header
-            
-            # Add bias, dark, and flat files to History
-            self.dataout.setheadval('HISTORY', 'BIAS: %s' % self.biasname)
-            self.dataout.setheadval('HISTORY', 'DARK: %s' % self.darkname)
-            self.dataout.setheadval('HISTORY', 'FLAT: %s' % self.flatname)
 
         # Set the base filename for the DataFits output object.
         self.dataout.filename = self.datain.filename
