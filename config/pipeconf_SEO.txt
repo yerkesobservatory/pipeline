@@ -20,10 +20,10 @@
 #   in the corresponding configuration parameters below (but this makes life easier)
 [envars]
     # Master and Raw Bias, Dark, Flat Folder - use with [biasdarkflat] below
-    MASTER_BDF_FOLDER = C:\\Users\\ordelore\\Documents\\SEO\\content\\data\\masterset
-    RAW_BDF_FOLDER = C:\\Users\\ordelore\\Documents\\SEO\\content\\data\\masterset
+    MASTER_BDF_FOLDER = /path/to/master/bias/dark/flats 
+    RAW_BDF_FOLDER = /path/to/raw/bias/dark/flats
     # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
-    SEO_AUXFOLDER = C:\\Users\\ordelore\\Documents\\SEO\\content\\pipeline\\auxfiles
+    SEO_AUXFOLDER = /path/to/auxfiles
 
 ### Data Section: information on data objects and file names -h
 [data]
@@ -64,7 +64,7 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    #stepslist = load, StepAddKeys, save, StepHotpix, save, StepRGB
+    stepslist = load, StepAddKeys, save, StepHotpix, save, StepRGB
 
 # Stoneedge Server Mode - for reducing data on the server
 #     Use this if you have sextractor and astrometry installed
@@ -73,7 +73,7 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepRGB
+    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
 
 # Master Bias Mode - to make master bias files
 [mode_masterbias]
@@ -137,7 +137,7 @@
     #datalist = R array, T array
     # Reload: Set to True to look for new bias files for every input
     reload = T
-    intermediate = T
+    intermediate = F
 
 # Hotpix step configuration
 [hotpix]
@@ -185,9 +185,11 @@
 # RGB step configuration
 [makergb]
     # percentile value for miniumum scaling (in decimal form)
-    minpercent = 0.5
+    minpercent = 0.05
     # percentile value for maximum scaling
     maxpercent = 0.999
+    # Flag to enable trilogy image scaling
+    usetrilogy = True
 
 # MasterBias step configuration
 [masterbias]
