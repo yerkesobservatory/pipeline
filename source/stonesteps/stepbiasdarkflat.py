@@ -366,6 +366,8 @@ if __name__ == '__main__':
     StepBiasDarkFlat().execute()
     
 '''HISTORY:
+2020-12-04 - Reintroduce the normalized flat code to maintain continuity with prior versions
+             of the BDF step. Reorganized the order of saving the HDUs  - Lorenzo Orders
 2020-09-22 - Eliminate unnecesary code and update documentation - Al Harper and Lorenzo Orders
 2020-09-19 - Removed code to normalize flat and made other minor edits - Al Harper
 2020-07-26 - Saving intermediate BDF steps and removal of CCDProc code - Lorenzo Orders
