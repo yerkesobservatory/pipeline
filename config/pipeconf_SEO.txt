@@ -137,6 +137,7 @@
     #datalist = R array, T array
     # Reload: Set to True to look for new bias files for every input
     reload = T
+    intermediate = F
 
 # Hotpix step configuration
 [hotpix]
