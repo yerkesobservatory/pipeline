@@ -125,8 +125,6 @@ class StepSrcExtPy(StepParent):
                                 'factor multiplied into kronrad to get radius for integration'])
         self.paramlist.append(['save_background', True,
                                 'option to save the background as a seprate hdu'])
-        self.paramlist.append(['save_imagesub', False,
-                                'option to save the background subtracted image as a seprate hdu'])
         # confirm end of setup
         self.log.debug('Setup: done')
 
@@ -329,24 +327,22 @@ class StepSrcExtPy(StepParent):
         ### Make output data
         # Copy data from datain
         self.dataout = self.datain
-        #Use the BKG Subtracted Image as the new image, this is a cleaner image overall
-        self.dataout.image = image_sub
         #This is making a third table which includes all of objects and more for future use
         self.dataout.tableset(objects, tablename='SEP_objects')
         self.dataout.tableaddcol('rh', rh, 'SEP_objects')
         self.dataout.tableaddcol('kflux', flux_elip, 'SEP_objects')
         self.dataout.tableaddcol('a2b', a2b, 'SEP_objects')
 
-        #If save Image_Sub and Background are true, this saves them as an HDU
+        # This saves the background subtracted image for use in Fluxcal
+        dataname = "IMSUB"
+        self.dataout.imageset(image_sub, imagename=dataname)
+        self.dataout.setheadval('HISTORY', 'IMSUB',
+                                dataname=dataname)
+        #If save Background are true, this saves it as an HDU
         if self.getarg('save_background'):
             dataname = "BACKGROUND"
             self.dataout.imageset(bkg_image, imagename=dataname)
             self.dataout.setheadval('HISTORY', 'BACKGROUND', 
-                                    dataname=dataname)
-        if self.getarg('save_imagesub'):
-            dataname = "IMSUB"
-            self.dataout.imageset(image_sub, imagename=dataname)
-            self.dataout.setheadval('HISTORY', 'IMSUB',
                                     dataname=dataname)
         #Add other headers and tables
         self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)') 

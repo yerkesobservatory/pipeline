@@ -202,16 +202,25 @@ class StepFluxCal(StepParent):
         self.dataout.setheadval('PHOTZP', 8.9,  'Photometric zeropoint MAG=-2.5*log(data)+PHOTZP')
         self.dataout.setheadval('BUNIT', 'Jy/pixel', 'Units for the data')
         
+
         # Scale the image using calculated b_ml_corr
-        image_background = self.datain.imageget("BACKGROUND")
+
+        image_sub = self.datain.imageget("IMSUB")
+        image = self.datain.image
+        background = image-image_sub
         #bzero = np.nanpercentile(self.dataout.image,self.getarg('zeropercent'))
-        bzero = image_background
+        bzero = background
         #-- Alternative bzero idea:
         #-mask = image_array < np.percentile(image,90)
         #-bzero = np.median(image_array[mask])
         
         bscale = 3631. * 10 ** (b_ml_corr/2.5)
-        self.dataout.image = bscale * (self.datain.image)
+        self.dataout.image = bscale * (image)
+
+        dataname = "CALIMSUB"
+        self.dataout.imageset((image - background)*bscale, imagename=dataname)
+        self.dataout.setheadval('HISTORY', 'CALIMSUB',
+                                dataname=dataname)
         # Add fitdata table
         self.dataout.tableset(fitdata_table.data,'Fit Data',fitdata_table.header)
 
