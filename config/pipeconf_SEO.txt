@@ -64,7 +64,7 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    #stepslist = load, StepAddKeys, save, StepHotpix, save, StepRGB
+    stepslist = load, StepAddKeys, save, StepHotpix, save, StepRGB
 
 # Stoneedge Server Mode - for reducing data on the server
 #     Use this if you have sextractor and astrometry installed
@@ -73,7 +73,7 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepRGB
+    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
 
 # Master Bias Mode - to make master bias files
 [mode_masterbias]
@@ -137,6 +137,7 @@
     #datalist = R array, T array
     # Reload: Set to True to look for new bias files for every input
     reload = T
+    intermediate = F
 
 # Hotpix step configuration
 [hotpix]
@@ -184,9 +185,11 @@
 # RGB step configuration
 [makergb]
     # percentile value for miniumum scaling (in decimal form)
-    minpercent = 0.5
+    minpercent = 0.05
     # percentile value for maximum scaling
     maxpercent = 0.999
+    # Flag to enable trilogy image scaling
+    usetrilogy = True
 
 # MasterBias step configuration
 [masterbias]
