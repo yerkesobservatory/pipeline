@@ -193,8 +193,7 @@ class StepFluxCal(StepParent):
         c = fits.ColDefs(cols)
         fitdata_table = fits.BinTableHDU.from_columns(c)
         ### Make output data
-        plt.hist(seo_Mag)
-        plt.savefig("test.png")
+
         # Copy data from datain
         self.dataout = self.datain
         # Add Photometric Zero point magnitude
