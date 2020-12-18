@@ -123,7 +123,7 @@ class StepSrcExtPy(StepParent):
                                 'deblend threshold for source extration'])
         self.paramlist.append(['phot_kronf', 2.5,
                                 'factor multiplied into kronrad to get radius for integration'])
-        self.paramlist.append(['save_background', False,
+        self.paramlist.append(['save_background', True,
                                 'option to save the background as a seprate hdu'])
         self.paramlist.append(['save_imagesub', False,
                                 'option to save the background subtracted image as a seprate hdu'])
@@ -172,7 +172,7 @@ class StepSrcExtPy(StepParent):
         extract_err = bkg_rms
         #Extract sources from the subtracted image. It extracts a low threshold list and a high threshold list
         sources = sep.extract(image_sub, extract_thresh, err=extract_err, deblend_nthresh= deblend_nthresh)
-        sourcesb= sep.extract(image_sub, extract_thresh*bright_factor, err=extract_err)
+        sourcesb= sep.extract(image_sub, extract_thresh*bright_factor, err=extract_err, deblend_nthresh= deblend_nthresh)
 
         ### Sort sources by descending isophotal flux. (Taken from Dr. Harper's Explore SEP Notebook)
         ind = np.argsort(sources['flux'])
@@ -257,18 +257,17 @@ class StepSrcExtPy(StepParent):
         semiminor = objects['b'] < 1.0
         smallmoment = (semimajor) & (semiminor)
         elong = a2b<elim
-        seo_SN = (elong) & (smallmoment) & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip != 0) & (flux_elip != 0) 
+        seo_SN = (elong)  & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip > 0) & (flux_elip > 0) 
 
-        #Now do this for the low threshold sources
+        #Now do this for the high threshold sources
         elongb = (objectsb['a']/objectsb['b'])<elim
         semimajorb = (objectsb['a']) < 1.0
         semiminorb = (objectsb['b']) < 1.0
         smallmomentb = (semimajorb) & (semiminorb)
-        seo_SNB = (elongb) & (smallmomentb) & ((flux_elipb/fluxerr_elipb)<1000) & (fluxerr_elipb != 0) & (flux_elipb != 0)
+        seo_SNB = (elongb)  & ((flux_elipb/fluxerr_elipb)<1000) & (fluxerr_elipb > 0) & (flux_elipb >0)
 
-
-        self.log.debug('Selected %d low thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
-        self.log.debug('Selected %d high thershold stars from Source Extrator catalog' % np.count_nonzero(seo_SNB))
+        self.log.debug('Selected %d low threshold stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
+        self.log.debug('Selected %d high threshold stars from Source Extrator catalog' % np.count_nonzero(seo_SNB))
 
         #Calculate mean RH, its STD, and mean Elongation to report in header
         rhmean, rhstd = np.nanmean(rh[seo_SN]), mad_std(rh[seo_SN], ignore_nan = True)
@@ -353,8 +352,8 @@ class StepSrcExtPy(StepParent):
         self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)') 
         self.dataout.setheadval ('RHALFSTD', rhstd, 'STD of masked mean of half-power radius')
         self.dataout.setheadval ('ELONG',elmean, 'Mean elong of accepted sources')
-        self.dataout.tableset(sources_table.data,'Low Threshold Sources',sources_table.header)
-        self.dataout.tableset(sourceb_table.data, 'High Threshold Sources', sourceb_table.header)
+        self.dataout.tableset(sources_table.data,'LTS',sources_table.header)
+        self.dataout.tableset(sourceb_table.data, 'HTS', sourceb_table.header)
         self.dataout.setheadval ('ETHRESH', extract_thresh, 'Extraction Thershold for Low Thershold Table')
         self.dataout.setheadval ('BFACTOR', bright_factor, 'Multiplier to create High Threshold Table')
        

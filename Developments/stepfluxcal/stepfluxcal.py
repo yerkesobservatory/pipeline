@@ -29,6 +29,7 @@ from astropy.io import ascii
 from astropy.coordinates import SkyCoord # To make RA/Dec as float
 from astropy.wcs.utils import pixel_to_skycoord
 from astropy import units as u # To help with SkyCoord
+from astropy import wcs
 import matplotlib # to make plots
 matplotlib.use('Agg') # Set pixel image
 import pylab as plt # pylab library for plotting
@@ -86,11 +87,17 @@ class StepFluxCal(StepParent):
         binning = self.datain.getheadval('XBIN')
 
         # Import Values from Table created during Source Extraction
-        sep_catalog = self.datain.tableget('Low Threshold Sources')
+        sep_catalog = self.datain.tableget('LTS')
         X = sep_catalog['X']
         Y = sep_catalog['Y']
         seo_Mag = -2.5*np.log10(sep_catalog['Uncalibrated Flux'])
-        seo_MagErr = (2.5/np.log(10)*sep_catalog['Uncalibrated Flux Error']/sep_catalog['Uncalibrated Flux'])
+        seo_MagErr = (2.5/np.log(10)*(sep_catalog['Uncalibrated Flux Error']/sep_catalog['Uncalibrated Flux']))
+
+        w = wcs.WCS(self.datain.header)
+        n1 = float(self.datain.header['NAXIS1']/2)
+        n2 = float(self.datain.header['NAXIS2']/2)
+        ra, dec = w.all_pix2world(X,Y, 0)
+
 
         ### Query and extract data from Guide Star Catalog
         # Get RA / Dec
@@ -128,7 +135,7 @@ class StepFluxCal(StepParent):
         self.log.debug('Received %d entries from Guide Star Catalog' % len(GSC_RA))
         ### Mach Guide Star Catalog data with data from Source Extractor
         # Do the matching
-        seo_radec = pixel_to_skycoord(xp = X, yp = Y, wcs = center_coordinates)
+        seo_radec = SkyCoord(ra = ra*u.deg, dec = dec*u.deg)
         GSC_radec = SkyCoord(ra=GSC_RA*u.deg, dec=GSC_DEC*u.deg)
         idx, d2d, d3d = GSC_radec.match_to_catalog_sky(seo_radec)
         # only select objects less than 0.025 away in distance, get distance value
@@ -165,8 +172,7 @@ class StepFluxCal(StepParent):
         self.log.info('Fitted offset is %f mag, fitted slope is %f' % (b_ml, m_ml) )
         b_ml_corr = b_ml + (m_ml-1) * np.median(GSC_Mag[mask])
         self.log.info('Corrected offset is %f mag' % b_ml_corr)
-        '''
-        '''
+        
         ### Make table with data which was fit
         # Collect data columns
         cols = []
@@ -187,6 +193,8 @@ class StepFluxCal(StepParent):
         c = fits.ColDefs(cols)
         fitdata_table = fits.BinTableHDU.from_columns(c)
         ### Make output data
+        plt.hist(seo_Mag)
+        plt.savefig("test.png")
         # Copy data from datain
         self.dataout = self.datain
         # Add Photometric Zero point magnitude
@@ -196,7 +204,7 @@ class StepFluxCal(StepParent):
         self.dataout.setheadval('BUNIT', 'Jy/pixel', 'Units for the data')
         
         # Scale the image using calculated b_ml_corr
-        image_background = fits.open(bkgdfilename)[0].data
+        image_background = self.datain.imageget("BACKGROUND")
         #bzero = np.nanpercentile(self.dataout.image,self.getarg('zeropercent'))
         bzero = image_background
         #-- Alternative bzero idea:
