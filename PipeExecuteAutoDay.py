@@ -110,7 +110,7 @@ def execute():
         #result = pipe(imagelist)
         try:
             #pass
-            result = pipe(imagelist, pipemode = 'seo_server')
+            result = pipe(imagelist, pipemode = 'seo_server',force=True)
         except Exception as e:
             log.warning("Pipeline for object = %s returned Error" % entry)
             log.warning('Found Error = %s' % repr(e))

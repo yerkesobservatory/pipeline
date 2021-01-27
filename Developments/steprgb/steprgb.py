@@ -3,7 +3,7 @@
 
     Code for StepRGB in pipeline: combines filters to colored image & adds a label
     
-    @author: M. Berthoud and A. Pal
+    @author: M. Berthoud, A. Pal, J. Lin
 """
 
 import os # os library
@@ -11,7 +11,8 @@ import numpy # numpy library
 import logging # logging object library
 import pylab # pylab library for creating rgb image
 import time # time library for dated folders
-from astropy.visualization import simple_norm
+from astropy.visualization import simple_norm # astropy library for image scaling
+from astropy.stats import sigma_clip # astropy library for trilogy image scaling
 from PIL import Image # image library for saving rgb file as JPEG
 from PIL import ImageFont # Libraries for adding a label to the color image
 from PIL import ImageDraw
@@ -66,7 +67,7 @@ class StepRGB(StepMOParent):
 		'Specifies the percentile for the minimum scaling'])
         self.paramlist.append(['maxpercent', 0.999,
 		'Specifies the percentile for the maximum scaling'])
-        self.paramlist.append(['filterorder', 'sii|i-band|h-alpha|r-band|clear|oiii|g-band',
+        self.paramlist.append(['filterorder', 'sii|i-band|h-alpha|r-band|oiii|g-band',
         'Specifies the filters to be used in this step from reddest to bluest. ' + 
         'Filters should be separated by the pipe (|) character. ' + 
         'Example: "i-band|r-band|g-band"'])
@@ -78,9 +79,19 @@ class StepRGB(StepMOParent):
         'Specifies optional folders to copy the finished .jpeg file to. ' +
         'Paths should be separated by the colon (:) character and can be ' +
         'time-formatted. ' +
-        r'Example: "~/myfiles:/data/images/StoneEdge/0.5meter/%Y/%Y-%m-%d'])
+        r'Example: "~/myfiles:/data/images/StoneEdge/0.5meter/%Y/%Y-%m-%d"'])
         self.paramlist.append(['createfolders', False,
         'Specifies whether nonexistent paths given as save folders should be created'])
+        self.paramlist.append(['usetrilogy', False,
+        'Specifies whether trilogy (https://www.stsci.edu/~dcoe/trilogy) ' +
+        'should be used for image scaling. ' +
+        'Requires scipy to be installed.'])
+        self.paramlist.append(['noiselum', [0.15,0.15,0.15],
+        'Specifies the noise intensity for trilogy scaling. ' +
+        'Can provide a single value for all channels or three comma-separated values for RGB.'])
+        self.paramlist.append(['useastroalign', False,
+        'Specifies whether astroalign should be used for image combination. ' +
+        'Requires astroalign to be installed.'])
 
     def run(self):
         """ Runs the combining algorithm. The self.datain is run
@@ -107,7 +118,6 @@ class StepRGB(StepMOParent):
             datain_filter_list = [element.getheadval('filter') for element in self.datain]
             used_filter_flags = [False] * len(self.datain)
 
-
             if len(filterprefs_list) != 3:
                 self.log.error('Invalid number of preferred filters provided (should be 3): ' + 
                                self.getarg('filterprefs'))
@@ -120,6 +130,7 @@ class StepRGB(StepMOParent):
                             used_filter_flags[j] = True
                             break
 
+            # Select missing filters from filterorder
             filterorder_walker = 0
             for i, channel in enumerate(datause):
                 if channel == None:
@@ -134,6 +145,7 @@ class StepRGB(StepMOParent):
                 elif channel.getheadval('filter') in filterorder_list:
                     filterorder_walker = filterorder_list.index(channel.getheadval('filter'))
                     
+            # Select missing filters from any remaining fits files
             for i, channel in enumerate(datause):
                 if channel == None:
                     for j, datain_filter in enumerate(datain_filter_list):
@@ -149,7 +161,7 @@ class StepRGB(StepMOParent):
         img = datause[0].image
         img1 = datause[1].image
         img2 = datause[2].image
-        
+
         ''' Finding Min/Max scaling values '''
         # Create a Data Cube with floats
         datacube = numpy.zeros((img.shape[0], img.shape[1], 3), dtype=float)
@@ -163,43 +175,114 @@ class StepRGB(StepMOParent):
         datacube.shape=(datalength,)
         datacube.sort()
         # Now use arrays for each filter to find separate min values
-        rarray = img.copy()
-        garray = img1.copy()
-        barray = img2.copy()
+        oned_channels = [img.copy(), img1.copy(), img2.copy()]
         # Shape and sort the arrays
         arrlength = img.shape[0] * img.shape[1]
-        rarray.shape=(arrlength,)
-        rarray.sort()
-        garray.shape=(arrlength,)
-        garray.sort()
-        barray.shape=(arrlength,)
-        barray.sort()
+        for arr in oned_channels:
+            arr.shape=(arrlength,)
+            arr.sort()
+        oned_channels = numpy.array(oned_channels)
+
         # Find the min/max percentile values in the data for scaling
         # Values are determined by parameters in the pipe configuration file
-        minpercent = int(arrlength * self.getarg('minpercent'))
-        maxpercent = int(datalength * self.getarg('maxpercent'))
+        minindex = int(arrlength * self.getarg('minpercent'))
         # Find the final data values to use for scaling from the image data
-        rminsv = rarray[minpercent]  #sv stands for "scalevalue"
-        gminsv = garray[minpercent]
-        bminsv = barray[minpercent]
-        maxsv = datacube[maxpercent]
-        self.log.info(' Scale min r/g/b: %f/%f/%f' % (rminsv,gminsv,bminsv))
-        self.log.info(' Scale max: %f' % maxsv)
-        # The same min/max values will be used to scale all filters
+        # sv stands for "scalevalue"
+        minsv = oned_channels[:, minindex]
+        self.log.info(' Scale min r/g/b: %f/%f/%f' % (minsv[0],minsv[1],minsv[2]))
+
+        if self.getarg('usetrilogy'):
+            # Trilogy scaling defines a separate max value for each channel
+            maxindex = int(arrlength * self.getarg('maxpercent'))
+            maxsv = oned_channels[:, maxindex]
+            self.log.info(' Scale max r/g/b: %f/%f/%f' % (maxsv[0],maxsv[1],maxsv[2]))
+        else:
+            # Old scaling uses a constant max value for each channel
+            maxindex = int(datalength * self.getarg('maxpercent'))
+            maxsv = datacube[maxindex]
+            self.log.info(' Scale max: %f' % maxsv)
         ''' Finished Finding scaling values	'''
 
         ''' Combining Function '''
         # Make new cube with the proper data type for color images (uint8)
-        # Use square root (sqrt) scaling for each filter
-        # log or asinh scaling is also available
-        #astropy.vidualizations.SqrtStretch()
         imgcube = numpy.zeros((img.shape[0], img.shape[1], 3), dtype='uint8')
-        minsv = [rminsv, gminsv, bminsv]
-        for i in range(3):
-            # Make normalization function
-            norm = simple_norm(datause[i].image, 'sqrt', min_cut = minsv[i], max_cut = maxsv)
-            # Apply it
-            imgcube[:,:,i] = norm(datause[i].image) * 255.
+
+        if self.getarg('usetrilogy'):
+            # Trilogy scaling uses log scaling constrained at three points
+            # Point 1 is the zero point -> scaled to 0
+            # Point 2 is the noise level (1 sigma above the sigma-clipped mean) -> scaled to noiselum
+            # Point 3 is a saturation level (user-defined) -> scaled to 1
+            # log function used is y = log10(k * (x - xo) + 1) / r
+            noisesv = numpy.empty(3)
+            for i, channel in enumerate(oned_channels):
+                clipped_channel = sigma_clip(channel)
+                noisesv[i] = numpy.mean(clipped_channel) + numpy.std(clipped_channel)
+
+            # Handling single float inputs and three-value inputs for noiselum
+            noiselum_param = self.getarg('noiselum')
+            if len(noiselum_param) == 3:
+                noiselum_list = noiselum_param
+            elif len(noiselum_param) == 1:
+                noiselum_list = noiselum_param * 3
+            else:
+                self.log.error('Invalid number of noiselums provided (should be 3 or 1): ' + 
+                            str(noiselum_param) +
+                            '. Setting noiselum to default value of 0.15 for all channels.')
+                noiselum_list = [0.15, 0.15, 0.15]
+            
+            # Solving for k and r must be done numerically
+            # We fit the log function by minimizing the RMSE at the three points
+            xarray = numpy.array([minsv, noisesv, maxsv])
+
+            def rmse(observed, expected):
+                return numpy.sqrt(numpy.mean(numpy.nan_to_num((observed - expected) ** 2, nan=100000.)))
+
+            def logy(x, xo, k, r):
+                return numpy.log10((k * (x - xo)) + 1) / r
+
+            def rmse_builder(x, noiselum):
+                return lambda kr: rmse(logy(x, x[0], kr[0], kr[1]), numpy.array([0, noiselum, 1]))
+
+            try:
+                from scipy.optimize import minimize
+            except:
+                self.log.error('Could not import scipy.optimize')
+
+            for i in range(3):
+                # Find parameters for normalization function
+                kr_res = minimize(rmse_builder(xarray[:, i], noiselum_list[i]), [0.001, 1], method='Nelder-Mead')
+                # Apply normalizaton function
+                imgcube[:,:,i] = logy(numpy.clip(datause[i].image, minsv[i], maxsv[i]), minsv[i], kr_res.x[0], kr_res.x[1]) * 255.
+
+        else:
+            # Old scaling uses square root (sqrt) scaling for each filter
+            # log or asinh scaling is also available
+            #astropy.vidualizations.SqrtStretch()
+            for i in range(3):
+                # Make normalization function
+                norm = simple_norm(datause[i].image, 'sqrt', min_cut = minsv[i], max_cut = maxsv)
+                # Apply it
+                imgcube[:,:,i] = norm(datause[i].image) * 255.
+
+
+        if self.getarg('useastroalign') == True:
+            ''' Astroalign image alignment '''
+            try:
+                import astroalign
+            except:
+                self.log.error('Could not import astroalign')
+            else:
+                # Align G and B channels to R channel
+                try:
+                    aligned_img1, footprint1 = astroalign.register(imgcube[:,:,1], imgcube[:,:,0])
+                    aligned_img2, footprint2 = astroalign.register(imgcube[:,:,2], imgcube[:,:,0])
+                except:
+                    self.log.error('astroalign alignment failed')
+                else:
+                    imgcube[:,:,1] = aligned_img1
+                    imgcube[:,:,2] = aligned_img2
+
+
         jpeg_dataout.image = imgcube
         # Create variable containing all the scaled image data
         imgcolor = Image.fromarray(jpeg_dataout.image, mode='RGB')
