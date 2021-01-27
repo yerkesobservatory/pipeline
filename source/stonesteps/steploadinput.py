@@ -67,6 +67,7 @@ class StepLoadInput(StepNIParent):
         infile = self.getarg('filelocation')
         inglob = (datetime.strftime(datetime.now(), infile))
         inglob = os.path.expandvars(inglob)
+        self.log.debug('Looking for files under %s' % inglob)
         indata = glob.glob(inglob)
         self.log.debug('Files found: %s' % indata)
         infilenameinclude = self.getarg('fileinclude').split('|')
