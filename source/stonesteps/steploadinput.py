@@ -64,9 +64,9 @@ class StepLoadInput(StepNIParent):
 
     def run(self, inpar = '', data = None, multi = False):
         # Loads all files base on glob, parameter 'filelocation'
-        infile = self.getarg('filelocation')
-        inglob = (datetime.strftime(datetime.now(), infile))
+        inglob = self.getarg('filelocation')
         inglob = os.path.expandvars(inglob)
+        inglob = datetime.strftime(datetime.now(), inglob)
         self.log.debug('Looking for files under %s' % inglob)
         indata = glob.glob(inglob)
         self.log.debug('Files found: %s' % indata)
