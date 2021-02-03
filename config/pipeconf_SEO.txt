@@ -81,7 +81,7 @@
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        filelocation = '$RAW_BDF_FOLDER/bias/bias*.fits'
+        filelocation = '$RAW_BDF_FOLDER/*/bias*RAW.fits'
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MBIAS|UNK|LOAD
     # Data group step configuration
@@ -95,7 +95,7 @@
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        filelocation = '$RAW_BDF_FOLDER/*/dark*.fits'
+        filelocation = '$RAW_BDF_FOLDER/*/dark*RAW.fits'
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MDARK|UNK|LOAD
     # Data group step configuration
@@ -109,7 +109,7 @@
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
-        filelocation = '$RAW_BDF_FOLDER/flat/flat*.fits'
+        filelocation = '$RAW_BDF_FOLDER/*/flat*RAW.fits'
         # strings which must not be present in the filename for the file to be loaded, separate with |
         fileexclude = MFLAT|UNK|LOAD
     # Data group step configuration
@@ -157,7 +157,7 @@
     # Timeout for running astrometry (seconds)
     timeout = 300
     # Only search in indexes within 'searchradius' (degrees) of the field center given by --ra and --dec
-    searchradius = 5
+    searchradius = 90
 
 # Web Astrometry Step Configuration
 [astrometryweb]
