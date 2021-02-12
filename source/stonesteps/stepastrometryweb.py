@@ -96,7 +96,7 @@ class StepAstrometryWeb(StepParent):
                 hdu = self.datain.tableget(tb_name)
             else:
                 hdu = self.datain.tableget()
-            tbl = pd.DataFrame(np.array(hdu).byteswap(inplace=True).newbyteorder())
+            tbl = pd.DataFrame(np.array(hdu).byteswap(inplace=True).newbyteorder('='))
             col_names = ['ID', 'X_IMAGE', 'Y_IMAGE', 'FLUX']
             [col_names.append('PLACEHOLDER' + str(i)) for i in range(len(tbl.columns) - 4)]
             tbl.columns = col_names
