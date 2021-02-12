@@ -52,6 +52,9 @@ class StepSortObs(StepParent):
         ### Set Parameter list
         # Clear Parameter list
         self.paramlist = []
+        # Append Parameters
+        self.paramlist.append(['valid_filters', ['r-band', 'g-band', 'i-band', 'h-alpha', 'sii', 'oiii', 'clear'],
+                               'List of filters that the telescope uses'])
         # Confirm end of setup
         self.log.debug('Setup: done')
 
@@ -59,8 +62,7 @@ class StepSortObs(StepParent):
         # dataout will be identical to datain except for filepath
         self.dataout = self.datain.copy()
         
-        valid_filters = ['r-band', 'g-band', 'i-band', 'h-alpha', 'sii', 'oiii', 'clear']
-
+        valid_filters = self.getarg('valid_filters')
         # Using for loop w/ valid_filters ensures no overlapping matching regex's
         for fltr in valid_filters:
             # Regex matches object_filter_......fits  to get the name of observed object
