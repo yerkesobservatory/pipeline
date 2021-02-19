@@ -53,8 +53,8 @@ class StepSortObs(StepParent):
         # Clear Parameter list
         self.paramlist = []
         # Append Parameters
-        self.paramlist.append(['valid_filters', ['r-band', 'g-band', 'i-band', 'h-alpha', 'sii', 'oiii', 'clear'],
-                               'List of filters that the telescope uses'])
+        self.paramlist.append(['pattern', '(^.+_([gri]-band|oiii|sii|clear|h-alpha))',
+                               'Regex pattern used to get name by matching name_filter'])
         # Confirm end of setup
         self.log.debug('Setup: done')
 
@@ -62,25 +62,26 @@ class StepSortObs(StepParent):
         # dataout will be identical to datain except for filepath
         self.dataout = self.datain.copy()
         
-        valid_filters = self.getarg('valid_filters')
-        # Using for loop w/ valid_filters ensures no overlapping matching regex's
-        for fltr in valid_filters:
-            # Regex matches object_filter_......fits  to get the name of observed object
-            pattern = '^.+_' + fltr
-            try: 
-                orig_path = os.path.split(self.datain.filename)
-                obj_name = re.search(pattern, orig_path[1])[0].replace(('_' + fltr), '').strip()
-            except:
-                pass
+        # Regex matches object_filter_......fits  to get the name of observed object
+        pattern = self.getarg('pattern')
+        try: 
+            orig_path = os.path.split(self.datain.filename)
+            mtch = re.findall(pattern, orig_path[1])
+            # re.findall() returns a list of length 1 containing a tuple of length n = # of matches,
+            # so mtch[0][0] will be object_filter and mtch[0][1] will be filter based on the
+            # grouping specified in pattern
+            obj_name = mtch[0][0].replace(('_' + mtch[0][1]), '').strip()
+        except:
+            pass
+        else:
+            # If a folder matching the object name exists, place the file there. If not, 
+            # make a folder first and then place the file there.
+            new_path = os.path.join(os.path.split(orig_path[0])[0], obj_name)
+            if os.path.exists(new_path):
+                self.dataout.filename = os.path.join(new_path, orig_path[1])
             else:
-                # If a folder matching the object name exists, place the file there. If not, 
-                # make a folder first and then place the file there.
-                new_path = os.path.join(os.path.split(orig_path[0])[0], obj_name)
-                if os.path.exists(new_path):
-                    self.dataout.filename = os.path.join(new_path, orig_path[1])
-                else:
-                    os.mkdir(new_path)
-                    self.dataout.filename = os.path.join(new_path, orig_path[1])
+                os.mkdir(new_path)
+                self.dataout.filename = os.path.join(new_path, orig_path[1])
 
         self.log.debug('Run: Done')
 
