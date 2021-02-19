@@ -212,7 +212,7 @@ if __name__ == '__main__':
           --loglevel=LEVEL : configures the logging output for a particular level
           -h, --help : Returns a list of 
     """
-    StepLocalAstrometry().execute()
+    StepAstrometryLocal().execute()
 
 """ === History ===
 2018-10-12 MGB: - Add code to try different --downsample factors
