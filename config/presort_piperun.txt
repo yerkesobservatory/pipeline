@@ -1,0 +1,21 @@
+# Testdata PipeRun file
+# This is a COMMENT
+# pythonpath = /home/joshgarza/piperun3
+#pythonpath = /Users/josh/Documents/SEO/piperun3
+pythonpath = /data/scripts/DataReduction/Developments
+loglevel = DEBUG
+# logfile = /home/joshgarza/piperun3/logfile.txt
+#logfile = /Users/josh/Documents/SEO/piperun3/logfile.txt
+logfile = /data/scripts/DataReduction/PipeLineLog.txt
+pipemode = testsortobs
+#pipeconf = /home/joshgarza/pipeline/config/pipeconf_SEO.txt
+#pipeconf = /Users/josh/pipeline/pipeline/config/pipeconf_SEO.txt
+#/Users/josh/Documents/SEO/piperun3/dconf.txt
+pipeconf = /data/scripts/DataReduction/config/pipeconf_SEO.txt
+/data/scripts/DataReduction/config/presort_dconf.txt
+inputfiles = /data/images/StoneEdge/0.5meter/2021/2021-01-04/*/bias*
+#inputfiles = /Users/josh/Documents/SEO/Datasets/fits2/sortobstestdata/2021/2021-02-27/itzamna/M1_r-band_30s_bin2_200101_071421_itzamna_seo_0_HPX.fits
+# inputfiles = /data/images/StoneEdge/0.5meter/2020/2020-05-02/itzamna/*.fits
+# outputfolder = /data/images/StoneEdge/0.5meter/2020/2020-05-02/itzamna
+# inputfiles = /data/images/StoneEdge/0.5meter/%Y/%Y-%m-%d/itzamna/*.fits
+# inputfiles = /Users/josh/Documents/SEO/piperun3/M13_clear_30s_bin1_190812_054529_itzamna_seo_0_HPX.fits
