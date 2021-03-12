@@ -46,7 +46,7 @@ class StepSortObs(StepParent):
         self.name='sortobs'
         # Shortcut for pipeline reduction step and identifier for
         # saved file names.
-        self.procname = 'SRT'
+        self.procname = 'RAW'
         # Set Logger for this pipe step
         self.log = logging.getLogger('pipe.step.%s' % self.name)
         ### Set Parameter list
