@@ -137,7 +137,7 @@ class StepSrcExtPy(StepParent):
         ### Perform Source Extraction
         #Open data out of fits file for use in SEP
         psimage = self.datain.image
-        image = psimage.byteswap().newbyteorder()
+        image = psimage.byteswap(inplace=True).newbyteorder('=')
 
         #These variables are used for the background analysis. 
         #We grab the values from the paramlist

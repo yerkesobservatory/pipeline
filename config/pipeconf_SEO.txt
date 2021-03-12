@@ -11,7 +11,7 @@
 # General Section: configuration of the pipeline
 [general]
     # list of packages to look for pipe step modules (order matters)
-    steppacks = stonesteps, darepype.drp, darepype.utils
+    steppacks = darepype.drp, stonesteps, darepype.drp, darepype.utils
     # list of steps for unknown instrument mode
     stepslist = StepLoadStoneedge, StepDemod
 
