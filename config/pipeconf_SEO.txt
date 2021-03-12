@@ -11,7 +11,7 @@
 # General Section: configuration of the pipeline
 [general]
     # list of packages to look for pipe step modules (order matters)
-    steppacks = stonesteps, darepype.drp, darepype.utils
+    steppacks = darepype.drp, stonesteps, darepype.drp, darepype.utils
     # list of steps for unknown instrument mode
     stepslist = StepLoadStoneedge, StepDemod
 
@@ -66,6 +66,15 @@
     # list of steps
     stepslist = load, StepAddKeys, save, StepHotpix, save, StepRGB
 
+# Stoneedge Server Mode 2020 - for reducing data on the server from 2020
+#     Use this if you have sextractor and astrometry installed
+[mode_seo_server_2020]
+# List of keyword=values required in file header to select this pipeline mode
+    #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
+    datakeys = "OBSERVAT=StoneEdge"
+    # list of steps
+    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
+
 # Stoneedge Server Mode - for reducing data on the server
 #     Use this if you have sextractor and astrometry installed
 [mode_seo_server]
@@ -73,7 +82,8 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
+    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
+
 
 # Master Bias Mode - to make master bias files
 [mode_masterbias]
@@ -284,6 +294,40 @@
 	sourcetableformat = csv
 	# Flag for saving a background image
 	savebackground = False
+
+
+# SrcExtPy step configuration
+[srcextpy]
+    # Flag for making txt table of all sources
+    sourcetable = false
+    # Format for text table of all sources (see astropy.io.ascii for options)
+    sourcetableformat = csv
+    #Mask Threshold, a variable for the background detection that we don't use
+    maskthreshold = 0.0
+    #Background width and height, controls size of background boxes)
+    bkg_wh = 16, 16
+    #Filter width and height, controls filter width and height in boxes
+    bkg_filterwh = 3, 3
+    #Filter Threshold, a variable currently unused in background detection
+    bkg_fthreshold = 0.0
+    #Extraction Threshold, used during source extraction as the signal to noise ratio required to be recorded
+    ext_thresh = 2.0
+    #Brightness Factor, A factor used to multiply by the extract thresh to determine the threshold for the heigh pass list
+    ext_bfactor=10.0
+    #Number of objects used for threshold deblending during source extraction
+    ext_deblend= 256
+    #Kron Factor, value multiplied by kron radius to get the radius of integration.
+    phot_kronf = 2.5
+    #Option to save the extracted background image as an extra HDU
+    save_background = true
+
+#FluxCal Step configuration
+[fluxcal]
+	# Percentile for BZERO value
+	zeropercent = 45.0
+	# Flag for making png plot of the fit
+	fitplot = True
+
 
 ### Data Handling Section
 

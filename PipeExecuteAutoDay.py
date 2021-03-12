@@ -74,7 +74,8 @@ def execute():
     # -- guaranteed to only contain the actual object folders from topdirectory
     for Object in rawlist:
         if not '.' in Object:            # This line makes sure to exlude any stray files
-            objectlist.append(Object)
+            if not 'itzamna' in Object:  # Exclude unsorted files
+                objectlist.append(Object)
     log.info('Object list = %s' %repr(objectlist))
     # Run this loop for each object folder ('entry') found in objectlist
     # THIS IS THE MAIN LOOP OVER ALL OBSERVED OBJECTS
@@ -87,8 +88,9 @@ def execute():
         for image in os.listdir(fullentry):
             # Makes sure the images collected are FITS images
             # i.e. end with "seo.fits" not KEYS or WCS other reduction product
-            if not image[-8:] in ['seo.fits', 'RAW.fits']: # if file ends with "seo.fits" - regular SEO data
+            if not image[-8:] in ['SRT.fits','seo.fits', 'RAW.fits']: # if file ends with "seo.fits" - regular SEO data
                                                            # if file ends with "RAW.fits" - raw data
+                                                           # if file ends with "SRT.fits" - sorted data
 	            if not '_0.fits' in image[-7:]: # check if file ends with "0.fits" - queue data
                         # The following lines were deactivated 190830 as it would include *seo_0_SxBkgd.fits
                         #num = image[-14:-5]

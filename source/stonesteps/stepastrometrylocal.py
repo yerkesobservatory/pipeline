@@ -171,10 +171,13 @@ class StepAstrometryLocal(StepParent):
 
         ### Post processing
         # Read output file
-        self.dataout = DataFits(config=self.config)
+        self.dataout = self.datain.copy()
+        tempobj = DataFits(config=self.config)
         self.log.debug('Opening astrometry.net output file %s' % outnewname)
         try:
-            self.dataout.load(outnewname)
+            tempobj.load(outnewname)
+            self.dataout.header = tempobj.header
+            self.dataout.image = tempobj.image
             self.dataout.filename = self.datain.filename
         except Exception as error:
             self.log.error("Unable to open astrometry. output file = %s"
@@ -212,7 +215,7 @@ if __name__ == '__main__':
           --loglevel=LEVEL : configures the logging output for a particular level
           -h, --help : Returns a list of 
     """
-    StepLocalAstrometry().execute()
+    StepAstrometryLocal().execute()
 
 """ === History ===
 2018-10-12 MGB: - Add code to try different --downsample factors
