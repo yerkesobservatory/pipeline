@@ -73,7 +73,7 @@ class StepAstrometryWeb(StepParent):
                                'Image plate scale units'])
         self.paramlist.append(['api_key', 'XXXXXXXX',
                                'API key used for interfacing with Astrometry.net'])
-        self.paramlist.append(['table_name', '',
+        self.paramlist.append(['table_name', 'HTS',
                                'Name of table that should be used when solving'])
         # confirm end of setup
         self.log.debug('Setup: done')
@@ -96,11 +96,13 @@ class StepAstrometryWeb(StepParent):
                 hdu = self.datain.tableget(tb_name)
             else:
                 hdu = self.datain.tableget()
-            tbl = pd.DataFrame(np.array(hdu).byteswap(inplace=True).newbyteorder())
-            tbl.columns = ['ID', 'X_IMAGE', 'Y_IMAGE', 'FLUX', 'HL_RADIUS']
+            tbl = pd.DataFrame(np.array(hdu).byteswap(inplace=True).newbyteorder('='))
+            col_names = ['ID', 'X_IMAGE', 'Y_IMAGE', 'FLUX']
+            [col_names.append('PLACEHOLDER' + str(i)) for i in range(len(tbl.columns) - 4)]
+            tbl.columns = col_names
             tbl = tbl.sort_values(by='FLUX', axis=0, ascending=False)
         except:
-            pass
+            self.log.error('ERROR: Encountered error getting table data')
         else:
             nosourcetable = False
 
