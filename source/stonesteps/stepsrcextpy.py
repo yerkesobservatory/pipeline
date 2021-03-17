@@ -26,7 +26,7 @@
         An image which is the difference of the original image and the background image.
 
     For more info check out the read the docs for SEP: https://sep.readthedocs.io/
-    Authors: Amanda Pagul / Marc Berthoud/ Daniel Sharkey/ Al Harper
+    Authors: Amanda Pagul / Marc Berthoud/ Daniel Sharkey/ Al Harper/ Alexa Bukowski
 """
 import os # os library
 import sys # sys library
@@ -125,6 +125,8 @@ class StepSrcExtPy(StepParent):
                                 'factor multiplied into kronrad to get radius for integration'])
         self.paramlist.append(['save_background', True,
                                 'option to save the background as a seprate hdu'])
+        self.paramlist.append(['byte_swap', True,
+        	                    'says if the bytes should be swapped or not for the image'])
         # confirm end of setup
         self.log.debug('Setup: done')
 
@@ -137,7 +139,10 @@ class StepSrcExtPy(StepParent):
         ### Perform Source Extraction
         #Open data out of fits file for use in SEP
         psimage = self.datain.image
-        image = psimage.byteswap().newbyteorder()
+        if(self.getarg('byte_swap')):
+            image = psimage.byteswap().newbyteorder()
+        else:
+    	    image = psimage
 
         #These variables are used for the background analysis. 
         #We grab the values from the paramlist

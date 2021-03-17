@@ -320,6 +320,8 @@
     phot_kronf = 2.5
     #Option to save the extracted background image as an extra HDU
     save_background = true
+    #The image most likely wants the bytes to be swapped during analysis, but some formats do not want them swapped
+    byte_swap = true
 
 #FluxCal Step configuration
 [fluxcal]
