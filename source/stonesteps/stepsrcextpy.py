@@ -26,7 +26,7 @@
         An image which is the difference of the original image and the background image.
 
     For more info check out the read the docs for SEP: https://sep.readthedocs.io/
-    Authors: Amanda Pagul / Marc Berthoud/ Daniel Sharkey/ Al Harper
+    Authors: Amanda Pagul / Marc Berthoud/ Daniel Sharkey/ Al Harper/ Alexa Bukowski/ Alexandra Masegian
 """
 import os # os library
 import sys # sys library
@@ -125,6 +125,8 @@ class StepSrcExtPy(StepParent):
                                 'factor multiplied into kronrad to get radius for integration'])
         self.paramlist.append(['save_background', True,
                                 'option to save the background as a seprate hdu'])
+        #self.paramlist.append(['byte_swap', False,
+        # 	                    'says if the bytes should be swapped or not for the image'])
         # confirm end of setup
         self.log.debug('Setup: done')
 
@@ -135,9 +137,15 @@ class StepSrcExtPy(StepParent):
         ### Preparation
         binning = self.datain.getheadval('XBIN')
         ### Perform Source Extraction
-        #Open data out of fits file for use in SEP
+        # Open data out of fits file for use in SEP
         psimage = self.datain.image
+        # Byteswap if required
         image = psimage.byteswap(inplace=True).newbyteorder('=')
+        # Alternative byteswap - use this if line above doesn't work
+        #if(self.getarg('byte_swap')):
+        #    image = psimage.byteswap().newbyteorder()
+        #else:
+    	#    image = psimage
 
         #These variables are used for the background analysis. 
         #We grab the values from the paramlist
@@ -182,6 +190,11 @@ class StepSrcExtPy(StepParent):
         reverserbri = np.arange(len(indb) - 1,-1,-1)
         rev_indb = np.take_along_axis(indb, reverserbri, axis = 0)
         objectsb = np.take_along_axis(sourcesb, rev_indb, axis = 0)
+        
+        #Correcting instances of floating point errors in theta from SEP
+        #Other issues will be flagged with an invalid aperture parameters error
+        objects['theta'] = np.where(abs(objects['theta'] - np.pi/2) < 0.001, np.pi/2, objects['theta'])
+        objectsb['theta'] = np.where(abs(objectsb['theta'] - np.pi/2) < 0.001, np.pi/2, objectsb['theta'])
 
         ###Do basic uncalibrated measurments of flux for use in step astrometry. 
         '''
