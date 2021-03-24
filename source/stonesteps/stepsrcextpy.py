@@ -145,7 +145,7 @@ class StepSrcExtPy(StepParent):
         #if(self.getarg('byte_swap')):
         #    image = psimage.byteswap().newbyteorder()
         #else:
-    	#    image = psimage
+        #image = psimage
 
         #These variables are used for the background analysis. 
         #We grab the values from the paramlist
