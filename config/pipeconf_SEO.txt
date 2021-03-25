@@ -83,6 +83,7 @@
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
     stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
+    #stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
 
 # Sort Observation Mode
 # Distributes pictures in itzamna into one folder for each object. To be run before regular reduction.
