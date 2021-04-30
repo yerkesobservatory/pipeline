@@ -315,6 +315,20 @@
     # Outputfolder: Output directory location - default is the folder of the input files
     outputfolder = $MASTER_BDF_FOLDER/Flat
     
+# Overscan Cutting step configuration
+[overcut]
+    # Fraction of the detector colums which are overscaned
+    # i.e. number of overscaned columns = number of columns / this fraction
+    ovrscncolsfrac = 257
+
+# Resample step configuration
+[resample]
+    # Downsample factor - integer
+    samplefac = 2
+    # list of header keywords to divide by samplefac
+    divkeys = CRPIX1, CRPIX2
+    multkeys = PIXSIZE1, PIXSIZE2, CD1_1, CD1_2, CD2_1, CD2_2
+
 # SortObs step configuration
 [sortobs]
     # Valid Filters
