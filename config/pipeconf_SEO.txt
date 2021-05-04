@@ -82,8 +82,8 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
-    #stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
+    #stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
+    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
 
 # Sort Observation Mode
 # Distributes pictures in itzamna into one folder for each object. To be run before regular reduction.
@@ -92,8 +92,8 @@
     stepslist = StepLoadInput, StepSortObs, save
     [[loadinput]]
         # Filename for input, can contain glob symbols and datetime keys
-        filelocation = /data/images/StoneEdge/0.5meter/2021/%Y-%m-%d/itzamna/*RAW.fits
-        #filelocation = /data/images/StoneEdge/0.5meter/2021/2021-01-22/itzamna/*RAW.fits
+        filelocation = /data/images/StoneEdge/0.5meter/2021/%Y-%m-%d/itzamna/*RAW.fits.gz
+        #filelocation = /data/images/StoneEdge/0.5meter/2021/2021-04-20/itzamna/*RAW.fits.gz
         # List of strings which filename must not contain to be loaded (ignore BDFs)
         fileexclude = bias_|dark_|flat_
 
@@ -192,9 +192,9 @@
     daterange = 0.5
     # list of keys that need to match bias and data file
     #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
-    biasfitkeys = XBIN, DATE-OBS  
-    darkfitkeys = XBIN, DATE-OBS, EXPTIME
-    flatfitkeys = XBIN, FILTER, DATE-OBS
+    biasfitkeys = NAXIS1, XBIN, DATE-OBS  
+    darkfitkeys = NAXIS1, XBIN, DATE-OBS, EXPTIME
+    flatfitkeys = NAXIS1, XBIN, FILTER, DATE-OBS
     # list of input file datasets to flatten
     # - Expects None or a list of image HDU 
     #datalist = R array, T array
