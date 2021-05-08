@@ -19,7 +19,8 @@
 #   Instead of using environment variables you can also enter the information
 #   in the corresponding configuration parameters below (but this makes life easier)
 [envars]
-    # Master and Raw Bias, Dark, Flat Folder - use with [biasdarkflat] below
+    # Master and Raw Bias, Dark, Flat Folder
+    #   Uncomment and set these to use environment variables for [masterbias/dark/flat]
     #MASTER_BDF_FOLDER = /path/to/master/bias/dark/flats 
     #RAW_BDF_FOLDER = /path/to/raw/bias/dark/flats
     # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
