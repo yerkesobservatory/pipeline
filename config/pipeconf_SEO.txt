@@ -20,8 +20,8 @@
 #   in the corresponding configuration parameters below (but this makes life easier)
 [envars]
     # Master and Raw Bias, Dark, Flat Folder - use with [biasdarkflat] below
-    MASTER_BDF_FOLDER = /path/to/master/bias/dark/flats 
-    RAW_BDF_FOLDER = /path/to/raw/bias/dark/flats
+    #MASTER_BDF_FOLDER = /path/to/master/bias/dark/flats 
+    #RAW_BDF_FOLDER = /path/to/raw/bias/dark/flats
     # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
     SEO_AUXFOLDER = /path/to/auxfiles
 
@@ -82,8 +82,8 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    #stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
-    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
+    #stepslist = load, StepAddKeys, StepOverCut, StepBiasDarkFlat, StepHotpix, StepReSample, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
+    stepslist = load, StepAddKeys, StepOverCut, StepBiasDarkFlat, save, StepHotpix, StepReSample, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
 
 # Sort Observation Mode
 # Distributes pictures in itzamna into one folder for each object. To be run before regular reduction.
@@ -99,7 +99,7 @@
 
 # Master Bias Mode - to make master bias files
 [mode_masterbias]
-    stepslist = StepLoadInput, StepDataGroup, save
+    stepslist = StepLoadInput, StepOverCut, save, StepDataGroup, save
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
@@ -113,7 +113,7 @@
 
 # Master Dark Mode - to make master dark files
 [mode_masterdark]
-    stepslist = StepLoadInput, StepDataGroup, save
+    stepslist = StepLoadInput, StepOverCut, save, StepDataGroup, save
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
@@ -127,7 +127,7 @@
 
 # Master Flat Mode - to make master flat files
 [mode_masterflat]
-    stepslist = StepLoadInput, StepDataGroup, save
+    stepslist = StepLoadInput, StepOverCut, save, StepDataGroup, save
     # BDF load step configuration
     [[loadinput]]
         # location of bdf folder(s)/file(s) to be reduced
@@ -292,7 +292,7 @@
     daterange = 0.5
     # list of keys that need to match bias and data file
     #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
-    biasfitkeys = XBIN, DATE-OBS
+    biasfitkeys = NAXIS1, XBIN, DATE-OBS
     # list of input file datasets to flatten
     # - Expects None or a list of image HDU 
     #datalist = R array, T array
@@ -307,8 +307,8 @@
     daterange = 0.5
     # list of keys that need to match bias and data file
     #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
-    biasfitkeys = XBIN, DATE-OBS
-    darkfitkeys = XBIN, DATE-OBS
+    biasfitkeys = NAXIS1, XBIN, DATE-OBS
+    darkfitkeys = NAXIS1, XBIN, DATE-OBS
     # list of input file datasets to flatten
     # - Expects None or a list of image HDU 
     #datalist = R array, T array
