@@ -72,6 +72,7 @@ class StepOverCut(StepParent):
         self.dataout.setheadval('OVSCNMED',oscnmed,'Detector overscan columns median value')
         # Remove the overscan
         self.dataout.image = self.datain.image[:,:-overscancoln]
+        self.dataout.setheadval('NAXIS1',self.dataout.image.shape[1])
         
             
 if __name__ == '__main__':
