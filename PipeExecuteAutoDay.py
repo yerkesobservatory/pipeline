@@ -22,6 +22,7 @@ import sys
 import logging
 import traceback
 import datetime
+import re
 
 # Set system variables
 logfile = '/data/scripts/DataReduction/PipeLineLog.txt'
@@ -88,14 +89,18 @@ def execute():
         for image in os.listdir(fullentry):
             # Makes sure the images collected are FITS images
             # i.e. end with "seo.fits" not KEYS or WCS other reduction product
-            if not image[-8:] in ['SRT.fits','seo.fits', 'RAW.fits']: # if file ends with "seo.fits" - regular SEO data
+            # This searches files which end with .fits preceeded by '_0', 'RAW', 'seo' or 'SRT'
+            #     with optional '.gz' at the end
+            if not re.search(r'(_0|RAW|seo|SRT)\.fits(?:\.gz)?\Z',image):
+                continue
+            #if not image[-8:] in ['SRT.fits','seo.fits', 'RAW.fits']: # if file ends with "seo.fits" - regular SEO data
                                                            # if file ends with "RAW.fits" - raw data
                                                            # if file ends with "SRT.fits" - sorted data
-	            if not '_0.fits' in image[-7:]: # check if file ends with "0.fits" - queue data
+	            #if not '_0.fits' in image[-7:]: # check if file ends with "0.fits" - queue data
                         # The following lines were deactivated 190830 as it would include *seo_0_SxBkgd.fits
                         #num = image[-14:-5]
 	                #if not 'seo%s.fits' % num in image[-17:]: # check if file ends with "seoNUMBER.fits"
-                        continue
+                        #continue
             # Ignore dark, flat or bias images
             if 'dark' in image or 'flat' in image or 'bias' in image:
                 continue
