@@ -164,7 +164,7 @@
     # Timeout for running astrometry (seconds)
     timeout = 300
     # Only search in indexes within 'searchradius' (degrees) of the field center given by --ra and --dec
-    searchradius = 90
+    searchradius = 5
 
 # Web Astrometry Step Configuration
 [astrometryweb]
