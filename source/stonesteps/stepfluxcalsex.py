@@ -124,8 +124,9 @@ class StepFluxCalSex(StepParent):
         # Unzip the intput file if it's zipped
         infilename = self.datain.filename
         if infilename[-3:] in '.gz':
-            self.log.debug('Unzipping input file %s' % self.datain.filename)
-            os.system('gunzip -k ' + infilename)
+            gzcom = 'gunzip -c ' + infilename + ' > ' + infilename[:-3]
+            self.log.debug('Unzipping input file, running :%s' % gzcom)
+            os.system( gzcom )
             infilename = self.datain.filename[:-3]
         # Make command string
         command = self.getarg('sx_cmd') % (infilename)
