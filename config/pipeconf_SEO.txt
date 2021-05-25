@@ -194,7 +194,7 @@
     # list of keys that need to match bias and data file
     #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
     biasfitkeys = NAXIS1, XBIN, DATE-OBS  
-    darkfitkeys = NAXIS1, XBIN, DATE-OBS, EXPTIME
+    darkfitkeys = NAXIS1, XBIN, EXPTIME, DATE-OBS
     flatfitkeys = NAXIS1, XBIN, FILTER, DATE-OBS
     # list of input file datasets to flatten
     # - Expects None or a list of image HDU 
