@@ -138,14 +138,22 @@ class StepSrcExtPy(StepParent):
         binning = self.datain.getheadval('XBIN')
         ### Perform Source Extraction
         # Open data out of fits file for use in SEP
-        psimage = self.datain.image
+        psimage = self.datain.image.copy()
         # Byteswap if required
-        image = psimage.byteswap(inplace=True).newbyteorder('=')
-        # Alternative byteswap - use this if line above doesn't work
-        #if(self.getarg('byte_swap')):
-        #    image = psimage.byteswap().newbyteorder()
-        #else:
-        #image = psimage
+        self.log.debug("Initial max exponent value: %d" % np.max(np.abs(np.frexp(psimage)[1])))
+        if np.max(np.abs(np.frexp(psimage)[1])) > 15:
+            self.log.debug("Performing byte swap")
+            image = psimage.byteswap(inplace=True)
+        else:
+            self.log.debug("No byte swap required")
+            image = psimage
+
+        self.log.debug("Initial data type: %s" % psimage.dtype)
+        if psimage.dtype != np.float64:
+            self.log.debug("Converting to float64")
+            image = image.byteswap(inplace=True).newbyteorder()
+        else:
+            self.log.debug("No dtype swap required")
 
         #These variables are used for the background analysis. 
         #We grab the values from the paramlist
@@ -339,7 +347,7 @@ class StepSrcExtPy(StepParent):
         sourceb_table= fits.BinTableHDU.from_columns(cb)
         ### Make output data
         # Copy data from datain
-        self.dataout = self.datain
+        self.dataout = self.datain.copy()  
         #This is making a third table which includes all of objects and more for future use
         self.dataout.tableset(objects, tablename='SEP_objects')
         self.dataout.tableaddcol('rh', rh, 'SEP_objects')
