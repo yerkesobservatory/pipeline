@@ -79,8 +79,6 @@ class StepReSample(StepParent):
         for key in self.getarg('multkeys'):
             if not key in self.datain.header: continue
             self.dataout.setheadval(key,self.datain.getheadval(key)*sfac)
-        
-        
             
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
