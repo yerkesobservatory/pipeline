@@ -140,8 +140,9 @@ class StepSrcExtPy(StepParent):
         # Open data out of fits file for use in SEP
         psimage = self.datain.image.copy()
         # Byteswap if required
-        self.log.debug("Initial max exponent value: %d" % np.max(np.abs(np.frexp(psimage)[1])))
-        if np.max(np.abs(np.frexp(psimage)[1])) > 15:
+        maxexp = np.max(np.abs(np.frexp(psimage)[1]))
+        self.log.debug("Initial max exponent value: %d" % maxexp)
+        if maxexp > 15:
             self.log.debug("Performing byte swap")
             image = psimage.byteswap(inplace=True)
         else:
