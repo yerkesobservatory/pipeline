@@ -66,7 +66,6 @@ class StepReSample(StepParent):
         sfac = self.getarg('samplefac')
         imgsiz = self.datain.image.shape
         imgout = np.empty([imgsiz[0]//sfac,imgsiz[1]//sfac,4],dtype=self.datain.image.dtype)
-        print(imgsiz,sfac,imgout.shape,len(range(0,imgsiz[0]//sfac,sfac)))
         imgout[...,0] = self.datain.image[range(0,imgsiz[0],sfac),:][:,range(0,imgsiz[1],sfac)]
         imgout[...,1] = self.datain.image[range(1,imgsiz[0],sfac),:][:,range(0,imgsiz[1],sfac)]
         imgout[...,2] = self.datain.image[range(0,imgsiz[0],sfac),:][:,range(1,imgsiz[1],sfac)]
