@@ -1,1 +1,1 @@
-# Delta Configuration file for mgb
+# Delta Configuration file for mgb.
