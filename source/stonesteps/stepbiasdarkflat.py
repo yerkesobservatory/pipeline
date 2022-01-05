@@ -31,7 +31,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
     """ Pipeline Step Object to calibrate Bias/Dark/Flat files
     """
     
-    stepver = '0.2' # pipe step version
+    stepver = '1.0' # pipe step version
     
     def __init__(self):
         """ Constructor: Initialize data objects and variables
