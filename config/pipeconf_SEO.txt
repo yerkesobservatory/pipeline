@@ -231,6 +231,8 @@
     reload = True
     # Flat to save intermediate data products
     intermediate = False
+    # Crossover threshold for H/L combination
+    splice_thresh = 3000.0
 
 # FluxCal Step configuration
 [fluxcal]

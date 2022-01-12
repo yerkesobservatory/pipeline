@@ -106,10 +106,15 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
             'Set to True to look for new pfit/flat/dark files for every input'])
         self.paramlist.append(['intermediate', False,
             'Set to T to include the result of the step'])
+        self.paramlist.append(['splice_thresh', 3000.0,
+            'Change to alter the cutoff threshold for combining high- and low-gain images'])
         # Set root names for loading parameters with StepLoadAux.
         self.loadauxsetup('pfit')
         self.loadauxsetup('dark') 
         self.loadauxsetup('flat')
+        
+        # Get crossover threshold from config file.
+        splice_thresh = self.getarg('splice_thresh')
         
         # NOTE HERE: not entirely clear on how steploadaux works- can it take multiple strings, like bin1H and bin1L?
         
@@ -174,12 +179,10 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
         
         
         ### THE IMAGES ARE in DataFits objects
-        firstimage = self.datain[0]
-        secondimage = self.datain[1]
         
         # Get the filename to determine gain
-        filename1 = firstimage.__getattr__(name = 'filenamebegin')
-        filename2 = secondimage.__getattr__(name = 'filenamebegin')
+        filename1 = self.datain[0].filenamebegin
+        filename2 = self.datain[1].filenamebegin
         
         if 'bin1L' in filename1:
             dataH_df = self.datain[1]
@@ -220,7 +223,7 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
         ldatabdf = (((ldata-lbias) - (ldark - lbias))/lflat) * gain
         
         '''Combine high- and low-gain data into HDR image'''
-        lupper = np.where(ldatabdf > 3000.0) # Crossover threshold is currently hard-coded. Could change to a parameter.
+        lupper = np.where(ldatabdf > splice_thresh) # Choose all pixels in low-gain data above a certain threshold parameter
         ldata = ldatabdf.copy()
         HDRdata = hdatabdf.copy()
         HDRdata[lupper] = ldata[lupper]      # Replace upper range of high-gain image with low-gain * gain values
