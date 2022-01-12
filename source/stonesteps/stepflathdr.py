@@ -9,9 +9,19 @@
     It produces one output file.
     
     It uses StepLoadAux functions to call the following files:
-        - masterpfit: ADD HERE WHAT THIS FILE IS
-        - masterdark: ADD HERE WHAT THIS FILE IS
-        - masterflat: ADD HERE WHAT THIS FILE IS
+        - masterpfit (x2): A 3D image containing two planes, constructed by performing
+            a polynomial fit (currently linear) to a set of short-exposure darks.
+            The first image has pixel values which are the slopes of linear fits
+            to data from each pixel; the second image contains the intercepts and
+            takes the place of a zero-exposure for the CMOS camera. Here, the
+            intercept image is used for bias subtraction. Low and high gain.
+        - masterdark (x2): A matched pair of high- and low-gain master darks of 
+            the same exposure length as the raw sky image. MDARK or MMDARK files.
+        - masterflat: A file consisting of three HDUs. The first contains a 3D
+            flat-field image with a plane each for the high and low gain data
+            (used for flat correction); the second contains a gain ratio image
+            (used for creating an HDR output); the third contains a table of
+            statistical information about the flats (not used here).
     
     Authors: Carmen Choza, Al Harper, Marc Berthoud
 """
@@ -19,6 +29,9 @@
 from darepype.drp import DataFits # pipeline data object class
 from darepype.drp.stepmiparent import StepMIParent # pipestep Multi-Input parent
 from darepype.tools.steploadaux import StepLoadAux # pipestep steploadaux object class
+from astropy.convolution import Gaussian2DKernel, interpolate_replace_nans # For masking/replacing
+import scipy.ndimage as nd
+import numpy as np
 
 class StepFlatHdr(StepLoadAux, StepMIParent):
     """ Pipeline Step Object to calibrate Flatfield High Dynamic Range files
@@ -33,14 +46,22 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
         super(StepFlatHdr,self).__init__()
 
         # Pfit values
-        self.pfitloaded = False # indicates if bias has been loaded
-        self.pfit = None # Numpy array object containing bias values
-        self.pfitname = '' # name of selected bias file
+        self.hpfitloaded = False # indicates if bias has been loaded
+        self.hpfit = None # Numpy array object containing bias values
+        self.hpfitname = '' # name of selected bias file
+        
+        self.lpfitloaded = False # indicates if bias has been loaded
+        self.lpfit = None # Numpy array object containing bias values
+        self.lpfitname = '' # name of selected bias file
         
         # Dark values
-        self.darkloaded = False # indicates if dark has been loaded
-        self.dark = None # Numpy array object containing dark values
-        self.darkname = '' # name of selected dark file
+        self.hdarkloaded = False # indicates if high-gain dark has been loaded
+        self.hdark = None # Numpy array object containing high-gain dark values
+        self.hdarkname = '' # name of selected high-gain dark file
+        
+        self.ldarkloaded = False # indicates if low-gain dark has been loaded
+        self.ldark = None # Numpy array object containing low-gain dark values
+        self.ldarkname = '' # name of selected low-gain dark file
         
         # Flat values
         self.flatloaded = False # indicates if flat has been loaded
@@ -87,8 +108,10 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
             'Set to T to include the result of the step'])
         # Set root names for loading parameters with StepLoadAux.
         self.loadauxsetup('pfit')
-        self.loadauxsetup('dark')
+        self.loadauxsetup('dark') 
         self.loadauxsetup('flat')
+        
+        # NOTE HERE: not entirely clear on how steploadaux works- can it take multiple strings, like bin1H and bin1L?
         
         ## SET LOGGER AND FINISH UP
         
@@ -104,21 +127,33 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
         ### Load pfit, dark and flat files
         # Set loaded flags to false if reload flag is set
         if self.getarg('reload'):
-            self.pfitloaded = False
-            self.darkloaded = False
+            self.pfitlloaded = False
+            self.pfithloaded = False
+            self.hdarkloaded = False
+            self.ldarkloaded = False
             self.flatloaded = False
         # Load pfit file
-        if not self.pfitloaded:
-            self.pfitname = self.loadauxfile('pfit', multi = False)
-            self.pfit = DataFits(config = self.config)
-            self.pfit.load(self.pfitname)
-            self.pfitloaded = True
+        if not self.pfithloaded:
+            self.hpfitname = self.loadauxfile('pfit', multi = False)
+            self.hpfit = DataFits(config = self.config)
+            self.hpfit.load(self.hpfitname)
+            self.hpfitloaded = True
+        if not self.pfitlloaded:
+            self.lpfitname = self.loadauxfile('pfit', multi = False)
+            self.lpfit = DataFits(config = self.config)
+            self.lpfit.load(self.lpfitname)
+            self.lpfitloaded = True
         # Load mdark file
-        if not self.darkloaded:
-            self.darkname = self.loadauxfile('dark', multi = False)
-            self.dark = DataFits(config = self.config)
-            self.dark.load(self.darkname)
-            self.darkloaded = True
+        if not self.hdarkloaded:
+            self.hdarkname = self.loadauxfile('dark', multi = False)
+            self.hdark = DataFits(config = self.config)
+            self.hdark.load(self.hdarkname)
+            self.hdarkloaded = True
+        if not self.ldarkloaded:
+            self.ldarkname = self.loadauxfile('dark', multi = False)
+            self.ldark = DataFits(config = self.config)
+            self.ldark.load(self.ldarkname)
+            self.ldarkloaded = True
         # Load mflat file
         if not self.flatloaded:
             self.flatname = self.loadauxfile('flat', multi = False)
@@ -126,13 +161,80 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
             self.flat.load(self.flatname)
             self.flatloaded = True
         
+        # Get all relevant image data
+        hbias = self.hpfit.image[1]   # high-gain bias from polyfit
+        lbias = self.lpfit.image[1]   # low-gain bias from polyfit
+        
+        hdark = self.hdark.image      # high-gain dark
+        ldark = self.ldark.image      # low-gain dark
+        
+        gain = self.flat.imageget('gain ratio')    # high-gain flat divided by low-gain flat, ratio between modes
+        hflat = self.flat.image[1]                 # high-gain flat
+        lflat = self.flat.image[0]                 # low-gain flat
+        
+        
         ### THE IMAGES ARE in DataFits objects
-        #   IT IS UNCLEAR Which is high and which is low gain image.
         firstimage = self.datain[0]
         secondimage = self.datain[1]
         
+        # Get the filename to determine gain
+        filename1 = firstimage.__getattr__(name = 'filenamebegin')
+        filename2 = secondimage.__getattr__(name = 'filenamebegin')
+        
+        if 'bin1L' in filename1:
+            dataH_df = self.datain[1]
+            if 'RAW.fits' in filename1:
+                dL = self.datain[0]
+                self.ldata_df = DataFits(config = self.config)
+                ldata_df.header = dL.getheader(dL.imgnames[1]).copy()
+                del dL.header['xtension']
+                ldata_df.header.insert(0,('simple',True,'file does conform to FITS standard'))
+                ldata_df.imageset(dL.imageget(dL.imgnames[1]))
+            else:
+                dataL_df = self.datain[0]
+        else if 'bin1H' in filename1:
+            self.dataH_df = self.datain[0]
+            if 'RAW.fits' in filename1:
+                dL = self.datain[1]
+                self.ldata_df = DataFits(config = self.config)
+                ldata_df.header = dL.getheader(dL.imgnames[1]).copy()
+                del dL.header['xtension']
+                ldata_df.header.insert(0,('simple',True,'file does conform to FITS standard'))
+                ldata_df.imageset(dL.imageget(dL.imgnames[1]))
+            else:
+                ldata_df = self.datain[1]
+       
+        # Assuming all that worked and dataL_df now contains the low-gain file, dataH_df now contains the high-gain file:
+        
+        hdata = hdata_df.image
+        ldata = ldata_df.image
+        
+        '''Process high-gain data'''
+        
+        hdatabdf = ((hdata - hbias) - (hdark - hbias))/hflat
+        
+        # At this point there is a masking step that I can work in once we get the bare bones hammered out.
+        
+        '''Process low-gain data'''
+        
+        ldatabdf = (((ldata-lbias) - (ldark - lbias))/lflat) * gain
+        
+        '''Combine high- and low-gain data into HDR image'''
+        lupper = np.where(ldatabdf > 3000.0) # Crossover threshold is currently hard-coded. Could change to a parameter.
+        ldata = ldatabdf.copy()
+        HDRdata = hdatabdf.copy()
+        HDRdata[lupper] = ldata[lupper]      # Replace upper range of high-gain image with low-gain * gain values
+        
+        '''Downsample image by factor of two'''
+        outdata = nd.zoom(HDRdata,0.5)
+        
         # Make dataout
         self.dataout = self.datain[0].copy() # could also be new DataFits() or copy of datain[1]]
+        
+        self.dataout.image = outdata
+        self.dataout.header = hdata_df.header.copy()
+        
+        # self.dataout.filename = combined filename? take high gain and remove bin1H --> add HDRCOMBINE tag or something of the sort?
         
     def reset(self):
         """ Resets the step to the same condition as it was when it was
