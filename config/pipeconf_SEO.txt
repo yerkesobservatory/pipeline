@@ -217,8 +217,8 @@
     #     (default is '' indicating all data has to be re-reduced)
     fileidkey = ''
     
-# FlatHDR Step configuration
-[flathdr]
+# HDR Step configuration
+[hdr]
 	# Folder to look for pfits, darks and flats
 	pfitfile = $MASTER_BDF_FOLDER/Bias/*.fits
     darkfile = $MASTER_BDF_FOLDER/Dark/*.fits

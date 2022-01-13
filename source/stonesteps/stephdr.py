@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """ 
-    Pipestep Flat HDR (High Dynamic Range)
+    Pipestep HDR (High Dynamic Range)
 
     This module defines the pipeline step that corrects a pair raw image low
-    and high gain images files for detector dark and flat effects.
+    and high gain images files for detector dark, bias, and flat effects.
     
     The step requires as input two files, a low gain file and a high gain file.
     It produces one output file.
@@ -43,7 +43,7 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
         """ Constructor: Initialize data objects and variables
         """
         # Call superclass constructor (calls setup)
-        super(StepFlatHdr,self).__init__()
+        super(StepHdr,self).__init__()
 
         # Pfit values
         self.hpfitloaded = False # indicates if bias has been loaded
@@ -93,9 +93,9 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
         ### SET NAMES
 
         # Set internal name of the pipeline reduction step.
-        self.name='flathdr'
+        self.name='hdr'
         # Set procname.
-        self.procname = 'FLT'
+        self.procname = 'HDR'
         
         ## SET UP PARAMETER LIST AND DEFAULT VALUES
         
@@ -112,9 +112,6 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
         self.loadauxsetup('pfit')
         self.loadauxsetup('dark') 
         self.loadauxsetup('flat')
-        
-        # Get crossover threshold from config file.
-        splice_thresh = self.getarg('splice_thresh')
         
         # NOTE HERE: not entirely clear on how steploadaux works- can it take multiple strings, like bin1H and bin1L?
         
@@ -223,6 +220,7 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
         ldatabdf = (((ldata-lbias) - (ldark - lbias))/lflat) * gain
         
         '''Combine high- and low-gain data into HDR image'''
+        splice_thresh = self.getarg('splice_thresh') # Get crossover threshold
         lupper = np.where(ldatabdf > splice_thresh) # Choose all pixels in low-gain data above a certain threshold parameter
         ldata = ldatabdf.copy()
         HDRdata = hdatabdf.copy()
