@@ -22,6 +22,7 @@ import sys
 import logging
 import traceback
 import datetime
+import re
 
 # Set system variables
 logfile = '/data/scripts/DataReduction/PipeLineLog.txt'
@@ -74,7 +75,8 @@ def execute():
     # -- guaranteed to only contain the actual object folders from topdirectory
     for Object in rawlist:
         if not '.' in Object:            # This line makes sure to exlude any stray files
-            objectlist.append(Object)
+            if not 'itzamna' in Object:  # Exclude unsorted files
+                objectlist.append(Object)
     log.info('Object list = %s' %repr(objectlist))
     # Run this loop for each object folder ('entry') found in objectlist
     # THIS IS THE MAIN LOOP OVER ALL OBSERVED OBJECTS
@@ -85,17 +87,14 @@ def execute():
         fullentry = os.path.join(topdirectory,entry)
         # Run this loop for each file ('image') found in the object folder ('fullentry')
         for image in os.listdir(fullentry):
-            # Makes sure the images collected are FITS images
-            # i.e. end with "seo.fits" not KEYS or WCS other reduction product
-            if not image[-8:] in ['seo.fits', 'RAW.fits']: # if file ends with "seo.fits" - regular SEO data
-                                                           # if file ends with "RAW.fits" - raw data
-	            if not '_0.fits' in image[-7:]: # check if file ends with "0.fits" - queue data
-                        # The following lines were deactivated 190830 as it would include *seo_0_SxBkgd.fits
-                        #num = image[-14:-5]
-	                #if not 'seo%s.fits' % num in image[-17:]: # check if file ends with "seoNUMBER.fits"
-                        continue
+            # Makes sure the images collected are FITS images, i.e. avoid reducing
+            #     existing data reduction product
+            # This searches image filenames which end with .fits preceeded by
+            #     '_0', 'RAW', 'seo' or 'SRT' with optional '.gz' at the end
+            if not re.search(r'(_0|RAW|seo|SRT)\.fits(?:\.gz)?\Z',image):
+                continue
             # Ignore dark, flat or bias images
-            if 'dark' in image or 'flat' in image or 'bias' in image:
+            if 'dark' in image or 'flat' in image or 'bias' in image or 'pinpoint' in image:
                 continue
             # Adds the correct images to imagelist
             imagelist.append(os.path.join(fullentry,image))

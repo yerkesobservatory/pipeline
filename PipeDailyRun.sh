@@ -13,6 +13,13 @@ export PYTHONPATH=/data/scripts/DataReduction/source
 
 DRPath=/usr/local/lib/python3.6/site-packages/darepype
 
+### Remove TMP files
+rm /tmp/*
+
+### Run Sort Obs
+cd /data/scripts/DataReduction
+/usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode sortobs -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1
+
 ### Run Masters
 cd /data/scripts/DataReduction
 /usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode masterbias -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1

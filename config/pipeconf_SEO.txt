@@ -19,7 +19,8 @@
 #   Instead of using environment variables you can also enter the information
 #   in the corresponding configuration parameters below (but this makes life easier)
 [envars]
-    # Master and Raw Bias, Dark, Flat Folder - use with [biasdarkflat] below
+    # Master and Raw Bias, Dark, Flat Folder
+    #   Uncomment and set these to use environment variables for [masterbias/dark/flat]
     #MASTER_BDF_FOLDER = /path/to/master/bias/dark/flats 
     #RAW_BDF_FOLDER = /path/to/raw/bias/dark/flats
     # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
@@ -82,8 +83,8 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    #stepslist = load, StepAddKeys, StepOverCut, StepBiasDarkFlat, StepHotpix, StepReSample, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
-    stepslist = load, StepAddKeys, StepOverCut, StepBiasDarkFlat, save, StepHotpix, StepReSample, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
+    stepslist = load, StepAddKeys, StepOverCut, StepBiasDarkFlat, StepHotpix, StepReSample, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
+    #stepslist = load, StepAddKeys, StepOverCut, StepBiasDarkFlat, save, StepHotpix, StepReSample, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
 
 # Sort Observation Mode
 # Distributes pictures in itzamna into one folder for each object. To be run before regular reduction.
@@ -163,7 +164,7 @@
     # Timeout for running astrometry (seconds)
     timeout = 300
     # Only search in indexes within 'searchradius' (degrees) of the field center given by --ra and --dec
-    searchradius = 90
+    searchradius = 5
 
 # Web Astrometry Step Configuration
 [astrometryweb]
@@ -193,7 +194,7 @@
     # list of keys that need to match bias and data file
     #fitkeys = ‘list’,’of’,’FIT Keywords’,’for Bias/Dark/Flat’ # StoneEdge
     biasfitkeys = NAXIS1, XBIN, DATE-OBS  
-    darkfitkeys = NAXIS1, XBIN, DATE-OBS, EXPTIME
+    darkfitkeys = NAXIS1, XBIN, EXPTIME, DATE-OBS
     flatfitkeys = NAXIS1, XBIN, FILTER, DATE-OBS
     # list of input file datasets to flatten
     # - Expects None or a list of image HDU 

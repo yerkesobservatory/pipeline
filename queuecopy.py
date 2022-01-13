@@ -115,6 +115,7 @@ for source_folder in source_folders:
     # Get date, username, object name from folderpart
     #sdate = ftime = time.strptime(ssplit[0], '%Y-%m-%d')
     #suser = ssplit[1][0].upper()+ssplit[1][1:] # i.e. Galaxieslab1group2
+    log.debug('Copying Data from %s' % source_folder)
     suser = os.path.split(srest)[1] # Get from upper level folder -- i.e. rich
     suser = suser[0].upper() + suser[1:] # Uppercase first character -- i.e. Rich
     sobject = ''.join(ssplit[2:-1]) # i.e. NGC_2129
