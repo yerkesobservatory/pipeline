@@ -32,8 +32,9 @@ from darepype.tools.steploadaux import StepLoadAux # pipestep steploadaux object
 from astropy.convolution import Gaussian2DKernel, interpolate_replace_nans # For masking/replacing
 import scipy.ndimage as nd
 import numpy as np
+import logging
 
-class StepFlatHdr(StepLoadAux, StepMIParent):
+class StepHdr(StepLoadAux, StepMIParent):
     """ Pipeline Step Object to calibrate Flatfield High Dynamic Range files
     """
     
@@ -175,7 +176,7 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
         lflat = self.flat.image[0]                 # low-gain flat
         
         
-        ### THE IMAGES ARE in DataFits objects
+        ### The images are now in DataFits objects
         
         # Get the filename to determine gain
         filename1 = self.datain[0].filenamebegin
@@ -192,7 +193,7 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
                 ldata_df.imageset(dL.imageget(dL.imgnames[1]))
             else:
                 dataL_df = self.datain[0]
-        else if 'bin1H' in filename1:
+        elif 'bin1H' in filename1:
             self.dataH_df = self.datain[0]
             if 'RAW.fits' in filename1:
                 dL = self.datain[1]
@@ -204,7 +205,7 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
             else:
                 ldata_df = self.datain[1]
        
-        # Assuming all that worked and dataL_df now contains the low-gain file, dataH_df now contains the high-gain file:
+        # dataL_df now contains the low-gain file, dataH_df now contains the high-gain file:
         
         hdata = hdata_df.image
         ldata = ldata_df.image
@@ -213,7 +214,9 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
         
         hdatabdf = ((hdata - hbias) - (hdark - hbias))/hflat
         
-        # At this point there is a masking step that I can work in once we get the bare bones hammered out.
+        # Create a hot pixel mask from the input dark.
+        
+        
         
         '''Process low-gain data'''
         
@@ -235,7 +238,13 @@ class StepFlatHdr(StepLoadAux, StepMIParent):
         self.dataout.image = outdata
         self.dataout.header = hdata_df.header.copy()
         
-        # self.dataout.filename = combined filename? take high gain and remove bin1H --> add HDRCOMBINE tag or something of the sort?
+        ## Construct an output name.
+
+        a = filename1.split('_')
+        b = '_'
+        newname = a[0]+b+a[1]+b+a[2]+b+a[3][:-1]+b+a[4]+b+a[5]+b+a[6]+b+a[7]+b+'HDR.fits'
+        
+        self.dataout.filename = newname
         
     def reset(self):
         """ Resets the step to the same condition as it was when it was
@@ -259,7 +268,7 @@ if __name__ == '__main__':
         --test : runs the functionality test i.e. pipestep.test()
         --loglevel=LEVEL : configures the logging output for a particular level
     """
-    StepFlatHdr().execute()
+    StepHdr().execute()
 
 '''HISTORY:
 2022-1-5 - Set up file, most code copied from StepBiasDarkFlat - Marc Berthoud
