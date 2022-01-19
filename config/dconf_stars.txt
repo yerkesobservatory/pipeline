@@ -13,6 +13,14 @@
     RAW_BDF_FOLDER = '/data/images/StoneEdge/0.5meter/2021/%Y-%m-%d' # for current date
     # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
     SEO_AUXFOLDER = /data/scripts/DataReduction/auxfiles
+
+# Mode to reduce after BDF/HDR step
+[mode_postbdf]
+    # List of keyword=values required in file header to select this pipeline mode
+    #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
+    datakeys = "OBSERVAT=StoneEdge"
+    # list of steps
+    stepslist = load, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
     
 # Local Astrometry section
 [astrometrylocal]

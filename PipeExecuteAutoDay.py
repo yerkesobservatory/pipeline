@@ -25,7 +25,7 @@ import datetime
 import re
 
 # Set system variables
-logfile = '/data/scripts/DataReduction/PipeLineLog.txt'
+logfile = '/data/scripts/pipeline/PipeLineLog.txt'
 #logfile = '/Users/atreyopal/Desktop/pipeline/PipeLineLog.txt'
 
 # Set logging format
@@ -36,7 +36,7 @@ log.info('Starting up')
 
 # Change directory & import the pipeline settings
 #sys.path.append('/Users/atreyopal/Desktop/pipeline/source/')
-sys.path.append('/data/scripts/DataReduction/source/')
+sys.path.append('/data/scripts/pipeline/source/')
 from darepype.drp.pipeline import PipeLine
 
 today = datetime.date.today()
@@ -56,8 +56,8 @@ datefilepath = '/data/images/StoneEdge/0.5meter/'+year+'/'+date
 def execute():
     # Call the pipeline configuration
     #pipe = PipeLine(config = '/Users/atreyopal/Desktop/pipeline/pipeconf_stonedge_remote.txt')
-    pipe = PipeLine(config = ['/data/scripts/DataReduction/config/pipeconf_SEO.txt',
-                              '/data/scripts/DataReduction/config/dconf_stars.txt'])
+    pipe = PipeLine(config = ['/data/scripts/pipeline/config/pipeconf_SEO.txt',
+                              '/data/scripts/pipeline/config/dconf_stars.txt'])
     # This version only needs to be executed from a terminal. A specific image folder
     # (like the ones on the stars base) is specified for the pipeline.  The pipeline
     # will look in the folder and find any of the sub-folders that contain the FITS images.
