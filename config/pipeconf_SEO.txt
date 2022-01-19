@@ -217,7 +217,24 @@
     #     (default is '' indicating all data has to be re-reduced)
     fileidkey = ''
     
-#FluxCal Step configuration
+# HDR Step configuration
+[hdr]
+	# Folder to look for pfits, darks and flats
+	pfitfile = $MASTER_BDF_FOLDER/Bias/*.fits
+    darkfile = $MASTER_BDF_FOLDER/Dark/*.fits
+    flatfile = $MASTER_BDF_FOLDER/Flat/*.fits
+    # list of keys that need to match pfit dark and flat file
+    pfitfitkeys = NAXIS1, DATE-OBS
+    darkfitkeys = NAXIS1, DATE-OBS
+    flatfitkeys = NASIS1, DATE-OBS
+    # Reload flag to force loading of new master files for each input file
+    reload = True
+    # Flat to save intermediate data products
+    intermediate = False
+    # Crossover threshold for H/L combination
+    splice_thresh = 3000.0
+
+# FluxCal Step configuration
 [fluxcal]
 	# Percentile for BZERO value
 	zeropercent = 45.0

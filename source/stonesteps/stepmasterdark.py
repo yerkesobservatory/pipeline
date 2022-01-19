@@ -14,8 +14,6 @@ import numpy # numpy library
 import logging # logging object library
 import astropy
 import ccdproc # package for reducing optical CCD telescope data 
-import matplotlib.pyplot as plt
-from astropy.io import fits #package to recognize FITS files
 from darepype.drp import StepMIParent
 from darepype.drp import DataFits
 from darepype.tools.steploadaux import StepLoadAux # pipestep steploadaux object
@@ -78,9 +76,9 @@ class StepMasterDark(StepLoadAux, StepMIParent):
         # Make a dummy dataout
         self.dataout = DataFits(config = self.config)
         if len(self.datain) == 0:
-            self.log.error('Flat calibration frame not found.')
-            raise RuntimeError('No flat file(s) loaded')
-        self.log.debug('Creating master flat frame...')
+            self.log.error('Dark calibration frame not found.')
+            raise RuntimeError('No dark file(s) loaded')
+        self.log.debug('Creating master dark frame...')
         # Create master frame: if there is just one file, turn it into master bias or else combine all to make master bias
         if (len(filelist) == 1):
             self.dark = ccdproc.CCDData.read(filelist[0], unit='adu', relax=True)

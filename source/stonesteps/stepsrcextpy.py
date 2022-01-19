@@ -125,8 +125,8 @@ class StepSrcExtPy(StepParent):
                                 'factor multiplied into kronrad to get radius for integration'])
         self.paramlist.append(['save_background', True,
                                 'option to save the background as a seprate hdu'])
-        self.paramlist.append(['byte_swap', False,
-        	                    'says if the bytes should be swapped or not for the image'])
+        #self.paramlist.append(['byte_swap', False,
+        # 	                    'says if the bytes should be swapped or not for the image'])
         # confirm end of setup
         self.log.debug('Setup: done')
 
@@ -137,12 +137,24 @@ class StepSrcExtPy(StepParent):
         ### Preparation
         binning = self.datain.getheadval('XBIN')
         ### Perform Source Extraction
-        #Open data out of fits file for use in SEP
-        psimage = self.datain.image
-        if(self.getarg('byte_swap')):
-            image = psimage.byteswap().newbyteorder()
+        # Open data out of fits file for use in SEP
+        psimage = self.datain.image.copy()
+        # Byteswap if required
+        maxexp = np.max(np.abs(np.frexp(psimage)[1]))
+        self.log.debug("Initial max exponent value: %d" % maxexp)
+        if maxexp > 15:
+            self.log.debug("Performing byte swap")
+            image = psimage.byteswap(inplace=True)
         else:
-    	    image = psimage
+            self.log.debug("No byte swap required")
+            image = psimage
+
+        self.log.debug("Initial data type: %s" % psimage.dtype)
+        if psimage.dtype != np.float64:
+            self.log.debug("Converting to float64")
+            image = image.byteswap(inplace=True).newbyteorder()
+        else:
+            self.log.debug("No dtype swap required")
 
         #These variables are used for the background analysis. 
         #We grab the values from the paramlist
@@ -336,7 +348,7 @@ class StepSrcExtPy(StepParent):
         sourceb_table= fits.BinTableHDU.from_columns(cb)
         ### Make output data
         # Copy data from datain
-        self.dataout = self.datain
+        self.dataout = self.datain.copy()  
         #This is making a third table which includes all of objects and more for future use
         self.dataout.tableset(objects, tablename='SEP_objects')
         self.dataout.tableaddcol('rh', rh, 'SEP_objects')

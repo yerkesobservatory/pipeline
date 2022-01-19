@@ -19,9 +19,7 @@ rm /tmp/*
 ### Run Sort Obs
 cd /data/scripts/DataReduction
 /usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode sortobs -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1
-
 ### Run Masters
-cd /data/scripts/DataReduction
 /usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode masterbias -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1
 /usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode masterdark -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1
 /usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode masterflat -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1

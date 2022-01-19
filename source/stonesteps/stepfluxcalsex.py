@@ -121,8 +121,15 @@ class StepFluxCalSex(StepParent):
         if bkgdfilename[-1] in '._-': bkgdfilename += 'SxBkgd.fits'
         else: bkgdfilename += '_SxBkgd.fits'
         self.log.debug('Sextractor catalog filename = %s' % catfilename)
+        # Unzip the intput file if it's zipped
+        infilename = self.datain.filename
+        if infilename[-3:] in '.gz':
+            gzcom = 'gunzip -c ' + infilename + ' > ' + infilename[:-3]
+            self.log.debug('Unzipping input file, running :%s' % gzcom)
+            os.system( gzcom )
+            infilename = self.datain.filename[:-3]
         # Make command string
-        command = self.getarg('sx_cmd') % (self.datain.filename)
+        command = self.getarg('sx_cmd') % (infilename)
         command += ' ' + self.getarg('sx_options')
         command += ' -c ' + os.path.expandvars(self.getarg('sx_confilename'))
         command += ' -CATALOG_NAME ' + catfilename
@@ -138,7 +145,11 @@ class StepFluxCalSex(StepParent):
         output, error = process.communicate()
         if self.getarg('verbose'):
             self.log.debug(output)
-        #subprocess.check_call(command)
+        # removed unziped file if zipped file exists
+        if infilename != self.datain.filename:
+            if os.path.exists(self.datain.filename):
+                self.log.debug('Removing temporary gunziped file %s' % infilename)
+                os.remove(infilename)
         ### Extract catalog from source extractor and clean up dataset
         # Use catalog from sourse extrator (test.cat)
         seo_catalog = astropy.table.Table.read(catfilename, format="fits", hdu='LDAC_OBJECTS')
