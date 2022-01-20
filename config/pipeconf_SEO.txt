@@ -226,11 +226,11 @@
     hdarkfile = $MASTER_BDF_FOLDER/MDARK/*.fits
     flatfile = $MASTER_BDF_FOLDER/MFLAT/*.fits
     # list of keys that need to match pfit dark and flat file
-    lpfitfitkeys = NAXIS1
-    hpfitfitkeys = NAXIS1
-    ldarkfitkeys = NAXIS1, EXPTIME
-    hdarkfitkeys = NAXIS1, EXPTIME
-    flatfitkeys = NASIS1, FILTER
+    #lpfitfitkeys = NAXIS1
+    #hpfitfitkeys = NAXIS1
+    ldarkfitkeys = EXPTIME
+    hdarkfitkeys = EXPTIME
+    flatfitkeys = FILTER
     # Reload flag to force loading of new master files for each input file
     reload = True
     # Flat to save intermediate data products

@@ -138,29 +138,29 @@ class StepHdr(StepLoadAux, StepMIParent):
             self.flatloaded = False
         # Load pfit file
         if not self.hpfitloaded:
-            self.hpfitname = self.loadauxfile('hpfit', multi = False)
+            self.hpfitname = self.loadauxname('hpfit', multi = False)
             self.hpfit = DataFits(config = self.config)
             self.hpfit.load(self.hpfitname)
             self.hpfitloaded = True
         if not self.lpfitloaded:
-            self.lpfitname = self.loadauxfile('lpfit', multi = False)
+            self.lpfitname = self.loadauxname('lpfit', multi = False)
             self.lpfit = DataFits(config = self.config)
             self.lpfit.load(self.lpfitname)
             self.lpfitloaded = True
         # Load mdark file
         if not self.hdarkloaded:
-            self.hdarkname = self.loadauxfile('hdark', multi = False)
+            self.hdarkname = self.loadauxname('hdark', multi = False)
             self.hdark = DataFits(config = self.config)
             self.hdark.load(self.hdarkname)
             self.hdarkloaded = True
         if not self.ldarkloaded:
-            self.ldarkname = self.loadauxfile('ldark', multi = False)
+            self.ldarkname = self.loadauxname('ldark', multi = False)
             self.ldark = DataFits(config = self.config)
             self.ldark.load(self.ldarkname)
             self.ldarkloaded = True
         # Load mflat file
         if not self.flatloaded:
-            self.flatname = self.loadauxfile('flat', multi = False)
+            self.flatname = self.loadauxname('flat', multi = False)
             self.flat = DataFits(config = self.config)
             self.flat.load(self.flatname)
             self.flatloaded = True
@@ -184,18 +184,18 @@ class StepHdr(StepLoadAux, StepMIParent):
         filename2 = self.datain[1].filenamebegin
         
         if 'bin1L' in filename1:
-            dataH_df = self.datain[1]
+            hdata_df = self.datain[1]
             if 'RAW.fits' in filename1:
-                dL = self.datain[0]
+                dL = self.datain[0]                                  
                 self.ldata_df = DataFits(config = self.config)
-                ldata_df.header = dL.getheader(dL.imgnames[1]).copy()
-                del dL.header['xtension']
-                ldata_df.header.insert(0,('simple',True,'file does conform to FITS standard'))
-                ldata_df.imageset(dL.imageget(dL.imgnames[1]))
+                ldata_df.header = dL.getheader(dL.imgnames[1]).copy()     # Extract header from second image position
+                del dL.header['xtension']                                 # Delete extension
+                ldata_df.header.insert(0,('simple',True,'file does conform to FITS standard'))  # Make note of it
+                ldata_df.imageset(dL.imageget(dL.imgnames[1]))            # Swap data from second HDU to first
             else:
                 dataL_df = self.datain[0]
         elif 'bin1H' in filename1:
-            self.dataH_df = self.datain[0]
+            hdata_df = self.datain[0]
             if 'RAW.fits' in filename1:
                 dL = self.datain[1]
                 self.ldata_df = DataFits(config = self.config)
@@ -208,8 +208,11 @@ class StepHdr(StepLoadAux, StepMIParent):
        
         # dataL_df now contains the low-gain file, dataH_df now contains the high-gain file:
         
-        hdata = hdata_df.image
-        ldata = ldata_df.image
+        hdata = hdata_df.image[:,:4096] * 1.0        # Crop overscan and convert to float
+        ldata = ldata_df.image[:,:4096] * 1.0        
+        
+        self.log.debug(np.shape(hdata))
+        self.log.debug(np.shape(ldata))
         
         '''Process high-gain data'''
         
