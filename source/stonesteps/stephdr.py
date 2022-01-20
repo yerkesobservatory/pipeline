@@ -110,11 +110,12 @@ class StepHdr(StepLoadAux, StepMIParent):
         self.paramlist.append(['splice_thresh', 3000.0,
             'Change to alter the cutoff threshold for combining high- and low-gain images'])
         # Set root names for loading parameters with StepLoadAux.
-        self.loadauxsetup('pfit')
-        self.loadauxsetup('dark') 
+        self.loadauxsetup('lpfit')
+        self.loadauxsetup('hpfit')
+        self.loadauxsetup('ldark') 
+        self.loadauxsetup('hdark')
         self.loadauxsetup('flat')
         
-        # NOTE HERE: not entirely clear on how steploadaux works- can it take multiple strings, like bin1H and bin1L?
         
         ## SET LOGGER AND FINISH UP
         
@@ -130,30 +131,30 @@ class StepHdr(StepLoadAux, StepMIParent):
         ### Load pfit, dark and flat files
         # Set loaded flags to false if reload flag is set
         if self.getarg('reload'):
-            self.pfitlloaded = False
-            self.pfithloaded = False
+            self.lpfitloaded = False
+            self.hpfitloaded = False
             self.hdarkloaded = False
             self.ldarkloaded = False
             self.flatloaded = False
         # Load pfit file
-        if not self.pfithloaded:
-            self.hpfitname = self.loadauxfile('pfit', multi = False)
+        if not self.hpfitloaded:
+            self.hpfitname = self.loadauxfile('hpfit', multi = False)
             self.hpfit = DataFits(config = self.config)
             self.hpfit.load(self.hpfitname)
             self.hpfitloaded = True
-        if not self.pfitlloaded:
-            self.lpfitname = self.loadauxfile('pfit', multi = False)
+        if not self.lpfitloaded:
+            self.lpfitname = self.loadauxfile('lpfit', multi = False)
             self.lpfit = DataFits(config = self.config)
             self.lpfit.load(self.lpfitname)
             self.lpfitloaded = True
         # Load mdark file
         if not self.hdarkloaded:
-            self.hdarkname = self.loadauxfile('dark', multi = False)
+            self.hdarkname = self.loadauxfile('hdark', multi = False)
             self.hdark = DataFits(config = self.config)
             self.hdark.load(self.hdarkname)
             self.hdarkloaded = True
         if not self.ldarkloaded:
-            self.ldarkname = self.loadauxfile('dark', multi = False)
+            self.ldarkname = self.loadauxfile('ldark', multi = False)
             self.ldark = DataFits(config = self.config)
             self.ldark.load(self.ldarkname)
             self.ldarkloaded = True
