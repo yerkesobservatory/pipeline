@@ -226,7 +226,7 @@
     # list of keys that need to match pfit dark and flat file
     pfitfitkeys = NAXIS1, DATE-OBS
     darkfitkeys = NAXIS1, DATE-OBS
-    flatfitkeys = NASIS1, DATE-OBS
+    flatfitkeys = NAXIS1, DATE-OBS
     # Reload flag to force loading of new master files for each input file
     reload = True
     # Flat to save intermediate data products
