@@ -182,34 +182,27 @@ class StepHdr(StepLoadAux, StepMIParent):
         # Get the filename to determine gain
         filename1 = self.datain[0].filenamebegin
         filename2 = self.datain[1].filenamebegin
+      
         
         if 'bin1L' in filename1:
-            hdata_df = self.datain[1]
-            if 'RAW.fits' in filename1:
-                dL = self.datain[0]                                  
-                self.ldata_df = DataFits(config = self.config)
-                ldata_df.header = dL.getheader(dL.imgnames[1]).copy()     # Extract header from second image position
-                del dL.header['xtension']                                 # Delete extension
-                ldata_df.header.insert(0,('simple',True,'file does conform to FITS standard'))  # Make note of it
-                ldata_df.imageset(dL.imageget(dL.imgnames[1]))            # Swap data from second HDU to first
-            else:
-                dataL_df = self.datain[0]
+            hdata_df = self.datain[1]       # Set high-gain data
+            dL = self.datain[0]                                  
+            ldata_df = DataFits(config = self.config)
+            ldata_df.header = dL.getheader(dL.imgnames[1]).copy()     # Extract header from second image position
+            ldata_df.header.insert(0,('simple',True,'file does conform to FITS standard'))  # Make note of it
+            ldata_df.imageset(dL.imageget(dL.imgnames[1]))            # Swap data from second HDU to first
         elif 'bin1H' in filename1:
-            hdata_df = self.datain[0]
-            if 'RAW.fits' in filename1:
-                dL = self.datain[1]
-                self.ldata_df = DataFits(config = self.config)
-                ldata_df.header = dL.getheader(dL.imgnames[1]).copy()
-                del dL.header['xtension']
-                ldata_df.header.insert(0,('simple',True,'file does conform to FITS standard'))
-                ldata_df.imageset(dL.imageget(dL.imgnames[1]))
-            else:
-                ldata_df = self.datain[1]
-       
+            hdata_df = self.datain[0]       # Set high-gain data
+            dL = self.datain[1]
+            ldata_df = DataFits(config = self.config)
+            ldata_df.header = dL.getheader(dL.imgnames[1]).copy()
+            ldata_df.header.insert(0,('simple',True,'file does conform to FITS standard'))
+            ldata_df.imageset(dL.imageget(dL.imgnames[1]))
+                
         # dataL_df now contains the low-gain file, dataH_df now contains the high-gain file:
         
-        hdata = hdata_df.image[:,:4096] * 1.0        # Crop overscan and convert to float
-        ldata = ldata_df.image[:,:4096] * 1.0        
+        hdata = hdata_df.image[:,:4096] * 1.0       # Crop overscan and convert to float
+        ldata = ldata_df.image[:,:4096] * 1.0       
         
         self.log.debug(np.shape(hdata))
         self.log.debug(np.shape(ldata))
