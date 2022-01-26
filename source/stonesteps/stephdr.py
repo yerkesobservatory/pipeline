@@ -206,14 +206,22 @@ class StepHdr(StepLoadAux, StepMIParent):
         
         self.log.debug(np.shape(hdata))
         self.log.debug(np.shape(ldata))
+        self.log.debug(hdata[500,500])
+        self.log.debug(ldata[500,500])
+        
+        # Create kernel for nan replacement
+        kernel = Gaussian2DKernel(x_stddev=2)
         
         '''Process high-gain data'''
         
         hdatabdf = ((hdata - hbias) - (hdark - hbias))/hflat
         
-        # Create a hot pixel mask from the input dark.
+        nanmask = np.isnan(hdatabdf)
+        self.log.debug(np.sum(nanmask))
         
+        hdatabdf = interpolate_replace_nans(hdatabdf, kernel)
         
+        self.log.debug(np.sum(np.isnan(hdatabdf)))
         
         '''Process low-gain data'''
         
