@@ -200,33 +200,30 @@ class StepHdr(StepLoadAux, StepMIParent):
             ldata_df.imageset(dL.imageget(dL.imgnames[1]))
                 
         # dataL_df now contains the low-gain file, dataH_df now contains the high-gain file:
-        
         hdata = hdata_df.image[:,:4096] * 1.0       # Crop overscan and convert to float
         ldata = ldata_df.image[:,:4096] * 1.0       
         
-        self.log.debug(np.shape(hdata))
-        self.log.debug(np.shape(ldata))
+        self.log.debug('Shape of Hdata: %s' % repr(np.shape(hdata)))
+        self.log.debug('Shape of Ldata: %s' % repr(np.shape(ldata)))
         
-        '''Process high-gain data'''
-        
+        # Process high-gain data
         hdatabdf = ((hdata - hbias) - (hdark - hbias))/hflat
         
         # Create a hot pixel mask from the input dark.
         
         
         
-        '''Process low-gain data'''
-        
+        # Process low-gain data
         ldatabdf = (((ldata-lbias) - (ldark - lbias))/lflat) * gain
         
-        '''Combine high- and low-gain data into HDR image'''
+        # Combine high- and low-gain data into HDR image
         splice_thresh = self.getarg('splice_thresh') # Get crossover threshold
         lupper = np.where(ldatabdf > splice_thresh) # Choose all pixels in low-gain data above a certain threshold parameter
         ldata = ldatabdf.copy()
         HDRdata = hdatabdf.copy()
         HDRdata[lupper] = ldata[lupper]      # Replace upper range of high-gain image with low-gain * gain values
         
-        '''Downsample image by factor of two'''
+        # Downsample image by factor of two
         outdata = nd.zoom(HDRdata,0.5)
         
         # Make dataout
@@ -235,13 +232,7 @@ class StepHdr(StepLoadAux, StepMIParent):
         self.dataout.image = outdata
         self.dataout.header = hdata_df.header.copy()
         
-        ## Construct an output name.
-
-        a = filename1.split('_')
-        b = '_'
-        newname = a[0]+b+a[1]+b+a[2]+b+a[3][:-1]+b+a[4]+b+a[5]+b+a[6]+b+a[7]+b+'HDR.fits'
-        
-        self.dataout.filename = newname
+        ## Construct an output name. (removed - this is done by StepParent:updateheader()
         
     def reset(self):
         """ Resets the step to the same condition as it was when it was
