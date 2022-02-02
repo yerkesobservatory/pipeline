@@ -3,7 +3,8 @@
     Pipestep HDR (High Dynamic Range)
 
     This module defines the pipeline step that corrects a pair raw image low
-    and high gain images files for detector dark, bias, and flat effects.
+    and high gain images files for detector dark, bias, and flat effects. It
+    crops the images 
     
     The step requires as input two files, a low gain file and a high gain file.
     It produces one output file.
@@ -225,7 +226,14 @@ class StepHdr(StepLoadAux, StepMIParent):
         
         '''Process low-gain data'''
         
-        ldatabdf = (((ldata-lbias) - (ldark - lbias))/lflat) * gain
+        ldatabdf = (((ldata - lbias) - (ldark - lbias))/lflat) * gain
+        
+        nanmask = np.isnan(ldatabdf)
+        self.log.debug(np.sum(nanmask))
+        
+        ldatabdf = interpolate_replace_nans(ldatabdf, kernel)
+        
+        self.log.debug(np.sum(np.isnan(ldatabdf)))
         
         '''Combine high- and low-gain data into HDR image'''
         splice_thresh = self.getarg('splice_thresh') # Get crossover threshold
@@ -238,18 +246,10 @@ class StepHdr(StepLoadAux, StepMIParent):
         outdata = nd.zoom(HDRdata,0.5)
         
         # Make dataout
-        self.dataout = self.datain[0].copy() # could also be new DataFits() or copy of datain[1]]
+        self.dataout = self.hdata_df.copy() # could also be new DataFits() or copy of datain[1]]
         
         self.dataout.image = outdata
         self.dataout.header = hdata_df.header.copy()
-        
-        ## Construct an output name.
-
-        a = filename1.split('_')
-        b = '_'
-        newname = a[0]+b+a[1]+b+a[2]+b+a[3][:-1]+b+a[4]+b+a[5]+b+a[6]+b+a[7]+b+'HDR.fits'
-        
-        self.dataout.filename = newname
         
     def reset(self):
         """ Resets the step to the same condition as it was when it was
