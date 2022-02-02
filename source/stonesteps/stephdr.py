@@ -201,20 +201,13 @@ class StepHdr(StepLoadAux, StepMIParent):
             ldata_df.imageset(dL.imageget(dL.imgnames[1]))
                 
         # dataL_df now contains the low-gain file, dataH_df now contains the high-gain file:
-        
         hdata = hdata_df.image[:,:4096] * 1.0       # Crop overscan and convert to float
         ldata = ldata_df.image[:,:4096] * 1.0       
         
-        self.log.debug(np.shape(hdata))
-        self.log.debug(np.shape(ldata))
-        self.log.debug(hdata[500,500])
-        self.log.debug(ldata[500,500])
+        self.log.debug('Shape of Hdata: %s' % repr(np.shape(hdata)))
+        self.log.debug('Shape of Ldata: %s' % repr(np.shape(ldata)))
         
-        # Create kernel for nan replacement
-        kernel = Gaussian2DKernel(x_stddev=2)
-        
-        '''Process high-gain data'''
-        
+        # Process high-gain data
         hdatabdf = ((hdata - hbias) - (hdark - hbias))/hflat
         
         nanmask = np.isnan(hdatabdf)
@@ -235,14 +228,14 @@ class StepHdr(StepLoadAux, StepMIParent):
         
         self.log.debug(np.sum(np.isnan(ldatabdf)))
         
-        '''Combine high- and low-gain data into HDR image'''
+        # Combine high- and low-gain data into HDR image
         splice_thresh = self.getarg('splice_thresh') # Get crossover threshold
         lupper = np.where(ldatabdf > splice_thresh) # Choose all pixels in low-gain data above a certain threshold parameter
         ldata = ldatabdf.copy()
         HDRdata = hdatabdf.copy()
         HDRdata[lupper] = ldata[lupper]      # Replace upper range of high-gain image with low-gain * gain values
         
-        '''Downsample image by factor of two'''
+        # Downsample image by factor of two
         outdata = nd.zoom(HDRdata,0.5)
         
         # Make dataout
