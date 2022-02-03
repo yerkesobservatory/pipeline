@@ -2,9 +2,11 @@
 """ 
     Pipestep HDR (High Dynamic Range)
 
-    This module defines the pipeline step that corrects a pair raw image low
-    and high gain images files for detector dark, bias, and flat effects. It
-    crops the images 
+    This module corrects a pair raw image low and high gain images files for 
+    detector dark, bias, and flat effects. The step crops the overscan from
+    input images, reduces high- and low-gain images individually, then
+    performs a Gaussian interpolation to remove nans from the data before
+    combining into one HDR image and downsampling.
     
     The step requires as input two files, a low gain file and a high gain file.
     It produces one output file.
@@ -207,6 +209,8 @@ class StepHdr(StepLoadAux, StepMIParent):
         self.log.debug('Shape of Hdata: %s' % repr(np.shape(hdata)))
         self.log.debug('Shape of Ldata: %s' % repr(np.shape(ldata)))
         
+        kernel = Gaussian2DKernel(x_stddev=2) # Make kernel for Gaussian interpolation
+        
         # Process high-gain data
         hdatabdf = ((hdata - hbias) - (hdark - hbias))/hflat
         
@@ -239,7 +243,7 @@ class StepHdr(StepLoadAux, StepMIParent):
         outdata = nd.zoom(HDRdata,0.5)
         
         # Make dataout
-        self.dataout = self.hdata_df.copy() # could also be new DataFits() or copy of datain[1]]
+        self.dataout = hdata_df.copy() # could also be new DataFits() or copy of datain[1]]
         
         self.dataout.image = outdata
         self.dataout.header = hdata_df.header.copy()

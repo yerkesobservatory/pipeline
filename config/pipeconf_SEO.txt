@@ -222,12 +222,12 @@
     # Folder to look for pfits, darks and flats
     lpfitfile = $MASTER_BDF_FOLDER/PFIT/*_bin1L_*_PFIT.fits
     hpfitfile = $MASTER_BDF_FOLDER/PFIT/*_bin1H_*PFIT.fits
-    ldarkfile = $MASTER_BDF_FOLDER/MDARK/*.fits
-    hdarkfile = $MASTER_BDF_FOLDER/MDARK/*.fits
+    ldarkfile = $MASTER_BDF_FOLDER/MDARK/*_bin1L_*.fits
+    hdarkfile = $MASTER_BDF_FOLDER/MDARK/*_bin1H_*.fits
     flatfile = $MASTER_BDF_FOLDER/MFLAT/*.fits
-    # list of keys that need to match pfit dark and flat file
-    #lpfitfitkeys = NAXIS1
-    #hpfitfitkeys = NAXIS1
+    # list of keys that need to match pfit dark and flat files
+    lpfitfitkeys = NAXIS2
+    hpfitfitkeys = NAXIS2
     ldarkfitkeys = EXPTIME
     hdarkfitkeys = EXPTIME
     flatfitkeys = FILTER
