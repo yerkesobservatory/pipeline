@@ -3,7 +3,8 @@
     Pipestep HDR (High Dynamic Range)
 
     This module defines the pipeline step that corrects a pair raw image low
-    and high gain images files for detector dark, bias, and flat effects.
+    and high gain images files for detector dark, bias, and flat effects. It
+    crops the images 
     
     The step requires as input two files, a low gain file and a high gain file.
     It produces one output file.
@@ -209,12 +210,23 @@ class StepHdr(StepLoadAux, StepMIParent):
         # Process high-gain data
         hdatabdf = ((hdata - hbias) - (hdark - hbias))/hflat
         
-        # Create a hot pixel mask from the input dark.
+        nanmask = np.isnan(hdatabdf)
+        self.log.debug(np.sum(nanmask))
         
+        hdatabdf = interpolate_replace_nans(hdatabdf, kernel)
         
+        self.log.debug(np.sum(np.isnan(hdatabdf)))
         
-        # Process low-gain data
-        ldatabdf = (((ldata-lbias) - (ldark - lbias))/lflat) * gain
+        '''Process low-gain data'''
+        
+        ldatabdf = (((ldata - lbias) - (ldark - lbias))/lflat) * gain
+        
+        nanmask = np.isnan(ldatabdf)
+        self.log.debug(np.sum(nanmask))
+        
+        ldatabdf = interpolate_replace_nans(ldatabdf, kernel)
+        
+        self.log.debug(np.sum(np.isnan(ldatabdf)))
         
         # Combine high- and low-gain data into HDR image
         splice_thresh = self.getarg('splice_thresh') # Get crossover threshold
@@ -227,12 +239,10 @@ class StepHdr(StepLoadAux, StepMIParent):
         outdata = nd.zoom(HDRdata,0.5)
         
         # Make dataout
-        self.dataout = self.datain[0].copy() # could also be new DataFits() or copy of datain[1]]
+        self.dataout = self.hdata_df.copy() # could also be new DataFits() or copy of datain[1]]
         
         self.dataout.image = outdata
         self.dataout.header = hdata_df.header.copy()
-        
-        ## Construct an output name. (removed - this is done by StepParent:updateheader()
         
     def reset(self):
         """ Resets the step to the same condition as it was when it was
