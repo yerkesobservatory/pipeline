@@ -12,19 +12,26 @@
     It produces one output file.
     
     It uses StepLoadAux functions to call the following files:
-        - masterpfit (x2): A 3D image containing two planes, constructed by performing
-            a polynomial fit (currently linear) to a set of short-exposure darks.
-            The first image has pixel values which are the slopes of linear fits
-            to data from each pixel; the second image contains the intercepts and
-            takes the place of a zero-exposure for the CMOS camera. Here, the
-            intercept image is used for bias subtraction. Low and high gain.
+        - masterpfit (x2): A 3D image containing one HDU with two planes, constructed
+            by performing a polynomial fit (currently linear) to a set of 
+            short-exposure darks. The first image has pixel values which are the 
+            slopes of linear fits to data from each pixel; the second image contains
+            the intercepts and takes the place of a zero-exposure for the CMOS camera. 
+            Here, the intercept image is used for bias subtraction. The step uses two
+            of these, one for each high- and low-gain.
         - masterdark (x2): A matched pair of high- and low-gain master darks of 
             the same exposure length as the raw sky image. MDARK or MMDARK files.
+            Each contains one HDU.
         - masterflat: A file consisting of three HDUs. The first contains a 3D
             flat-field image with a plane each for the high and low gain data
             (used for flat correction); the second contains a gain ratio image
             (used for creating an HDR output); the third contains a table of
             statistical information about the flats (not used here).
+            
+    The high-gain mode of the CMOS detector currently causes low-gain images to be
+    loaded into the second HDU, and the header data to be loaded into an XTENSION
+    header in the second image position. The step locates the low-gain file and
+    swaps the data into the correct positions.
     
     Authors: Carmen Choza, Al Harper, Marc Berthoud
 """
@@ -112,6 +119,11 @@ class StepHdr(StepLoadAux, StepMIParent):
             'Set to T to include the result of the step'])
         self.paramlist.append(['splice_thresh', 3000.0,
             'Change to alter the cutoff threshold for combining high- and low-gain images'])
+        self.paramlist.append(['divkeys', [], 
+            'list of header keywords to divide by sample factor'])
+        self.paramlist.append(['multkeys', [], 
+            'list of header keywords to multiply by sample factor'])
+       
         # Set root names for loading parameters with StepLoadAux.
         self.loadauxsetup('lpfit')
         self.loadauxsetup('hpfit')
@@ -185,22 +197,32 @@ class StepHdr(StepLoadAux, StepMIParent):
         # Get the filename to determine gain
         filename1 = self.datain[0].filenamebegin
         filename2 = self.datain[1].filenamebegin
-      
         
-        if 'bin1L' in filename1:
+        self.log.debug(filename1)
+        self.log.debug(filename2)
+
+    #   if not ('bin1H' in filename1 or 'bin1H' in filename2)
+        if 'bin1H' not in filename1 and 'bin1H' not in filename2:
+            self.log.error('High-gain file not found.')
+            raise RuntimeError('No high-gain file loaded')
+        elif 'bin1L' not in filename1 and 'bin1L' not in filename2:
+            self.log.error('Low-gain image not found.')
+            raise RuntimeError('No low-gain file loaded')
+        elif 'bin1L' in filename1:
             hdata_df = self.datain[1]       # Set high-gain data
-            dL = self.datain[0]                                  
             ldata_df = DataFits(config = self.config)
-            ldata_df.header = dL.getheader(dL.imgnames[1]).copy()     # Extract header from second image position
-            ldata_df.header.insert(0,('simple',True,'file does conform to FITS standard'))  # Make note of it
+            #ldata_df = df.imageset(self.datain[0].imageget(self.datain[0].imgnames[1]))
+            dL = self.datain[0]                                  
             ldata_df.imageset(dL.imageget(dL.imgnames[1]))            # Swap data from second HDU to first
         elif 'bin1H' in filename1:
             hdata_df = self.datain[0]       # Set high-gain data
+            ldata_df = DataFits(config = self.config)
+            # ldata_df = ldata_df.imageset(self.datain[1].imageget(self.datain[1].imgnames[1]))
             dL = self.datain[1]
             ldata_df = DataFits(config = self.config)
-            ldata_df.header = dL.getheader(dL.imgnames[1]).copy()
-            ldata_df.header.insert(0,('simple',True,'file does conform to FITS standard'))
             ldata_df.imageset(dL.imageget(dL.imgnames[1]))
+        
+        
                 
         # dataL_df now contains the low-gain file, dataH_df now contains the high-gain file:
         hdata = hdata_df.image[:,:4096] * 1.0       # Crop overscan and convert to float
@@ -208,6 +230,8 @@ class StepHdr(StepLoadAux, StepMIParent):
         
         self.log.debug('Shape of Hdata: %s' % repr(np.shape(hdata)))
         self.log.debug('Shape of Ldata: %s' % repr(np.shape(ldata)))
+        
+        hdata_df.setheadval('CRPIX1', len(hdata)/2)  # Update due to overscan crop
         
         kernel = Gaussian2DKernel(x_stddev=2) # Make kernel for Gaussian interpolation
         
@@ -244,9 +268,15 @@ class StepHdr(StepLoadAux, StepMIParent):
         
         # Make dataout
         self.dataout = hdata_df.copy() # could also be new DataFits() or copy of datain[1]]
-        
         self.dataout.image = outdata
-        self.dataout.header = hdata_df.header.copy()
+            
+        # Edit output header keys according to downsample 
+        for key in self.getarg('divkeys'):                                # Divide keywords by sample factor
+            if not key in self.dataout.header: continue
+            self.dataout.setheadval(key,self.dataout.getheadval(key)/2)
+        for key in self.getarg('multkeys'):                               # Multiply keywords by sample factor
+            if not key in self.dataout.header: continue
+            self.dataout.setheadval(key,self.dataout.getheadval(key)*2)
         
     def reset(self):
         """ Resets the step to the same condition as it was when it was
