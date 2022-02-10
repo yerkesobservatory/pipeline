@@ -84,7 +84,21 @@
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
     stepslist = load, StepAddKeys, StepOverCut, StepBiasDarkFlat, StepHotpix, StepReSample, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
-    #stepslist = load, StepAddKeys, StepOverCut, StepBiasDarkFlat, save, StepHotpix, StepReSample, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
+
+# Stoneedge Server HDR Mode - for reducing HDR data on the server
+#     Use this if you have sextractor and astrometry installed and are
+#     reducing HDR (High Dynamic Range i.e. low and high gain) data
+[mode_seo_server_hdr]
+# List of keyword=values required in file header to select this pipeline mode
+    #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
+    datakeys = "OBSERVAT=StoneEdge"
+    # list of steps
+    stepslist = load, StepAddKeys, StepDataGroup, StepHdr, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
+	# Settings for StepDataGroup to run StepHdr
+    [[datagroup]]
+        redstepname = StepHdr
+        groupkeys = DATE-OBS
+    
 
 # Sort Observation Mode
 # Distributes pictures in itzamna into one folder for each object. To be run before regular reduction.
@@ -222,9 +236,9 @@
     # Folder to look for pfits, darks and flats
     lpfitfile = $MASTER_BDF_FOLDER/PFIT/*_bin1L_*_PFIT.fits
     hpfitfile = $MASTER_BDF_FOLDER/PFIT/*_bin1H_*PFIT.fits
-    ldarkfile = $MASTER_BDF_FOLDER/MDARK/*_bin1L_*.fits
-    hdarkfile = $MASTER_BDF_FOLDER/MDARK/*_bin1H_*.fits
-    flatfile = $MASTER_BDF_FOLDER/MFLAT/*.fits
+    ldarkfile = $MASTER_BDF_FOLDER/DARK/*_bin1L_*.fits
+    hdarkfile = $MASTER_BDF_FOLDER/DARK/*_bin1H_*.fits
+    flatfile = $MASTER_BDF_FOLDER/FLAT*/*.fits
     # list of keys that need to match pfit dark and flat files
     lpfitfitkeys = NAXIS2
     hpfitfitkeys = NAXIS2
