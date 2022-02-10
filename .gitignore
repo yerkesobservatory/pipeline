@@ -3,4 +3,5 @@
 *.DS_STORE
 .*project
 .DS_Store
+*Log.txt
 config/dconf_HDR.txt
