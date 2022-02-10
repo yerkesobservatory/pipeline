@@ -251,6 +251,9 @@
     intermediate = False
     # Crossover threshold for H/L combination
     splice_thresh = 3000.0
+    # list of header keywords to divide by samplefac
+    divkeys = CRPIX1, CRPIX2
+    multkeys = PIXSIZE1, PIXSIZE2, CD1_1, CD1_2, CD2_1, CD2_2
 
 # FluxCal Step configuration
 [fluxcal]
