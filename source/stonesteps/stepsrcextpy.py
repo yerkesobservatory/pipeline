@@ -48,6 +48,7 @@ from astropy.stats import mad_std
 import pylab as plt # pylab library for plotting
 from lmfit import minimize, Parameters # For brightness correction fit
 from darepype.drp import StepParent # pipestep stepparent object
+from darepype.drp.datafits import DataFits
 
 
 class StepSrcExtPy(StepParent):
@@ -141,8 +142,10 @@ class StepSrcExtPy(StepParent):
         psimage = self.datain.image.copy()
         # Byteswap if required
         maxexp = np.max(np.abs(np.frexp(psimage)[1]))
-        self.log.debug("Initial max exponent value: %d" % maxexp)
-        if maxexp > 15:
+        self.log.debug('Initial max exponent value: %d' % maxexp)
+        self.log.debug('Isnative: %s' % repr(psimage.dtype.isnative))
+        #if not psimage.dtype.isnative:
+        if maxexp > 19:
             self.log.debug("Performing byte swap")
             image = psimage.byteswap(inplace=True)
         else:
@@ -172,11 +175,22 @@ class StepSrcExtPy(StepParent):
         bkg_image=bkg.back()
 
         bkg_rms =bkg.rms()
+        self.log.debug('Background image global')
+        if bkg.globalback < np.nanmin(image) or bkg.globalback > np.nanmax(image):
+            self.log.warn('Background has out of bounds values - image may not reduce')
         #Subtract the background from the image
         image_sub = image - bkg_image
         #Calculate the Median and STD of the Subtracted Image
         imsubmed = np.nanmedian(image_sub)
         imsubmad = mad_std(image_sub)
+        
+        # save background image ###############################
+#         apple = DataFits(config = self.config)
+#         apple.image = bkg_image
+#         apple.save(os.path.join(os.path.split(self.datain.filename)[0],'bgimg.fits'))
+#         apple = DataFits(config = self.config)
+#         apple.image = image_sub
+#         apple.save(os.path.join(os.path.split(self.datain.filename)[0],'imgsub.fits'))
 
 		#Create variables that are used during source Extraction and Flux Calculation
         #Some defined in the param are grabbed now
@@ -193,6 +207,7 @@ class StepSrcExtPy(StepParent):
         ind = np.argsort(sources['flux'])
         reverser = np.arange(len(ind) - 1,-1,-1)
         rev_ind = np.take_along_axis(ind, reverser, axis = 0)
+        
         objects = np.take_along_axis(sources, rev_ind, axis = 0)
 
         indb = np.argsort(sourcesb['flux'])
