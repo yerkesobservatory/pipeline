@@ -93,8 +93,8 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    stepslist = load, StepAddKeys, StepDataGroup, StepHdr, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
-	# Settings for StepDataGroup to run StepHdr
+    stepslist = load, StepAddKeys, StepDataGroup, save, StepHotpix, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
+    # Settings for StepDataGroup to run StepHdr
     [[datagroup]]
         redstepname = StepHdr
         groupkeys = DATE-OBS
