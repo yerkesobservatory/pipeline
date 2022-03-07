@@ -188,8 +188,8 @@ class StepHdr(StepLoadAux, StepMIParent):
         ldark = self.ldark.image      # low-gain dark
         
         gain = self.flat.imageget('gain ratio')    # high-gain flat divided by low-gain flat, ratio between modes
-        hflat = self.flat.image[1]                 # high-gain flat
-        lflat = self.flat.image[0]                 # low-gain flat
+        hflat = self.flat.image[0]                 # high-gain flat
+        lflat = self.flat.image[1]                 # low-gain flat
         
         
         ### The images are now in DataFits objects
