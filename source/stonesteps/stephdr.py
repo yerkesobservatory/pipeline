@@ -276,7 +276,10 @@ class StepHdr(StepLoadAux, StepMIParent):
             self.dataout.setheadval(key,self.dataout.getheadval(key)/2)
         for key in self.getarg('multkeys'):                               # Multiply keywords by sample factor
             if not key in self.dataout.header: continue
-            self.dataout.setheadval(key,self.dataout.getheadval(key)*2)
+                if key == 'GAIN':
+                    self.dataout.setheadval(key,self.dataout.getheadval(key)*4)
+                else:
+                    self.dataout.setheadval(key,self.dataout.getheadval(key)*2)
         
     def reset(self):
         """ Resets the step to the same condition as it was when it was
