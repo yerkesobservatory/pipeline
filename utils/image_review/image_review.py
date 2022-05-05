@@ -1,13 +1,16 @@
-import pygame, sys
-import astropy.io.fits as fits
+import sys
+import argparse
 import os
+from tracemalloc import start
 import numpy as np
+import shutil
+import pygame
+import pygame.freetype
 import matplotlib.colors as colors
 import matplotlib.cm as cm
 from astropy.stats import mad_std
-import shutil
-import pygame.freetype
-import argparse
+import astropy.io.fits as fits
+
 
 # Constants
 # If the image goes beyond the bounds of your screen, feel free to scale it down
@@ -30,13 +33,16 @@ def conv_to_cmap(image):
     return mapper.to_rgba(image, bytes=True)
     
 
-def main(out_path, filenames):
+def main(out_path, filenames, startindex):
     pygame.init()
     display = pygame.display.set_mode(SCREEN_SIZE)
     pygame.display.set_caption("Image Review")
-    
-    current_image = 0
-    # TODO load multiple files into memory at once
+    if startindex < 0:
+        startindex = 0
+    if startindex >= len(filenames):
+        startindex = len(filenames)-1
+        
+    current_image = startindex
     pygame.freetype.init()
     
     screen_font = pygame.freetype.SysFont("Arial", size=FONT_SIZE)
@@ -58,7 +64,12 @@ def main(out_path, filenames):
         filename_text = screen_font.render(f"{os.path.basename(filenames[current_image])} {current_image+1}/{len(filenames)}", bgcolor="white", fgcolor="black")[0]
         
         # image temperature
-        file_temp = screen_font.render(f"Sensor temperature: {fits_header['DEWTEM1']}°C", bgcolor="white", fgcolor="black")[0]
+        info_row = ""
+        if 'DEWTEM1' in fits_header:
+            info_row += f"Sensor temp: {fits_header['DEWTEM1']}°C"
+        if 'RHALF' in fits_header:
+            info_row += f"  Half radius: {fits_header['RHALF']}px"
+        file_temp = screen_font.render(info_row, bgcolor="white", fgcolor="black")[0]
         
         # Report out background level & RMS (Add to keywords from SEP)
         
@@ -107,7 +118,7 @@ def main(out_path, filenames):
                     if event.key == pygame.K_BACKSPACE:
                         redraw = True
                         out_file = os.path.basename(fits_file)
-                        # only deelte the file if it already exists
+                        # only delete the file if it already exists
                         if os.path.exists(os.path.join(out_path, out_file)):
                             os.remove(os.path.join(out_path, out_file))
 
@@ -115,11 +126,16 @@ def main(out_path, filenames):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Preview and filter FITS files')
     parser.add_argument("--outfolder", dest="out_folder", metavar="O", type=str, nargs=1, help="The folder used to save filtered images")
+    parser.add_argument("--startindex", dest="startindex", metavar="O", type=int, nargs=1, help="The integer index of the start image (Default: 0)", required=False, default=0)
     parser.add_argument("file", metavar="F", type=str, nargs=argparse.REMAINDER, help="The FITS files to be loaded and previewed")
     args = parser.parse_args()
     out_folder = args.out_folder[0]
     fits_files = args.file
+    if type(args.startindex) == list:
+        startindex = args.startindex[0]
+    else:
+        startindex = args.startindex
     if not(os.path.exists(out_folder)):
         print(f"{out_folder} is not a directory. Creating it now")
         os.mkdir(out_folder)
-    main(out_folder, fits_files)
+    main(out_folder, fits_files, startindex)

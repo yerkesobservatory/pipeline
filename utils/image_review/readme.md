@@ -7,6 +7,11 @@ To run the image review script
 python3 image_review.py --outfolder <folder to save your selected images to> <input files>
 ```
 
+For example, if I had a list of M51 HDR images that I wanted to save to a folder called `m51_images_cleaned`, I would run the following command:
+```
+python3 image_review.py --outfolder m51_images_cleaned m51*HDR.fits
+```
+
 # Choosing Files
 Although it is possible to type out each of your fits files, I highly recommend learning to
 use wildcards. For example, SEO images currently (as of April 2022) look like this:
