@@ -1,0 +1,16 @@
+---
+# to add more displayed fields, add them in this format
+# [header name]: "display text"
+# In the program, they will be displayed as "display text: value of header name"
+displaykeys:
+  DEWTEM1: "Sensor Temp"
+  RHALF: "Half radius"
+
+# If a file has multiple HDUs, this is the index to load
+hduindex: 0
+
+# Decide whether to display the name of the HDU
+displayhduname: True
+
+# Out of the loaded FITS files, start with the following index
+startindex: 0

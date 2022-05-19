@@ -28,3 +28,27 @@ on March 1st, 2022, I would use `*_220301_*.fits`. Each of these wildcards will 
 fits files in the current folder and return a list of them to image_filter.py. If you wanted to search through
 other directories, you just need to append the directory name to the file: `/path/to/dir/*.fits`. You can also
 use wildcards in directories to: `/path/to/dir/*/m51*.fits` will take each image of M51 in each of the directories.
+
+# Configuration File
+To streamline the process of running this script, it is possible to update settings in a configuration file. This
+avoids the need to type out long commands and speeds up the process of changing specific flags. Confiugrations files can be passed to the program using the `--config` flag.
+
+Configuration files are stored as a YAML file, and an example one is available here as config.yaml, but you are allowed to name your own configuration files.
+```
+---
+# to add more displayed fields, add them in this format
+# [header name]: "display text"
+# In the program, they will be displayed as "display text: value of header name"
+displaykeys:
+  DEWTEM1: "Sensor Temp"
+  RHALF: "Half radius"
+
+# If a file has multiple HDUs, this is the index to load
+hduindex: 0
+
+# Decide whether to display the name of the HDU
+displayhduname: True
+
+# Out of the loaded FITS files, start with the following index
+startindex: 0
+```
