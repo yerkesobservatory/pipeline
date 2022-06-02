@@ -8,15 +8,17 @@
         * Notebook for combining RAW.fits or MDARK.fits images into MDARK.fits or MMDARK.fits images, respectively. MDARK images are the mean of a group of RAW images.  MMDARK images are the mean of a group of MDARK images. At present,we assume that the images being combined have similar S/N ratios (that is, the curent algorithm does not weight the images when combining).
         * In addition to the mean dark image (in the primary HDU), each MMDARK.fits file also contain a second HDU with a noise image made by taking the standard deviation along the stack axis of the N input images and a third HDU with a table of image statistics. Notionally, these extra HDUs could be used for quality analysis or to determine weighting factors. Preserving this information may make it possible to eventually discard the RAW data to preserve disk space.
 
-
-    @author: Carmen Choza, Matt Merz, Al Harper, Marc Berthoud
+    @author: Carmen Choza, Al Harper, Marc Berthoud
 """
 
 import os # os library
 import sys # sys library
-import numpy # numpy library
+import numpy as np # numpy library
 import logging # logging object library
-import astropy
+#import astropy
+from astropy.time import Time
+from astropy.stats import mad_std
+from astropy.io import fits
 from darepype.drp import StepMIParent
 from darepype.drp import DataFits
 
@@ -47,8 +49,7 @@ class StepMasterDarkHdr(StepMIParent):
         self.name='masterdarkhdr'
         # Shortcut for pipeline reduction step and identifier for
         # saved file names.
-        self.procname = 'mdarkhdr'
-        
+        self.procname = 'MDARK'
         
         ### Set parameter list
         # Clear parameter list
@@ -90,15 +91,13 @@ class StepMasterDarkHdr(StepMIParent):
         numfiles = len(filelist)
             
         # Process time and sort lists    
-        date_obs = [f.get('date-obs', 'None') for f in headerlist]
-        t = time.Time(date_obs, format='isot', scale='utc')
+        date_obs = [f.get('date-obs', 'None') for f in headlist]
+        t = Time(date_obs, format='isot', scale='utc')
         tsort = np.argsort(t)
         tfiles = [filelist[i] for i in tsort]
         headlist = [headlist[i] for i in tsort]
         utime = [t[i].unix for i in tsort]
         
-        self.log.debug(tfiles)
-        self.log.debug(utime)
         self.log.debug("Times logged and file lists sorted")
         
         # Make dataout
@@ -123,15 +122,14 @@ class StepMasterDarkHdr(StepMIParent):
             darkstack.append(dark)
 
         self.dark = np.nanmean(darkstack, axis=0)  # Currently takes a simple mean--could become a parameter
-        self.noise = np.nanstd(img, axis=0)        # Make a noise image
+        self.noise = np.nanstd(darkstack, axis=0)        # Make a noise image
             
         # Set output header, put image into output
         self.dataout.header = self.datain[0].header
         self.dataout.imageset(self.dark)
         
         # Put noise image in second HDU
-        self.dataout.imageset(noiseimage, 'STD')
-        
+        self.dataout.imageset(self.noise, 'STD')
         
         ### Extract data table information
         
@@ -158,6 +156,40 @@ class StepMasterDarkHdr(StepMIParent):
             rotation[i] = headlist[i]['rotation']
             setpoint[i] = headlist[i]['setpoint']
             drive[i] = headlist[i]['drive']
+            
+        # Compute difference between images in the stack and the mean or median of the stack
+        
+        dmedian = np.zeros((numfiles))
+        dmean = np.zeros((numfiles))
+        dmad = np.zeros((numfiles))
+        dstd = np.zeros((numfiles))
+        difimage = np.zeros_like(darkstack)
+        for i in range(numfiles):
+            difimage[i] = darkstack[i] - self.dark
+            dmedian[i] = np.nanmedian(difimage[i])
+            dmean[i] = np.nanmean(difimage[i])
+            dmad[i] = mad_std(difimage[i],ignore_nan=True)
+            dstd[i] = np.nanstd(difimage[i])
+            
+        ### Update output header with stack information
+        
+        self.dataout.setheadval('notes', 'Master dark image made from a list of dark images.')
+        self.dataout.setheadval('notes1', 'Primary HDU is the mean of the input images.')
+        self.dataout.setheadval('notes2', 'HDU#2 is a table with statistical and environmental data.')
+        self.dataout.setheadval('filelist', 'Input files are those in date+time-range in output filename.')
+        self.dataout.setheadval('imagetyp', 'MDARK', 'Image type of the output file')
+        self.dataout.setheadval('bzero', 0.0)
+        self.dataout.setheadval('oscnmean', 0.0)
+        self.dataout.setheadval('reduceby', 'pipeline StepMasterDarkHdr', 'Reduction software')
+        self.dataout.setheadval('numfiles', numfiles, 'Number of input files')
+        self.dataout.header['ambient'] = np.nanmean(ambient)
+        self.dataout.header['primary'] = np.nanmean(primary)
+        self.dataout.header['secondar'] = np.nanmean(secondar)
+        self.dataout.header['dewtem1'] = np.nanmean(dewtem1)
+        self.dataout.header['heatsink'] = np.nanmean(heatsink)
+        self.dataout.header['rotation'] = np.nanmean(rotation)
+        self.dataout.header['setpoint'] = np.nanmean(setpoint)
+        self.dataout.header['drive'] = np.nanmean(drive)
 
         ### Put derived and header data into a fits table and add it to the output object
 
@@ -190,7 +222,6 @@ class StepMasterDarkHdr(StepMIParent):
         cols.append(fits.Column(name='setpoint', format='D', array=setpoint, unit='C'))
         cols.append(fits.Column(name='drive', format='D', array=drive, unit='percent'))
 
-
         # Make table
         table_columns = fits.ColDefs(cols)
         table = fits.BinTableHDU.from_columns(table_columns)
@@ -200,7 +231,7 @@ class StepMasterDarkHdr(StepMIParent):
         self.dataout.tableset(table.data, tablename = 'table', tableheader=tabhead)        
         
         ### Add history
-        self.dataout.setheadval('HISTORY','MasterDark: %d files used' % len(filelist))
+        self.dataout.setheadval('HISTORY','MasterDark: %d files used' % numfiles)
 
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
@@ -212,7 +243,7 @@ if __name__ == '__main__':
           --loglevel=LEVEL : configures the logging output for a particular level
           -h, --help : Returns a list of 
     """
-    StepMasterBias().execute()
+    StepMasterDarkHdr().execute()
         
         
 """ === History ===
