@@ -43,6 +43,7 @@ from astropy.convolution import Gaussian2DKernel, interpolate_replace_nans # For
 import scipy.ndimage as nd
 import numpy as np
 import logging
+from skimage.measure import block_reduce
 
 class StepHdr(StepLoadAux, StepMIParent):
     """ Pipeline Step Object to calibrate Flatfield High Dynamic Range files
@@ -123,6 +124,8 @@ class StepHdr(StepLoadAux, StepMIParent):
             'list of header keywords to divide by sample factor'])
         self.paramlist.append(['multkeys', [], 
             'list of header keywords to multiply by sample factor'])
+        self.paramlist.append(['overscan_correct', True,
+            'Set to False to omit overscan subtraction'])
        
         # Set root names for loading parameters with StepLoadAux.
         self.loadauxsetup('lpfit')
@@ -192,7 +195,7 @@ class StepHdr(StepLoadAux, StepMIParent):
         lflat = self.flat.image[1]                 # low-gain flat
         
         
-        ### The images are now in DataFits objects
+        ### The calibration images are now in DataFits objects
         
         # Get the filename to determine gain
         filename1 = self.datain[0].filenamebegin
@@ -225,8 +228,22 @@ class StepHdr(StepLoadAux, StepMIParent):
         
                 
         # dataL_df now contains the low-gain file, dataH_df now contains the high-gain file:
+        
         hdata = hdata_df.image[:,:4096] * 1.0       # Crop overscan and convert to float
-        ldata = ldata_df.image[:,:4096] * 1.0       
+        ldata = ldata_df.image[:,:4096] * 1.0   
+        
+        if overscan_correct == True:
+            hOS = hdata_df.image[:,4096:]
+            hOSmean = np.nanmean(hOS)                   # Total overscan mean
+            hOVmeans = np.nanmean(hOS, axis=1)        # Means by row
+            hOScorrect = np.transpose(np.zeros((4096,4096)) + hOVmeans)
+            hdata = hdata - (hOScorrect-hOSmean)       # Apply overscan correction
+            
+            lOS = ldata_df.image[:,4096:]    
+            lOSmean = np.nanmean(lOS)
+            lOVmeans = np.nanmean(lOS, axis=1)
+            lOScorrect = np.transpose(np.zeros((4096,4096)) + lOVmeans)
+            ldata = ldata - (lOScorrect-lOSmean)
         
         self.log.debug('Shape of Hdata: %s' % repr(np.shape(hdata)))
         self.log.debug('Shape of Ldata: %s' % repr(np.shape(ldata)))
@@ -263,8 +280,8 @@ class StepHdr(StepLoadAux, StepMIParent):
         HDRdata = hdatabdf.copy()
         HDRdata[lupper] = ldata[lupper]      # Replace upper range of high-gain image with low-gain * gain values
         
-        # Downsample image by factor of two
-        outdata = nd.zoom(HDRdata,0.5)
+        # Downsample image by factor of two using skimage block reduce
+        outdata = block_reduce(HDRdata,block_size = (2,2), func=np.mean)
         
         # Make dataout
         self.dataout = hdata_df.copy() # could also be new DataFits() or copy of datain[1]]
