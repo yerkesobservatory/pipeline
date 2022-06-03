@@ -29,6 +29,14 @@ class StepMasterDarkHdr(StepMIParent):
     """
     stepver = '0.1' # pipe step version
     
+    def __init__(self):
+        """ Constructor: Initialize data objects and variables
+        """
+        # call superclass constructor (calls setup)
+        super(StepMasterDarkHdr,self).__init__()
+
+        self.log.debug('Init: done')
+    
     def setup(self):
         """ ### Names and Parameters need to be Set Here ###
             Sets the internal names for the function and for saved files.
@@ -232,6 +240,8 @@ class StepMasterDarkHdr(StepMIParent):
         
         ### Add history
         self.dataout.setheadval('HISTORY','MasterDark: %d files used' % numfiles)
+        
+        self.log.debug("Filename: %s" % self.dataout.filename)
 
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
