@@ -133,7 +133,8 @@ class StepMasterDarkHdr(StepMIParent):
         self.noise = np.nanstd(darkstack, axis=0)        # Make a noise image
             
         # Set output header, put image into output
-        self.dataout.header = self.datain[0].header
+        self.dataout = self.datain[0].copy()
+        #self.dataout.header = self.datain[0].header
         self.dataout.imageset(self.dark)
         
         # Put noise image in second HDU
