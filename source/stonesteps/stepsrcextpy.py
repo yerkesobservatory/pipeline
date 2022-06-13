@@ -142,7 +142,7 @@ class StepSrcExtPy(StepParent):
         # Byteswap if required
         maxexp = np.max(np.abs(np.frexp(psimage)[1]))
         self.log.debug("Initial max exponent value: %d" % maxexp)
-        if maxexp > 15:
+        if maxexp > 19:
             self.log.debug("Performing byte swap")
             image = psimage.byteswap(inplace=True)
         else:
