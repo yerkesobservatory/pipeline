@@ -166,12 +166,13 @@
         
 # Copy Queue data
 [mode_copyqueue]
-	stepslist = StepLoadInput, StepQueueCopy
-	# Loadinput step details
-	[[loadinput]]
-		# Location of files
-		filelocation = '/data/public/queue/*/*/raw/science/*.fits
-		fileexclude = 'bias|dark|flat'
+    stepslist = StepLoadInput, StepQueueCopy
+    # Loadinput step details
+    [[loadinput]]
+        # Location of files
+        filelocation = '/data/public/queue/*/*/raw/science/*.fits'
+        fileexclude = 'bias|dark|flat'		
+        headeronly = True
 
 ### Pipe Steps Section
 #   One entry for each pipe step which is used

@@ -18,7 +18,7 @@
 # Copy Queue data
 [mode_copyqueue]
     [[loadinput]]
-        filelocation = '/data/public/queue/*/2022-06-08_seo_apagul/raw/science/*.fits
+        filelocation = '/data/public/queue/*/*2022-06-*_seo_*/raw/science/*.fits'
 
 # Mode to reduce after BDF/HDR step
 [mode_postbdf]

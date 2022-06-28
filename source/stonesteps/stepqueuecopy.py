@@ -14,7 +14,8 @@
       * Makes a piperun file
       
     File format
-    * Low gain file must have GAIN > 2.0 e/ADU and '.fitsL.fits' at the end of filename
+    * Low gain file must have GAIN > 2.0 e/ADU and '.fitsL.fits' at
+      the end of filename. Also data in second header.
     * High gain file must have GAIN < 2.0 e/ADU and '.fits' at end of filename
     * The observer is the last '_' separated word in the filename
     * Input filename is of the form
@@ -32,7 +33,9 @@
 import logging # logging object library
 from darepype.drp.stepmiparent import StepMIParent
 from datetime import datetime
+import os
 import shutil
+from astropy.io import fits
 
 class StepQueueCopy(StepMIParent):
     """ DarePype Step Queue Copy Object
@@ -80,14 +83,23 @@ class StepQueueCopy(StepMIParent):
         """
         # For each file add gain, observer to header, then make filename
         observers = [] # list of observers
-        obsvations = {}
+        observations = {}
         for dat in self.datain:
             # Get filepath / name
             filepath, filename = os.path.split(dat.filename)
-            obspath = os.path.split(filepath)[1]
+            obspath = os.path.split(filepath)[0]
+            obspath = os.path.split(obspath)[0]
+            obspath = os.path.split(obspath)[1]
+
             # Check gain / remove end of filename
             # fitsL.fits i.e. bin1L files have gain 18.31
             # fits i.e. bin1H files have gain 0.86
+            try:
+                gain = dat.getheadval('GAIN')
+            except KeyError:
+                # all data is in the second header, load it
+                hdus = fits.open(dat.filename)
+                dat.header = hdus[1].header
             if not (dat.getheadval('GAIN') > 2.0 and '.fitsL.fits' in filename):
                 self.log.warn("Image %s has mismatched gain/filename" % filename)
             # Remove end of filename
@@ -98,17 +110,21 @@ class StepQueueCopy(StepMIParent):
                 fname = fname[:-6]
             # Get observer into OBSERVER keyword
             observer = fname.split('_')[-1]
-            dat.setheadval('OBSERVER',observer)
+            dat.setheadval('OBSERVER',observer.capitalize())
             # Make output filename
             outfname = fname[:fname.index('_bin')+5] # get all to binN
-            if dat.getheadval('GAIN') > 2.0: outfname += 'L_' # add high/low gain
-            else: outfname += 'H_'
-            fdate = strptime(dat.getheadval('DATE-OBS'),'%Y-%m-%dT%H:%M:%S')
-            outfname += datetime.strftime('%y%m%d_%H%M%S_', fdate) # add date_time
+            try:
+                if dat.getheadval('GAIN') > 2.0: outfname += 'L_' # add high/low gain
+                else: outfname += 'H_'
+            except:
+                outfname += 'L_'
+            fdate = datetime.strptime(dat.getheadval('DATE-OBS'),'%Y-%m-%dT%H:%M:%S')
+            outfname += fdate.strftime('%y%m%d_%H%M%S_') # add date_time
             outfname += observer + '_seo_0_RAW.fits' # and end of name
             # Get output path
-            outpath = path.join(self.getarg('outpath'), observer, obspath)
-            outfname = path.join(outpath,outfname)
+            outpath = os.path.join(self.getarg('outpath'), 
+                                   observer.capitalize(), obspath)
+            outfname = os.path.join(outpath,outfname)
             dat.setheadval('OUTFNAME', outfname)
             self.log.debug(f'{dat.filename} -> {outfname}')
             # Add observer and observation
@@ -124,13 +140,15 @@ class StepQueueCopy(StepMIParent):
         # Loop through observers
         for observer in observers:
             # Make folder
-            outpath = path.join(self.getarg('outpath'), observer)
+            outpath = os.path.join(self.getarg('outpath'), 
+                                   observer.capitalize())
             if not os.path.exists(outpath):
                 os.mkdir(outpath)
             # Loop through observations
             for obspath in observations[observer]:
                 # Make folder
-                outpath = path.join(outpath, obspath)
+                outpath = os.path.join(self.getarg('outpath'),
+                                       observer.capitalize(), obspath)
                 if not os.path.exists(outpath):
                     os.mkdir(outpath)
                 # Make piperun filepathname
@@ -152,13 +170,13 @@ class StepQueueCopy(StepMIParent):
                     f'outputfolder = {outpath}\n'
                     )
                 # Save file
-                log.info('Writing piperun at %s' % piperun)
+                self.log.info('Writing piperun at %s' % piperun)
                 with open(piperun,'wt') as outf:
                     outf.write(text)
         # Copy the files
         for dat in self.datain:
             # Set up command
-            shutil.copy(dat.filename, dat.getheadval('OUTFNAME'))                
+            shutil.copy(dat.filename, dat.getheadval('OUTFNAME'))               
         # Populate dataout (just so there's something in it)
         self.dataout = self.datain[0]
     
