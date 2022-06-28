@@ -13,6 +13,11 @@
     RAW_BDF_FOLDER = '/data/images/StoneEdge/0.5meter/2021/%Y-%m-%d' # for current date
     # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
     SEO_AUXFOLDER = /data/scripts/DataReduction/auxfiles
+    
+# Copy Queue data
+[mode_copyqueue]
+    [[loadinput]]
+        filelocation = '/data/public/queue/*/2022-06-08_seo_apagul/raw/science/*.fits
 
 # Mode to reduce after BDF/HDR step
 [mode_postbdf]

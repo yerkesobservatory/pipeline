@@ -156,6 +156,15 @@
     [[datagroup]]
         redstepname = StepMasterFlat
         groupkeys = XBIN|FILTER
+        
+# Copy Queue data
+[mode_copyqueue]
+	stepslist = StepLoadInput, StepQueueCopy
+	# Loadinput step details
+	[[loadinput]]
+		# Location of files
+		filelocation = '/data/public/queue/*/*/raw/science/*.fits
+		fileexclude = 'bias|dark|flat'
 
 ### Pipe Steps Section
 #   One entry for each pipe step which is used
@@ -362,6 +371,13 @@
     # Fraction of the detector colums which are overscaned
     # i.e. number of overscaned columns = number of columns / this fraction
     ovrscncolsfrac = 257
+
+# Queue Copy step configuration
+[queuecopy]
+	# Output path
+	outpath = /data/images/queue
+	# Path for piperun files
+	piperunpath = /data/images/queue/A_Test/piperuns
 
 # Resample step configuration
 [resample]

@@ -61,6 +61,8 @@ class StepLoadInput(StepNIParent):
             "List of strings which filename must contain to be loaded (unused if '', | separated)"])
         self.paramlist.append(['fileexclude','MBIAS',
             "List of strings which filename must not contain to be loaded (unused if '' | separated)"])
+        self.paramlist.append(['headeronly',False,
+                               'Flag to indicate that only data header should be loaded'])
 
     def run(self, inpar = '', data = None, multi = False):
         # Loads all files base on glob, parameter 'filelocation'
@@ -137,8 +139,12 @@ class StepLoadInput(StepNIParent):
         finalsorted=sorted(finalfiles)
         self.dataout=[]
         # Appends final list of loaded files to dataout
-        for f in finalsorted:
-            self.dataout.append(DataParent(config = self.config).load(f))
+        if self.getarg('headeronly'):
+            for f in finalsorted:
+                self.dataout.append(DataParent(config = self.config).loadhead(f))
+        else:
+            for f in finalsorted:
+                self.dataout.append(DataParent(config = self.config).load(f))
 
     def runend(self,data):
         """ Method to call at the end of pipe the pipe step call
