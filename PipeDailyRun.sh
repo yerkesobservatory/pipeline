@@ -9,7 +9,7 @@
 
 ### Setup
 export PATH=/usr/lib64/qt-3.3/bin:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:$HOME/bin:$PATH
-export PYTHONPATH=/data/scripts/DataReduction/source
+export PYTHONPATH=/data/scripts/pipeline/source
 
 DRPath=/usr/local/lib/python3.6/site-packages/darepype
 
@@ -17,7 +17,7 @@ DRPath=/usr/local/lib/python3.6/site-packages/darepype
 rm /tmp/*
 
 ### Run Sort Obs
-cd /data/scripts/DataReduction
+cd /data/scripts/pipeline
 /usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode sortobs -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1
 ### Run Masters
 /usr/local/bin/python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode masterbias -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1
