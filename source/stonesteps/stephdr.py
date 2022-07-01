@@ -232,7 +232,7 @@ class StepHdr(StepLoadAux, StepMIParent):
         hdata = hdata_df.image[:,:4096] * 1.0       # Crop overscan and convert to float
         ldata = ldata_df.image[:,:4096] * 1.0   
         
-        if overscan_correct == True:
+        if False: # overscan_correct == True: # THIS CRASHES THE STEP - DEACTIVATED - MGB 220630
             hOS = hdata_df.image[:,4096:]
             hOSmean = np.nanmean(hOS)                   # Total overscan mean
             hOVmeans = np.nanmean(hOS, axis=1)        # Means by row
@@ -293,10 +293,10 @@ class StepHdr(StepLoadAux, StepMIParent):
             self.dataout.setheadval(key,self.dataout.getheadval(key)/2)
         for key in self.getarg('multkeys'):                               # Multiply keywords by sample factor
             if not key in self.dataout.header: continue
-                if key == 'GAIN':
-                    self.dataout.setheadval(key,self.dataout.getheadval(key)*4)
-                else:
-                    self.dataout.setheadval(key,self.dataout.getheadval(key)*2)
+            if key == 'GAIN':
+                self.dataout.setheadval(key,self.dataout.getheadval(key)*4)
+            else:
+                self.dataout.setheadval(key,self.dataout.getheadval(key)*2)
         
     def reset(self):
         """ Resets the step to the same condition as it was when it was

@@ -170,7 +170,7 @@
     # Loadinput step details
     [[loadinput]]
         # Location of files
-        filelocation = '/data/public/queue/*/*/raw/science/*.fits'
+        filelocation = '/data/public/queue/*/*%Y-%m-%d*/raw/science/*.fits'
         fileexclude = 'bias|dark|flat'		
         headeronly = True
 

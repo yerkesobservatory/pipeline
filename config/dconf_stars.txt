@@ -15,10 +15,10 @@
     # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
     SEO_AUXFOLDER = /data/scripts/pipeline/auxfiles
     
-# Copy Queue data
-[mode_copyqueue]
-    [[loadinput]]
-        filelocation = '/data/public/queue/*/*2022-06-*_seo_*/raw/science/*.fits'
+# Copy Queue data (only needed when debugging)x
+#[mode_copyqueue]
+#    [[loadinput]]
+#        filelocation = '/data/public/queue/*/*2022-06-30_seo_*/raw/science/*.fits'
 
 # Mode to reduce after BDF/HDR step
 [mode_postbdf]

@@ -26,3 +26,6 @@ cd /data/scripts/pipeline
 
 ### Run Pipeline
 ./PipeExecuteAutoDay.py >> AstroLog.txt 2>&1
+
+### Copy queue data
+/usr/local/bin/python3 /usr/local/lib/python3.6/site-packages/darepype/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode copyqueue -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1
