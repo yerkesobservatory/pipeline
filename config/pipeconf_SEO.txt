@@ -68,6 +68,7 @@
     [[datagroup]]
         redstepname = StepHdr
         groupkeys = DATE-OBS
+        saveoutput = True
 
 # Stoneedge Short Mode - for reducing data on your own computer
 #     Use this to test the pipeline without making any changes to the config file
@@ -94,6 +95,7 @@
     [[datagroup]]
         redstepname = StepHdr
         groupkeys = DATE-OBS
+        saveoutput = True
 
 # Stoneedge Server Mode - for reducing data on the server from 2020
 #     Use this if you have sextractor and astrometry installed but no HDR images
