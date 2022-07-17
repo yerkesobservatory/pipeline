@@ -107,7 +107,13 @@ class StepLoadInput(StepNIParent):
         indatafinal = list(set(ininclude)-set(inexclude))
         headlist = []
         for innam in indatafinal:
-            headlist.append(DataParent(config = self.config).loadhead(innam))
+            try:
+                din = DataParent(config = self.config).loadhead(innam)
+            except: 
+                msg = "Unable to open file %s" % innam
+                self.log.warn(msg)
+                continue
+            headlist.append(din)
         includelist = self.getarg('includeheadvals').split('|')
         keysinclude = []
         inheadinclude = []

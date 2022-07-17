@@ -26,7 +26,14 @@
         An image which is the difference of the original image and the background image.
 
     For more info check out the read the docs for SEP: https://sep.readthedocs.io/
-    Authors: Amanda Pagul / Marc Berthoud/ Daniel Sharkey/ Al Harper/ Alexa Bukowski/ Alexandra Masegian
+    
+    Bugfixes:
+    - Exception: object deblending overflow: limit of 1024 sub-objects reached while
+                 deblending. Decrease number of deblending thresholds or increase the
+                 detection threshold.
+      => Increase the ext_thresh parameter
+    
+    Authors: Amanda Pagul / Daniel Sharkey/ Al Harper/ Alexa Bukowski/ Alexandra Masegian
 """
 import os # os library
 import sys # sys library
