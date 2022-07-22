@@ -161,9 +161,8 @@ class StepSrcExtPy(StepParent):
         self.log.debug("Initial data type: %s" % psimage.dtype)
         if psimage.dtype != np.float64:
             self.log.debug("Converting to float64")
-            image = image.byteswap(inplace=True).newbyteorder()
-        else:
-            self.log.debug("No dtype swap required")
+            #image = image.byteswap(inplace=True).newbyteorder()
+            image = image.astype(np.float64)
 
         #These variables are used for the background analysis. 
         #We grab the values from the paramlist
