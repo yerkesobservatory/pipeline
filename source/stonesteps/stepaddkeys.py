@@ -59,7 +59,7 @@ class StepAddKeys(StepParent):
         try:
             observer = self.datain.getheadval('OBSERVER')
             # Make sure it's not invalid entry
-            if observer.lower() in ['', 'unk', 'unknown', 'remote'] :
+            if observer.lower() in ['', 'unk', 'unknown', 'remote', 'sirius'] :
                 got_observer = False
             else:
                 got_observer = True
