@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 """ 
-    Pipestep HDR (High Dynamic Range)
+        Pipestep HDR (High Dynamic Range)
 
-    This module corrects a pair raw image low and high gain images files for 
+    This module corrects a pair of raw image low and high gain image files for 
     detector dark, bias, and flat effects. The step crops the overscan from
     input images, reduces high- and low-gain images individually, then
     performs a Gaussian interpolation to remove nans from the data before
-    combining into one HDR image and downsampling.
+    combining into one HDR image and downsampling. Optionally, the step can also
+    apply the astroscrappy function to remove cosmic ray defects from the
+    downsampled image.
     
     The step requires as input two files, a low gain file and a high gain file.
     It produces one output file.
@@ -14,24 +16,39 @@
     It uses StepLoadAux functions to call the following files:
         - masterpfit (x2): A 3D image containing one HDU with two planes, constructed
             by performing a polynomial fit (currently linear) to a set of 
-            short-exposure darks. The first image has pixel values which are the 
-            slopes of linear fits to data from each pixel; the second image contains
-            the intercepts and takes the place of a zero-exposure for the CMOS camera. 
-            Here, the intercept image is used for bias subtraction. The step uses two
-            of these, one for each high- and low-gain.
+            short-exposure darks taken at different exposure times (currently between 1s
+            and 64s). The first image plane has pixel values which are the slopes of
+            linear fits to data from each pixel; the second image contains
+            the intercepts and takes the place of a zero-exposure image (bias image)
+            for the CMOS camera. Here, the intercept image is used for bias subtraction.
+            The step uses two of these, one each for high- and low-gain.
         - masterdark (x2): A matched pair of high- and low-gain master darks of 
-            the same exposure length as the raw sky image. MDARK or MMDARK files.
-            Each contains one HDU.
+            the same exposure length as the raw sky image. MDARK.fits or MMDARK.fits
+            files. Each contains one HDU.
+        - mastertfit (x2): A matched pair of high- and low-gain master darks of 
+            the same exposure length as the raw sky image. TFIT files.
+            Each contains one HDU containing a 3D image with two planes constructed
+            by performing a polynomial fit (currently linear) to a set of long-exposure
+            darks taken at different heatsink temperatures. The first image plane has
+            pixel values which are the slopes of linear fits to the data from each pixel.
+            The second plane contains the intercepts (this is equivalent to a dark
+            image taken at a heatsink temperature of 0 C).    
         - masterflat: A file consisting of three HDUs. The first contains a 3D
             flat-field image with a plane each for the high and low gain data
             (used for flat correction); the second contains a gain ratio image
-            (used for creating an HDR output); the third contains a table of
+            (used for creating an HDR output image); the third contains a table of
             statistical information about the flats (not used here).
             
     The high-gain mode of the CMOS detector currently causes low-gain images to be
     loaded into the second HDU, and the header data to be loaded into an XTENSION
     header in the second image position. The step locates the low-gain file and
     swaps the data into the correct positions.
+    
+    The current version of this code assumes that there is a unique master file in the
+    master dark directory with exactly the same exposure time as the file to be reduced.
+    That is, it assumes that at each exposure time, there is either an MDARK.fits or
+    TFIT.fits file, but not both. It then automatically detects whether the file with
+    the matching exposure time is an MDARK.fits or TFIT.fits.
     
     Authors: Carmen Choza, Al Harper, Marc Berthoud
 """
@@ -40,10 +57,11 @@ from darepype.drp import DataFits # pipeline data object class
 from darepype.drp.stepmiparent import StepMIParent # pipestep Multi-Input parent
 from darepype.tools.steploadaux import StepLoadAux # pipestep steploadaux object class
 from astropy.convolution import Gaussian2DKernel, interpolate_replace_nans # For masking/replacing
-import scipy.ndimage as nd
 import numpy as np
 import logging
 from skimage.measure import block_reduce
+import astroscrappy
+import os
 
 class StepHdr(StepLoadAux, StepMIParent):
     """ Pipeline Step Object to calibrate Flatfield High Dynamic Range files
@@ -126,7 +144,16 @@ class StepHdr(StepLoadAux, StepMIParent):
             'list of header keywords to multiply by sample factor'])
         self.paramlist.append(['overscan_correct', True,
             'Set to False to omit overscan subtraction'])
-       
+        self.paramlist.append(['remove_cosmics', True, 
+        	'Set to False to omit cosmic ray removal'])
+        self.paramlist.append(['psffwhm', 5.0, 
+        	'Set to psf full width half maximum'])
+        self.paramlist.append(['fsmode', 'convolve', 
+        	'Set to fsmode for astroscrappy'])
+        self.paramlist.append(['cleantype', 'medmask', 
+        	'Set to cleantype for astroscrappy'])
+            
+            
         # Set root names for loading parameters with StepLoadAux.
         self.loadauxsetup('lpfit')
         self.loadauxsetup('hpfit')
@@ -146,7 +173,7 @@ class StepHdr(StepLoadAux, StepMIParent):
         """ Runs the correction algorithm. The corrected data is
             returned in self.dataout
         """
-        ### Load pfit, dark and flat files
+        ### Load pfit, dark, and flat files
         # Set loaded flags to false if reload flag is set
         if self.getarg('reload'):
             self.lpfitloaded = False
@@ -195,7 +222,7 @@ class StepHdr(StepLoadAux, StepMIParent):
         lflat = self.flat.image[1]                 # low-gain flat
         
         
-        ### The calibration images are now in DataFits objects
+        ### The calibration images are now in numpy arrays
         
         # Get the filename to determine gain
         filename1 = self.datain[0].filenamebegin
@@ -224,22 +251,23 @@ class StepHdr(StepLoadAux, StepMIParent):
             dL = self.datain[1]
             ldata_df = DataFits(config = self.config)
             ldata_df.imageset(dL.imageget(dL.imgnames[1]))
-        
-        
+            
                 
         # dataL_df now contains the low-gain file, dataH_df now contains the high-gain file:
         
-        hdata = hdata_df.image[:,:4096] * 1.0       # Crop overscan and convert to float
-        ldata = ldata_df.image[:,:4096] * 1.0   
+        hdata = hdata_df.image[:,:4096] * 1.0      
+        ldata = ldata_df.image[:,:4096] * 1.0
         
-        if False: # overscan_correct == True: # THIS CRASHES THE STEP - DEACTIVATED - MGB 220630
-            hOS = hdata_df.image[:,4096:]
+         # Crop overscan and convert to float   
+        
+        if self.getarg ('overscan_correct') == True: 
+            hOS = hdata_df.image[:,4096:] * 1.0
             hOSmean = np.nanmean(hOS)                   # Total overscan mean
             hOVmeans = np.nanmean(hOS, axis=1)        # Means by row
             hOScorrect = np.transpose(np.zeros((4096,4096)) + hOVmeans)
             hdata = hdata - (hOScorrect-hOSmean)       # Apply overscan correction
             
-            lOS = ldata_df.image[:,4096:]    
+            lOS = ldata_df.image[:,4096:] * 1.0
             lOSmean = np.nanmean(lOS)
             lOVmeans = np.nanmean(lOS, axis=1)
             lOScorrect = np.transpose(np.zeros((4096,4096)) + lOVmeans)
@@ -252,8 +280,19 @@ class StepHdr(StepLoadAux, StepMIParent):
         
         kernel = Gaussian2DKernel(x_stddev=2) # Make kernel for Gaussian interpolation
         
+        # Set up to handle either TFIT or MDARK files
+        dname = os.path.split(self.hdarkname)
+        if '_TFIT.fit' in dname[1]:    # Make temperature-matched darks from TFIT data        
+            heatsink = hdata_df.getheadval('heatsink')        
+            darkh = hdark[1] + hdark[0]*heatsink
+            darkl = ldark[1] + ldark[0]*heatsink
+        else:                          # Or use MDARK data
+            darkh = hdark
+            darkl = ldark
+        
+
         # Process high-gain data
-        hdatabdf = ((hdata - hbias) - (hdark - hbias))/hflat
+        hdatabdf = ((hdata - hbias) - (darkh - hbias))/hflat
         
         nanmask = np.isnan(hdatabdf)
         self.log.debug(np.sum(nanmask))
@@ -264,7 +303,7 @@ class StepHdr(StepLoadAux, StepMIParent):
         
         '''Process low-gain data'''
         
-        ldatabdf = (((ldata - lbias) - (ldark - lbias))/lflat) * gain
+        ldatabdf = (((ldata - lbias) - (darkl - lbias))/lflat) * gain
         
         nanmask = np.isnan(ldatabdf)
         self.log.debug(np.sum(nanmask))
@@ -281,8 +320,18 @@ class StepHdr(StepLoadAux, StepMIParent):
         HDRdata[lupper] = ldata[lupper]      # Replace upper range of high-gain image with low-gain * gain values
         
         # Downsample image by factor of two using skimage block reduce
-        outdata = block_reduce(HDRdata,block_size = (2,2), func=np.mean)
+        outdata_hdr = block_reduce(HDRdata,block_size = (2,2), func=np.mean)
         
+        
+        # Option to use astroscrappy to remove cosmic ray artifacts
+        remove_cosmics = self.getarg('remove_cosmics')
+        psffwhm = self.getarg('psffwhm')
+        fsmode = self.getarg('fsmode')
+        cleantype = self.getarg('cleantype')        
+        if self.getarg('remove_cosmics'):
+        	crarray, outdata = astroscrappy.detect_cosmics(outdata_hdr, psffwhm=psffwhm, fsmode=fsmode, cleantype=cleantype)
+
+        	       
         # Make dataout
         self.dataout = hdata_df.copy() # could also be new DataFits() or copy of datain[1]]
         self.dataout.image = outdata
