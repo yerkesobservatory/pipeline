@@ -29,7 +29,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             # in meeting Al said pfit is int.+slope of interpolated dark current vs. exptime? confused on this
             # hand-drawn diagram insinuates I only need the pfits + flats ; remove darks from code?            
             # Call superclass constructor (calls setup)
-            super(StepHdr,self).__init__()
+            super(StepMasterFlatHdr,self).__init__()
 
             # Pfit values
             self.hpfitloaded = False # indicates if bias has been loaded
@@ -151,8 +151,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         # Add history
         self.dataout.setheadval('HISTORY','MasterFlat: %d files used' % len(filelist))
 
-    if __name__ == '__main__':
-        """ Main function to run the pipe step from command line on a file.
+if __name__ == '__main__':
+    """ Main function to run the pipe step from command line on a file.
             Command:
               python stepparent.py input.fits -arg1 -arg2 . . .
             Standard arguments:
@@ -161,4 +161,4 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
               --loglevel=LEVEL : configures the logging output for a particular level
               -h, --help : Returns a list of 
         """
-        StepMasterFlatHdr().execute()
+    StepMasterFlatHdr().execute()
