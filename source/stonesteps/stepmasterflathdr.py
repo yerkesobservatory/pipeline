@@ -15,7 +15,7 @@ import numpy as np
 import logging
 from skimage.measure import block_reduce
 
-class stepmasterflathdr(StepLoadAux, StepMIParent):
+class StepMasterFlatHdr(StepLoadAux, StepMIParent):
     '''Pipeline step object to produce and subtract master flats, pulls in pfits (3d image with one layer as the dark
     and one as the bias) and raw flats, requires valid config file'''
     
@@ -152,13 +152,13 @@ class stepmasterflathdr(StepLoadAux, StepMIParent):
         self.dataout.setheadval('HISTORY','MasterFlat: %d files used' % len(filelist))
 
     if __name__ == '__main__':
-    """ Main function to run the pipe step from command line on a file.
-        Command:
-          python stepparent.py input.fits -arg1 -arg2 . . .
-        Standard arguments:
-          --config=ConfigFilePathName.txt : name of the configuration file
-          -t, --test : runs the functionality test i.e. pipestep.test()
-          --loglevel=LEVEL : configures the logging output for a particular level
-          -h, --help : Returns a list of 
-    """
-        stepmasterflathdr().execute()
+        """ Main function to run the pipe step from command line on a file.
+            Command:
+              python stepparent.py input.fits -arg1 -arg2 . . .
+            Standard arguments:
+              --config=ConfigFilePathName.txt : name of the configuration file
+              -t, --test : runs the functionality test i.e. pipestep.test()
+              --loglevel=LEVEL : configures the logging output for a particular level
+              -h, --help : Returns a list of 
+        """
+        StepMasterFlatHdr().execute()
