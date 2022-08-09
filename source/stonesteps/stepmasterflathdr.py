@@ -1,4 +1,56 @@
-### BUILDING STEPMASTERFLATHDR : COPY INTO .PY FILE AND PUSH TO GITHUB TODAY
+### BUILDING STEPMASTERFLATHDR
+'''
+Pipestep Master Flat HDR
+
+Produces Master Flat images using pfit images and raw flats as inputs. 
+
+Uses StepLoadAux to load in pfit files. 
+
+FINIAN'S NOTES:
+
+- Some imports are currently redundant due to being drawn from multiple sources, this can be cleaned up later.
+
+- Potentially irrelevant code for loading in flats is in the __init__, there is code for loading them in the Run 
+  funtion from Al's make_flat_HDR colab notebook. I believe this should be taken care of by the load input part
+  of the config file, but am not sure exactly what to put in this notebook to load in the flats.
+  
+- Some functions from Al's make_flat notebook may be irrelevant and able to be removed.
+
+- Unsure if the code to build the hotpix mask should be in here, and if so, where. 
+  Al suggested moving the code that generates this mask to the code that creates the pfit, and loading it in
+  using the loadaux functionality.
+
+
+
+STEP DESCRIPTION:
+
+Makes flat-field calibration images. Specialized for making HDR images for the SBIG CMOS camera.
+Also makes gain ratio images by comparing signals in the high and low gain channels when the camera is operated in 
+HDR mode. After bias-subtraction, the total signal (sky signal plus dark signal) of the high gain channel is 
+divided by the total signal of the low-gain channel.
+
+Input files are:
+-   RAW flat images, taken at dusk with a script that acquires flat images of approximately equal exposure level. 
+    The script attempts to make the median value of the image approximately 3000 ADU (the high-gain channel 
+    saturates at 4095 ADU).
+-   PFIT images, which comprise a 3D image with two planes. In the first, the pixel values are the dark current and 
+    in the second they are the bias levels. The PFIT images enable interpolation to the exact exposure time of the 
+    individual RAW flat images.
+    
+Output is a file with the suffix MFLAT. It has three HDUs:
+-   The primary HDU is the flat-field image. It is a 3D image with two planes. The first (index = 0) is the high-gain 
+    flat and the second (index = 1) is the low-gain flat.
+-   The second HDU is the gain ratio image. The image name is 'GAIN RATIO'.
+-   The third HDU is a table with information about the individual RAW images used to make the MFLAT image.
+
+The table name is 'TABLE'.
+The notebook batch-processes files within a directory according to keywords in user-configurable lists, 
+one for gain and one for filter.
+The output flat image and gain image both contain NANS that identify pixels determined using histograms to be 
+outliers. The threshold criteria can be tuned by changing parameters in the code.
+
+'''
+
 from darepype.drp import DataFits # pipeline data object class
 from darepype.drp.stepmiparent import StepMIParent # pipestep Multi-Input parent
 from darepype.tools.steploadaux import StepLoadAux # pipestep steploadaux object class
@@ -15,6 +67,409 @@ import numpy as np
 import logging
 from skimage.measure import block_reduce
 
+
+## BELOW: imports from Al's make_flat colab notebook 
+
+ ## Variables used to control execution of the code.
+camera = 'SBIG'    # Identifies camera being used. Currently the choices are SBIG and FLI (CMOS and CCD, respectively).
+reduceby = 'make_flat_HDR_auto_51'  # Reduction software (this notebook)
+ ## Core imports.
+import sys
+import os
+import numpy as np
+print(sys.executable) ## Check to see if Jupyter is using the correct path.
+ ### Generally useful mports and system path additions. May contain some imports not required for this notebook. 
+from matplotlib import pyplot as plt        # A collection of modules. Needed here to display images and graphs.
+from matplotlib import pylab                # A collection of modules. Needed here to plot histograms.
+from darepype.drp.datafits import DataFits  # Gets the function that makes DataFits io objects.
+from astropy.io import fits                 # Need this if you want to use astropy.io io objects.
+from ipywidgets import interact             # Need this for interactive plots.
+from matplotlib.colors import LogNorm       # Machinery for LogNorm scaling of intensities.
+from matplotlib.colors import SymLogNorm    # Machinery for SymLogNorm scaling of intensities.
+from matplotlib.colors import PowerNorm     # Machinery for LogNorm (e.g., square root) scaling of intensities.
+from astropy.stats import mad_std           # The median absolute deviation, a more robust estimator than std.
+import scipy.ndimage as nd                  # Various algorithms for image transformations.
+from astropy.time import Time
+
+
+## BELOW: Al's paths, not sure if this bit is strictly necessary
+ ## Specify the paths to the data input and output directories.
+
+ # flatpath = '/Users/alex/_observing/_stone edge data/2021/2021-12-11/chultun'
+ # polypath = '/Users/alex/_observing/_stone edge data/2021/all_2021-10_sdarks/mdark/mdark_17to23/polyfit'
+
+flatpath = '/Users/alex/_observing/_stone_edge_data/2022/2022-06-26/chultun'
+polypath = '/Users/alex/_observing/_stone_edge_data/2022/shortdarks-5C/mdark/polyfit'
+
+ ## Set up output directory.
+ ############################################################
+ ## Direct assignment.
+ # outpath = '/Users/alex/_observing/_stone edge data/2021/Masters_new/Flat'
+ ############################################################
+ ## Create or check for subdirectory.
+newdir = os.path.join(flatpath, 'mflat')
+if os.path.exists(newdir):
+    print(newdir, '\n'+'Directory already exists!')
+else:
+    os.mkdir(newdir)
+    print(newdir, '\n'+'Directory created!')
+outpath = newdir
+ ############################################################
+
+config = os.path.join('/Users/alex/mycode/DarePype/pipeline/config', 'pipeconf_SEO.txt')
+
+print('')
+print('config =', config)
+
+####
+## BELOW: AL'S FUNCTIONS: SOME MAY NOT BE NECESSARY BUT SOME DEFINITELY ARE:
+## ALSO: NOT SURE IF THESE SHOULD BE WITHIN THE CLASS DEFINITION OR BEFORE IT. WILL LEAVE HERE FOR NOW
+###
+def timesort(filelist, datapath, date_key = 'date-obs', print_list = True):
+    '''
+    Sorts a list of fits files by a header keyword with a date/time value.
+    Arguments:
+        filelist   = a list of fits files
+        datapath   = the path to the files
+        date_key   = the header keyword containing the time/date data
+        print_list = if True, print the sorted file list
+    Returns:
+        tfiles     = the sorted file list
+        utime      = a list of the unix times of the observations
+    Author(s): Al Harper
+    Modified: 210807
+    Version: 1.0
+    '''    
+    date_obs = []                                           # Make a list to hold the date-obs keyword strings.
+    fd = DataFits(config=config)                            # Make a PipeData object.
+    for i in range(len(filelist)):                          # Make a PipeData object.
+        fd.loadhead(os.path.join(datapath,filelist[i]))
+        date_obs.append(fd.header.get('date-obs','None'))   # Add date information to list. of string objects.
+    t = Time(date_obs, format='isot', scale='utc')          # Make an astropy time object in 'isot' format.  
+    tsort = np.argsort(t)                                   # Make a list of indices that will sort by date_obs.
+    tfiles = []
+    utime = []
+    for i in tsort:
+        tfiles.append(filelist[i])
+        utime.append(t[i].unix)
+    if print_list == True:
+        for i in range(len(filelist)):
+            print( i, tfiles[i], utime[i])
+    return tfiles, utime
+
+
+def timesortHDR(filelist, datapath, date_key = 'date-obs', print_list = True):
+    '''
+    Sorts a list of fits files by a header keyword with a date/time value. In the case of an
+    SBIG CMOS camera RAW file, the date/time is read from the second HDU.
+    Arguments:
+        filelist   = a list of fits files
+        datapath   = the path to the files
+        date_key   = the header keyword containing the time/date data
+        print_list = if True, print the sorted file list
+    Returns:
+        tfiles     = the sorted file list
+        utime      = a list of the unix times of the observations
+    Author(s): Al Harper
+    Modified: 210807, 210815
+    Version: 1.1
+    '''
+    
+    date_obs = []                                                # Make a list to hold the date-obs keyword strings.
+    fd = DataFits(config=config)                                 # Make a PipeData object.
+    for i in range(len(filelist)):
+        fname = os.path.join(datapath,filelist[i])
+        if '_bin1L' in filelist[i] and '_RAW.' in filelist[i]:
+            fd.load(fname)                                       # Load the fits file into the PipeData object.
+            head = fd.getheader(fd.imgnames[1])                  # Get the header of the second HDU (index = [1]).
+            date_obs.append(head[date_key])                      # Add date information to list. of string objects.
+        else: 
+            fd.load(fname)                                       # Load the fits file.                                       # Load the fits file.
+            head = fd.getheader()                                # Get the header of the primary HDU (index = [0]).
+            date_obs.append(head[date_key])                      # Add date information to list. of string objects.
+    t = Time(date_obs, format='isot', scale='utc')               # Make an astropy time object in 'isot' format.  
+    tsort = np.argsort(t)                                        # Make a list of indices that will sort by date_obs.
+    tfiles = []
+    utime = []
+    for i in tsort:
+        tfiles.append(filelist[i])
+        utime.append(t[i].unix)
+    if print_list == True:
+        for i in range(len(filelist)):
+            print( i, tfiles[i], utime[i])
+    return tfiles, utime
+
+
+def expsortHDR(filelist, datapath, print_list = True):   
+    '''
+    Sorts a list of fits files by a header keyword with an exposure time value. In the case of an
+    SBIG CMOS camera RAW file, the exposure time is read from the second HDU.
+    Arguments:
+        filelist   = a list of fits files
+        datapath   = the path to the files
+        print_list = if True, print the sorted file list
+    Returns:
+        expfiles     = the sorted file list
+        exp          = a sorted list of the exposure times
+    Author(s): Carmen Choza
+    Modified: 210812
+    Version: 1.0
+    '''    
+    
+    exptime = []
+    df = DataFits()
+    for i in range(len(filelist)):
+        fname = os.path.join(datapath, filelist[i])
+        if '_bin1L' in filelist[i] and '_RAW.' in filelist[i]:
+            df.load(fname)
+            head = df.getheader(df.imgnames[1])
+            exptime.append(head['exptime'])
+        else:
+            df.loadhead(os.path.join(datapath, filelist[i]))
+            exptime.append(df.header.get('exptime', 'None'))
+        expsort = np.argsort(exptime)
+        expfiles = []
+        exp = []
+    for i in expsort:
+            expfiles.append(filelist[i])
+            exp.append(exptime[i])
+    if print_list == True:
+            for i in range(len(filelist)):
+                print(i, expfiles[i], exp[i])
+    return expfiles, exp
+
+
+
+def histogram2(img, titlestring = '', NBINS=800, percent=(.05,.05), figsize=(18,8), display_lims=(0,1000), \
+               mask_lims=[0,3500], use_percent=True):  
+    '''
+    Makes two histograms of an image. One includes all points and one includes all points within specified
+    limits. If there are nans in the image, they are set to a value just smaller than the minimum value of
+    the image and then eliminated from the flattened image before computing the histograms.
+    Returns:
+        undermask = mask identifying pixels with values less than mask_lims[0]
+        overmask  = mask identifying pixels with values greater than mask_lims[1]
+        mask_lims = list with the upper and lower limits, respectively, of undermask and overmask
+    Arguments:
+        img             = image to be analyzed
+        titlestring     = title of output graph
+        percent         = limit percentiles for masks to be applied by default to the second plot
+        figsize         = figure size
+        display_lims    = lower and upper limits of display of second histogram
+        mask_lims       = lower and upper limits used to create undermask and overmask
+        use_percent     = True if mask_lims is to be set automatically to the value of the "percent" kwarg
+                          and False if undermask and overmask limits are to be set by the mask_lims kwarg
+    Author(s): Al Harper
+    Modified: 210806, 210811
+    Version 1.1
+    '''
+
+    plt.figure(figsize = figsize)
+    
+    ## Set any nans to a value just smaller than img minimum so the histogram won't get confused.
+    newimg = img.copy()
+    imgmin = np.nanmin(img)
+    newmin = imgmin - 0.000001 * imgmin
+    oldmin_bool = newimg == imgmin
+    oldmin = np.sum(oldmin_bool)
+    nanmask = np.isnan(img)
+    newimg[nanmask] = newmin
+    print('Number of nans =', np.sum(nanmask))
+    print('image minimum =', imgmin)
+    print('Number of old mins =', oldmin)
+
+    ## Flatten the image, sort it, exclude formerly nan values, and find indices and image values
+    ## corresponding to the percent kwarg values.
+    flatpic = newimg.flatten()
+    sortpic = sorted(flatpic)
+    nans = np.sum(sortpic == newmin)
+    newsortpic = sortpic[nans:]
+    b = int(len(newsortpic)*(1 - percent[1]/100.0))
+    a = int(len(newsortpic)*(percent[0]/100.0))
+
+    upper_value = newsortpic[b]
+    lower_value = newsortpic[a]
+    print('Value at {} percentile = {:<0.4e}'.format(percent[0] , lower_value))
+    print('Value at {} percentile = {:<0.4e}'.format(100.0 - percent[1] , upper_value))
+
+    fpic = newsortpic[a:b]
+
+    ## Make masks and calculate how many pixels fall below and above limits.
+    if use_percent == True:
+        mask_lims[0], mask_lims[1] = lower_value, upper_value
+        
+    ## Create some masks for pixels below and above 
+    undermask, overmask = np.where(newimg < mask_lims[0]), np.where(newimg > mask_lims[1])
+    numberunder, numberover = len(undermask[0]), len(overmask[0])
+    if numberunder >= nans:
+        numberunder = numberunder - nans
+        print(numberunder, '<', mask_lims[0], '  exclusive of nans')
+    else:
+        numberunder = 0
+        print(numberunder, '<', mask_lims[0])
+    print( numberover, '>', mask_lims[1])
+    
+    ## Plot primary histogram.
+    plt.subplot(2,1,1)
+    plt.title(titlestring, fontsize=14)
+    plt.grid()
+    histogram = pylab.hist(newsortpic,NBINS,histtype='step',color='b',log=True)
+    
+    ## Plot secondary histogram.
+    plt.subplot(2,1,2)
+    plt.grid()
+    if use_percent == True:
+        histogram = pylab.hist(fpic, NBINS, histtype='step', color='b', log=True)
+    else:
+        histogram = pylab.hist(sortpic[nans:], NBINS, histtype='step', color='b', log=True, \
+                        range=(display_lims[0], display_lims[1]))
+        
+    plt.xlabel('median ={:.2e}  mean ={:.2e}   min = {:.2e}   max={:.2e}   {:d} >= {:.2e}   {:d} <= {:.2e}'\
+               .format(np.median(sortpic), np.mean(sortpic), np.min(sortpic), np.max(sortpic)\
+               ,numberover, mask_lims[1], numberunder, mask_lims[0]), fontsize=14)
+    
+    return undermask, overmask, mask_lims
+
+
+def read_oneDF(whichfiles, whichfile, whichpath, convert_raw=False):
+    '''
+    Read one fits file into a DataFits object. If the file is an SBIG CMOS camera RAW file, 
+    strip the overscan rows from the image and create a header keyword with value equal to
+    the mean value of the overscan region.
+    Returns:
+        df:              DataFits object
+    Arguments:
+        whichfiles:      List of fits files
+        whichfile:       Index number of file to be selected from list
+        whichpath:       Path to directory where files are stored
+        convert_raw:     If True, strip overscan columns from SBIG CMOS camera images 
+                         and add overscan mean to header. Default = False
+    Author(s): Al Harper
+    Modified: 210805
+    Version 1.0
+    '''
+
+    fitsfilename = os.path.join(whichpath,whichfiles[whichfile])
+    if 'bin1L' in fitsfilename and '_RAW.fit' in whichfiles[whichfile]:
+        ddf = DataFits(config=config)
+        ddf.load(fitsfilename)
+        df = DataFits(config=config)
+        df.header = ddf.getheader(ddf.imgnames[1]).copy()
+        del df.header['xtension']
+        df.header.insert(0,('simple',True,'file does conform to FITS standard'))
+        df.imageset(ddf.imageget(ddf.imgnames[1]))
+    else:
+        df = DataFits(config=config)                # Create a DataPype DataFits io object.
+        df.load(fitsfilename)                       # Loads the file.
+        
+    ## Crop over-scan columns from image and create over-scan image (only for bin=1L SBIG CMOS camera images).
+    if camera == 'SBIG' and '_RAW.fit' in whichfiles[0] and convert_raw == True:
+        osimg = df.image[:,4096:]
+        df.image = df.image[:,:4096]
+#         print('output image shape =',df.image.shape)
+        oscnmean = np.nanmean(osimg)
+        df.header['oscnmean'] = oscnmean
+
+    return df
+
+
+def make_stackDF(whichfiles, whichpath, print_list=True):
+    '''
+    Make a stack of images, a list of headers from those images, and calculate some medians 
+    and stds that will help set autoscaling parameters. If camera == 'SBIG', crop the
+    overscan columns and create an overscan image. If the data were taken in low-gain mode,
+    fix the FITS format of the low-gain image. If printout=True, print the filenames
+    as they are read.
+    
+    Returns:
+        image    =  a 3-dimensional image (an "image stack")
+        headlist =  a list of the primary headers of the imaes in the stack
+        stats    =  {'median':median,'std':std,'mad':mad}
+    Author(s): Al Harper
+    Modified: 210805, 210817, 211112
+    Version 1.2
+    '''
+
+    # Read one file to determine numbers of rows and columns.
+    ff = read_oneDF(whichfiles, 0, whichpath, convert_raw = True)
+    rows, cols = ff.image.shape[0], ff.image.shape[1]
+
+    image = np.zeros((len(whichfiles), rows,cols))  # 3D numpy array to hold the stack of images.
+    median = np.zeros((len(whichfiles)))            # 1D numpy array to hold array medians.
+    mean = np.zeros((len(whichfiles)))            # 1D numpy array to hold array medians.
+    std = np.zeros((len(whichfiles)))               # 1D numpy array to hold array stds.
+    mad = np.zeros((len(whichfiles)))            # 1D numpy array to hold median absolute deviations.
+
+    headlist = []                                   # Empty list to hold the headers.
+    for i in range(len(whichfiles)):
+        df = read_oneDF(whichfiles, i, whichpath, convert_raw = True)
+        image[i] = df.image
+        headlist.append(df.header.copy())
+        # Calculate some statistical information.
+        mad[i] = mad_std(image[i],ignore_nan=True)
+        median[i] = np.nanmedian(image[i])
+        mean[i] = np.nanmean(image[i])
+        std[i] = np.nanstd(image[i])
+#         print('')
+        if print_list == True:
+            print(i, whichfiles[i])
+#         print(median[i], mean[i], std[i], mad[i], np.nanmin(image[i]), np.nanmax(image[i]))
+        
+    stats = {'median':median, 'mean':mean, 'std':std, 'mad':mad}
+
+    return image, headlist, stats
+
+
+def saveDF(datafits, fname, path, overwrite=False, ask=True, ignore=False):
+    '''
+    Saves DataFits object to a file. Checks whether file exists and responds in manner 
+    determined by kwargs. If kwarg ignore = True, nothing will be saved.
+    Arguments:
+        datafits  = a DataFits object
+        fname     = the name of the file to be saved
+        path      = the path to the file to be saved
+        overwrite = if True will overwrite existing file, if False will print warning that file exists
+        ask       = if True will request a keyboard input ('y' or 'n') to proceed
+        ignore    = if True, no action will be taken by the cell and "No action taken" will be printed
+    Author(s) = Al Harper
+    Created: 2101-08-05
+    Modified: 210816
+    Version = 1.1 
+    ''' 
+    outf = os.path.join(path, fname)
+    file_exists = os.path.exists(outf)   
+    if os.path.exists(outf) == True and overwrite == False:
+        print('File already exists: ' + outf)
+    else:
+        if ignore == False:
+            if ask == True:
+                print('outfile =', outf)
+                yes_or_no = input('Save file? Enter "y" or "n":')
+                if yes_or_no == 'y':
+                    datafits.save(outf)
+                    if file_exists == True:
+                        print(outf + ' has been overwritten')
+                    else:
+                        print(outf + ' has been saved.')
+                else:
+                    print('OK-- file was not saved.')
+            else:
+                datafits.save(outf)
+                if file_exists == True:
+                    print(outf + ' has been overwritten')
+                else:
+                    print(outf + ' has been saved.')
+        else:
+            print('No action taken')
+
+
+
+###########################################################################
+
+#  BELOW HERE IS THE ACTUAL CLASS : SOME OF AL'S FUNCTIONS MAY NEED TO BE MOVED HERE
+
+############################################################################
+
 class StepMasterFlatHdr(StepLoadAux, StepMIParent):
     '''Pipeline step object to produce and subtract master flats, pulls in pfits (3d image with one layer as the dark
     and one as the bias) and raw flats, requires valid config file'''
@@ -25,10 +480,9 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             #Finian: taken from stepHDR ; "PFIT images, which comprise a 3D image with two planes. In the first, 
             #the pixel values are the dark current and in the second they are the bias levels. 
             #The PFIT images enable interpolation to the exact exposure time of the individual RAW flat images." 
-            # - make_flat_HDR_auto , Finian: wondering why pfit + darks are loaded if the pfit contains the dark+bias?
-            # in meeting Al said pfit is int.+slope of interpolated dark current vs. exptime? confused on this
-            # hand-drawn diagram insinuates I only need the pfits + flats ; remove darks from code?            
+            # WILL NEED HI GAIN AND LO GAIN FLAT, LIKEWISE FOR PFIT
             # Call superclass constructor (calls setup)
+            
             super(StepMasterFlatHdr,self).__init__()
 
             # Pfit values
@@ -40,15 +494,6 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             self.lpfit = None # Numpy array object containing bias values
             self.lpfitname = '' # name of selected bias file
 
-            # Dark values
-            self.hdarkloaded = False # indicates if high-gain dark has been loaded
-            self.hdark = None # Numpy array object containing high-gain dark values
-            self.hdarkname = '' # name of selected high-gain dark file
-
-            self.ldarkloaded = False # indicates if low-gain dark has been loaded
-            self.ldark = None # Numpy array object containing low-gain dark values
-            self.ldarkname = '' # name of selected low-gain dark file
-
             # Flat values
             self.flatloaded = False # indicates if flat has been loaded
             self.flat = None # Numpy array object containing flat values
@@ -58,8 +503,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             self.log.debug('Init: done')
 
     def setup(self):
-        # FINIAN: taken from stepmasterflat.py , for loadaux lines at bottom should I replace with one line
-        # loading pfit?
+        # FINIAN: taken from stepmasterflat.py 
+        ## replace load aux steps to load in pfit, that will be the only aux file
         """ ### Names and Parameters need to be Set Here ###
             Sets the internal names for the function and for saved files.
             Defines the input parameters for the current pipe step.
@@ -86,70 +531,394 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         # Clear Parameter list
         self.paramlist = []
         # Append parameters !!!! WHAT PARAMETERS ARE NEEDED ????? !!!!!
+        
+        # FINIAN: Al says I will need to change these parameters here
         self.paramlist.append(['combinemethod','median',
                                'Specifies how the files should be combined - options are median, average, sum'])
         self.paramlist.append(['outputfolder','',
                                'Output directory location - default is the folder of the input files'])
-        # Get parameters for StepLoadAux, replace auxfile with biasfile
-        self.loadauxsetup('bias')
-        # Get parameters for StepLoadAux, replace auxfile with darkfile
-        self.loadauxsetup('dark')
+        # Get parameters for StepLoadAux, replace auxfile with pfit
+        self.loadauxsetup('pfit')
 
     def run(self):
-        # FINIAN: this code from stepmasterflat.py was more legible to me than the code in stephdr.py
-        # can I replace the separate dark and bias steps with a single pfit step?
-        """ Runs the combining algorithm. The self.datain is run
-            through the code, the result is in self.dataout.
-        """
-        # Find master dark to subtract from master dark
-        biaslist = self.loadauxname('bias', multi = False)
-        darklist = self.loadauxname('dark', multi = False)
-        if(len(biaslist) == 0):
-            self.log.error('No bias calibration frames found.')
-        if(len(darklist) == 0):
-            self.log.error('No bias calibration frames found.')
-        self.bias = ccdproc.CCDData.read(biaslist, unit='adu', relax=True)
-        self.dark = ccdproc.CCDData.read(darklist, unit='adu', relax=True)
-        # Create empy list for filenames of loaded frames
-        filelist=[]
-        for fin in self.datain:
-            self.log.debug("Input filename = %s" % fin.filename)
-            filelist.append(fin.filename)
-        # Make a dummy dataout
-        self.dataout = DataFits(config = self.config)
-        if len(self.datain) == 0:
-            self.log.error('Flat calibration frame not found.')
-            raise RuntimeError('No flat file(s) loaded')
-        self.log.debug('Creating master flat frame...')
-        # Create master frame: if there is just one file, turn it into master bias or else combine all to make master bias
-        if (len(filelist) == 1):
-            self.flat = ccdproc.CCDData.read(filelist[0], unit='adu', relax=True)
-            self.flat = ccdproc.subtract_bias(self.flat, self.bias, add_keyword=False)
-            self.flat = ccdproc.subtract_dark(self.flat, self.dark, scale=True, exposure_time='EXPTIME', exposure_unit=u.second, add_keyword=False)
-        else:
-            #bias and dark correct frames
-            flatlist=[]
-            for i in filelist:
-                flat =ccdproc.CCDData.read(i, unit='adu', relax=True)
-                flatsubbias = ccdproc.subtract_bias(flat, self.bias, add_keyword=False)
-                flatsubbiasdark = ccdproc.subtract_dark(flatsubbias, self.dark, scale=True, exposure_time='EXPTIME', exposure_unit=u.second, add_keyword=False)
-                flatlist.append(flatsubbiasdark)
-            #scale the flat component frames to have the same mean value, 10000.0
-            scaling_func = lambda arr: 10000.0/numpy.ma.median(arr)
-            #combine them
-            self.flat = ccdproc.combine(flatlist, method=self.getarg('combinemethod'), scale=scaling_func, unit='adu', add_keyword=False)
-        # set output header, put image into output
-        self.dataout.header=self.datain[0].header
-        self.dataout.imageset(self.flat)
-        # rename output filename
-        outputfolder = self.getarg('outputfolder')
-        if outputfolder != '':
-            outputfolder = os.path.expandvars(outputfolder)
-            self.dataout.filename = os.path.join(outputfolder, os.path.split(filelist[0])[1])
-        else:
-            self.dataout.filename = filelist[0]
-        # Add history
-        self.dataout.setheadval('HISTORY','MasterFlat: %d files used' % len(filelist))
+        ## this bit taken from Al's colab notebook make_flat_HDR_auto_52_220803
+        '''Loop to input and process RAW flatfiles'''
+        
+        '''Load and process a set of high and low gain flatfiles.'''
+
+        ## FINIAN: is this the right place for this?
+        ## FINIAN: since flats are loaded in below here, is the bit about flats in the __init__ irrelevant?
+        
+        print('Begin reduction.')
+
+        '''Prepare a hot pixel mask'''
+
+        print('')
+        hotpixlim = 99.5                           # Input parameter for hot pixel limit
+        print('hotpixlim =', hotpixlim)
+        img = polydarkimg[0,0]
+        uppercut = np.percentile(img, hotpixlim)
+        print('uppercut =', uppercut)
+        hotpix = np.where(img > uppercut)
+        print('len hotpix =', len(hotpix[0]))
+        print('')
+
+        for specfltr in bands:
+            plt.close('all')      # Close all open plots to free up memory.
+
+            '''Use list comprehensions to select subsets of files to load. Then sort files by exposure time.'''
+
+            flatfiles = [0, 0]
+
+            flatfiles[0] = [f for f in os.listdir(flatpath) if '.fit' in f and '_bin1H' in f \
+                            and 'flat' in f and specfltr in f and 'RAW.fit' in f]
+            flatfiles[0], utimeH = timesortHDR(flatfiles[0], flatpath, date_key = 'date-obs', \
+                                               print_list = False)
+
+            flatfiles[1] = [f for f in os.listdir(flatpath) if '.fit' in f and '_bin1L' in f \
+                            and 'flat' in f and specfltr in f and 'RAW.fit' in f]
+            flatfiles[1], utimeL = timesortHDR(flatfiles[1], flatpath, date_key = 'date-obs', \
+                                               print_list = False)
+
+            '''Create output file name (assuming high and low gain flats are to be stored as
+            a 2D image).'''
+
+            lf = flatfiles[0][len(flatfiles[0])-1].split('_')
+            ff = flatfiles[0][0].split('_')
+            flatname = 'mflat_'+ff[1]+'_'+ff[3]+'DR'+'_'+ff[4]+'_'+ff[5]+'-'+lf[5]+'_'+ff[6]+'_'+ff[7]+'_'+'MFLAT.fits'
+            print('flatname =',flatname)
+            print('')
+
+            '''Make a 4D image of high and low gain flat files. Dimensions are [gain, stack, row, col].'''
+
+            flatnum = len(flatfiles[0])
+            flatheadlist, flatstats = [[], []], [[], []]
+            flatimage = np.zeros((2, flatnum, rows, cols))
+            for i in range(2):
+                flatimage[i], flatheadlist[i], flatstats[i] = make_stackDF(flatfiles[i], flatpath,\
+                                                                    print_list=False)
+            flatbaseheader = flatheadlist[0][0]
+
+            '''
+            Print list of the files and median signal values.
+            Compile a list of exposure times. Set variables for max and min exposure
+            time for inclusion in header.
+            '''
+
+            print('Print filenames and image medians,')
+            print('')
+            for i in range(2):
+                flatexptimes = []
+                imedian = flatstats[i]['median']
+                for j in range(len(flatfiles[i])):
+                    exptime = flatheadlist[i][j]['exptime']
+                    flatexptimes.append(exptime)
+                    print ('{:<4}{:<70}{:12.2f}'.format(j,flatfiles[i][j],imedian[j]))
+                print('')
+            xtimemin = np.min(flatexptimes)
+            xtimemax = np.max(flatexptimes)
+            print('xtimemin =', xtimemin, '  xtimemax =', xtimemax)
+            print('')
+
+
+            '''Construct a stack of dark images to match the flat image exposure times.'''
+
+            darkimage = np.zeros_like(flatimage)
+            for i in range(2):
+                for j in range(flatimage.shape[1]):
+                    darkimage[i,j] = polydarkimg[i,1] + polydarkimg[i,0] * flatexptimes[j]
+
+
+            '''Derive relative gain images for each HDR flat image in the stack. Note that
+            we are measuring the total signal above bias resulting from both photons and
+            dark current.'''
+
+            biasimage = np.zeros((2, rows, cols))
+            biasimage[0] = polydarkimg[0, 1]
+            biasimage[1] = polydarkimg[1, 1]
+
+            gainratiostack = np.zeros_like(flatimage[0])
+            print('Medians of gain ratio images.')
+            for i in range(len(flatfiles[0])):
+                gainratiostack[i] = (flatimage[0][i] - biasimage[0]) / (flatimage[1][i] - biasimage[1])
+                print(np.nanmedian(gainratiostack[i]))
+            print('')
+
+            '''
+            Create median gain ratio image and std gain ratio image from the stack of gain 
+            ratio images. Calculate and print some statistics of the two images, ignoring 
+            masked values.
+            '''
+
+            # Take the median and std along the stack axis of gainratiostack.
+            mediangainratioimg = np.nanmedian(gainratiostack, axis = 0)
+            stdgainratioimg = np.nanstd(gainratiostack, axis = 0)
+
+            # Take image medians and means of the two 2D images derived above.
+            grat_median = np.nanmedian(mediangainratioimg)
+            grat_mean = np.nanmean(mediangainratioimg)
+            stdgrat_median = np.nanmedian(stdgainratioimg)
+            stdgrat_mean = np.nanmean(stdgainratioimg)
+            print('median, mean of median gain ratio image =', grat_median, grat_mean)
+            print('max, min =', np.nanmax(mediangainratioimg), np.nanmin(mediangainratioimg))
+            print('')
+            print('median, mean of std gain ratio image =', stdgrat_median, stdgrat_mean)
+            print('max, min =', np.nanmax(stdgainratioimg), np.nanmin(stdgainratioimg))
+            print('')
+
+
+            '''
+            Create masked median gain ratio image and masked std image with nans replacing 
+            masked pixels. Mask used here is hotpix (a hot pixel mask made from a dark exposure 
+            in a preceding cell). Print some statistics, ignoring masked values.
+            '''
+
+            maskedgainratioimg = mediangainratioimg.copy()
+            maskedgainratioimg[hotpix] = np.nan
+
+            maskedstdgainratioimg = stdgainratioimg.copy()
+            maskedstdgainratioimg[hotpix] = np.nan
+
+            print('median, mean of masked gain ratio image =', np.nanmedian(maskedgainratioimg), 
+                  np.nanmean(maskedgainratioimg))
+            print('max, min = of masked gain ratio image', np.nanmax(maskedgainratioimg), 
+                  np.nanmin(maskedgainratioimg))
+            print('')
+            print('median, mean of masked std gain ratio image =', np.nanmedian(maskedstdgainratioimg), 
+                  np.nanmean(maskedstdgainratioimg))
+            print('max, min of masked std gain ratio image =', np.nanmax(maskedstdgainratioimg), 
+                  np.nanmin(maskedstdgainratioimg))
+            print('')
+
+
+            '''Make a histogram and two masks from the masked gain ratio image in order to
+            eliminate outliers with anomalously high or low gain. The low and high limits have 
+            been chosen empirically. The values hard-coded in here will eliminate a small 
+            fraction of the total number of pixels while preserving the smooth (and presumably 
+            "physical") portion of the histogram. while eliminating outliers. However, at some 
+            time in the future one could, if desired, make the mask limits input parameters.'''
+
+            img = maskedgainratioimg
+            titlestring = ''
+            masklow, maskhigh = grat_median - 1.0, grat_median + 1.0
+            mgrmasklow, mgrmaskhigh, mask_lims = histogram2(img, titlestring, NBINS=800, percent=[0.0001,0.0001], figsize=(18,8), \
+                            display_lims=(18.0,25.0), mask_lims=[masklow,maskhigh], use_percent=False)
+
+            '''Subtract interpolated darks from the flat images.'''
+
+            if '_RAW.fit' in flatfiles[0][0]:
+                flatimageDS = flatimage - darkimage
+        #     print(flatimageDS.shape)
+
+            '''
+            Normalize each of the images in the high and low-gain flat image stack to its own median,
+            and apply the gain-outlier mask derived above. From this point on, there will be nans
+            for every pixel in both the hotpix and mgrmask masks.'''
+
+            flatimageDSN = np.zeros_like(flatimageDS)
+            flatmediansDS = np.zeros((2, flatnum))
+            flatmadstdsDSN = np.zeros((2, flatnum))
+            for i in range(2):
+                for j in range(flatnum):
+                    flatimageDS[i,j][mgrmasklow] = np.nan
+                    flatimageDS[i,j][mgrmaskhigh] = np.nan
+                    flatmediansDS[i,j] = np.nanmedian(flatimageDS[i,j])
+                    flatimageDSN[i,j] = flatimageDS[i,j] / flatmediansDS[i,j]
+                    flatmadstdsDSN[i,j] = mad_std(flatimageDSN[i,j], ignore_nan=True)
+        #     print(flatimageDSN.shape, flatmediansDS.shape)
+
+
+            '''Make median high and low gain flats from the stacks and compute their respective
+            median, mean, std, and mad. The result is a 3D image with high and low-gain planes.'''
+
+            flat = np.nanmedian(flatimageDSN, axis=1)
+
+            flatmedian, flatmean, flatstd, flatmadstd = [0,0], [0,0], [0,0], [0,0]
+
+            for i in range(2):  
+                flatmedian[i] = np.nanmedian(flat[i])                   # Median of the median flat.
+                flatmean[i] = np.nanmean(flat[i])                       # Mean of the median flat.
+                flatstd[i] = np.nanstd(flat[i])                         # mad_std of the median flat.
+                flatmadstd[i] = mad_std(flat[i],ignore_nan=True)        # mad_std of the median flat.
+        #     print('')
+            print('Median flat median =', flatmedian )
+            print('Mean flat median =', flatmean )
+            print('Median flat std =', flatstd)
+            print('Median flat mad_std =', flatmadstd)
+            print('')
+
+
+            '''Print a list of the medians of the dark-subtracted high and low gain flat images.'''
+            print('List of medians of dark-subtracted high and low gain flat images')
+            for i in range(flatimage.shape[1]):
+                print('{:<3}{:<10.2f}{:<10.2f}'.format(i, flatmediansDS[0,i], flatmediansDS[1,i]))
+            print('')
+
+            '''Find minimum and maximum values of the image medians for inclusion in output header.'''
+
+            medmin, medmax = [0,0], [0,0]
+            medmin[0] = np.nanmin(flatmediansDS[0])
+            medmax[0] = np.nanmax(flatmediansDS[0])
+            medmin[1] = np.nanmin(flatmediansDS[1])
+            medmax[1] = np.nanmax(flatmediansDS[1])
+            print('minimum medians =', medmin, '   ', 'maximum medians =', medmax )
+            print('')
+
+            '''
+            Re-normalize the median flats (H and L) to their medians and mask out pixels with 
+            gains greater than or less than 1.0 from the median gain. Replace the masked pixels 
+            with np.nan. Hence, when a sky image is divided by the flat, those pixels will also 
+            be masked (will be np.nan) in the flat-fielded sky image (in addition to the pixela
+            aleady replaced with nans using the hotpix mask).
+            '''
+
+            mflat = np.zeros_like(flat)
+            mflatmedian = np.zeros((2))
+            mflatmadstd = np.zeros((2))
+            for i in range(2):
+                mflat[i] = flat[i] / flatmedian[i]
+                mflatmedian[i] = np.nanmedian(mflat[i])
+                mflat[i][mgrmasklow] = np.nan
+                mflat[i][mgrmaskhigh] = np.nan
+                mflatmadstd[i] = mad_std(mflat[i], ignore_nan=True)
+            print('mflatmedian, mflatmadstd =', mflatmedian, mflatmadstd)
+            print('')
+
+            '''Free up memory being used by in-line images.'''
+
+            plt.close('all')    # Free up memory being used by inline images.
+
+
+            '''
+            Compute the differences of each of the individual normalized flat images from the
+            median flat of the stack. Compute and print the median, std, and mad_std of
+            each of the difference images. If display = True, also show the images.
+            '''
+
+            g = 0           # Gain = 0 for high-gain, 1 for low-gain.
+
+            display = show_difimages  # If True, display the individual difference images.
+
+            vmx = mflatmadstd[g] * 2.0
+            vmn = - mflatmadstd[g] * 2.0
+
+            difimage = np.zeros_like(flatimageDS)  # Ratio of inidvidual flat images to the median flat image.
+            difmadstd = np.zeros((flatnum))
+            difstd = np.zeros((flatnum))
+            difmean = np.zeros((flatnum))
+            difmedian = np.zeros((flatnum))
+
+
+            print('List difimage median, mean, std, and mad_std')
+            for i in range(flatimageDS.shape[1]):
+                difimage[g,i] = flatimageDSN[g,i]-mflat[g]
+                difmadstd[i] = mad_std(difimage[g,i],ignore_nan=True)
+                difstd[i] = np.nanstd(difimage[g,i])
+                difmean[i] = np.nanmean(difimage[g,i])
+                difmedian[i] = np.nanmedian(difimage[g,i])
+                print(i, difmedian[i], difmean[i], difstd[i], difmadstd[i])
+                if display == True:
+                    plt.figure(figsize = (10,10))
+                    plt.grid()
+                    plt.title(flatfiles[g][i])  # + '  Mean ='+ str(difmean) + '  mad_std =' + str(difmadstd))
+                    plt.imshow(difimage[g,i], 'rainbow', interpolation='nearest', vmin = vmn, vmax = vmx)
+                    plt.colorbar(shrink=0.8)   
+
+
+            '''Create output DataFits object and fill with image data.'''
+
+            dataout = DataFits(config=config)
+            dataout.header = flatbaseheader.copy()
+            dataout.image = mflat
+            dataout.imageset(maskedgainratioimg, 'GAIN RATIO')
+
+
+            '''
+            Create numpy arrays with information from headers, make_stack, and timesortDF functions.
+            '''
+
+            imedianH, imadH, imeanH, istdH = flatstats[0]['median'], flatstats[0]['mad']\
+                                            , flatstats[0]['mean'], flatstats[0]['std']     # From make_stackDF
+            imedianL, imadL, imeanL, istdL = flatstats[1]['median'], flatstats[1]['mad']\
+                                            , flatstats[1]['mean'], flatstats[1]['std']     # From make_stackDF
+
+            utime = np.asarray(utimeH)  # From time_sortDF.
+            etime = utime - utime[0]    # Time elepased from the beginning of the first exposure of the sequence.
+            index = np.arange(flatnum)  # Make a column with the file sequence numbers 
+
+            # From header:
+            ambient = np.zeros((flatnum))
+            primary = np.zeros((flatnum))
+            secondar = np.zeros((flatnum))
+            dewtem1 = np.zeros((flatnum))
+            for i in range(flatnum):
+                ambient[i] = flatheadlist[0][i]['ambient']
+                primary[i] = flatheadlist[0][i]['primary']
+                secondar[i] = flatheadlist[0][i]['secondar']
+                dewtem1[i] = flatheadlist[0][i]['dewtem1']
+
+            '''Now put put derived and header data into a fits table and add it to the output object.'''
+
+            # Make file identifiers:
+            IDs = []
+            for i in range(flatnum):
+                fi = flatfiles[0][i].split('_')
+                IDs.append(fi[4]+'_'+fi[5])
+            fileIDs = np.asarray(IDs)
+
+            # Make a list of fits column objects.
+            tcols = []
+            tcols.append(fits.Column(name='index', format='I', array=index))
+            tcols.append(fits.Column(name='fileID', format='20A', array=fileIDs))
+            tcols.append(fits.Column(name='median', format='D', array=imedianH, unit='ADU'))
+            tcols.append(fits.Column(name='mean', format='D', array=imeanH, unit='ADU'))
+            tcols.append(fits.Column(name='std', format='D', array=istdH, unit='ADU'))
+            tcols.append(fits.Column(name='mad', format='D', array=imadH, unit='ADU'))
+            tcols.append(fits.Column(name='dmedian', format='D', array=difmedian, unit='ADU'))
+            tcols.append(fits.Column(name='dmean', format='D', array=difmean, unit='ADU'))
+            tcols.append(fits.Column(name='dstd', format='D', array=difstd, unit='ADU'))
+            tcols.append(fits.Column(name='dmad', format='D', array=difmadstd, unit='ADU'))
+            tcols.append(fits.Column(name='ambient', format='D', array=ambient, unit='C'))
+            tcols.append(fits.Column(name='primary', format='D', array=primary, unit='C'))
+            tcols.append(fits.Column(name='secondar', format='D', array=secondar, unit='C'))
+            tcols.append(fits.Column(name='dewtem1', format='D', array=dewtem1, unit='C'))
+            tcols.append(fits.Column(name='elapsed time', format='D', array=etime, unit='seconds'))
+
+            # Make table
+            c = fits.ColDefs(tcols)
+            table = fits.BinTableHDU.from_columns(c)
+            tabhead = table.header
+
+            # Add table to the datafits output object.
+            dataout.tableset(table.data, tablename = 'table', tableheader=tabhead)
+
+            '''Populate output header with new keyword data.'''
+
+            dataout.header['notes'] = 'High and low gain master flats (3D image)'
+            dataout.header['notes2'] = '2nd HDU is a gain ratio image. Contains nans'
+            dataout.header['notes3'] = 'Table contains statistical and environmental data'
+            dataout.header['filelist'] = filestring
+            dataout.header['oscnmean'] = 0.0
+            dataout.header['imagetyp'] = 'HDR MFLAT'
+            dataout.setheadval('xtimemin', xtimemin, 'Minimum exposure in the set of flats')
+            dataout.setheadval('xtimemax', xtimemax, 'Maximum exposure in the set of flats')
+            dataout.setheadval('medminH', medmin[0], 'Minimum high gain median in the set of flats')
+            dataout.setheadval('medmaxH', medmax[0], 'Maximum high gain median in the set of flats')
+            dataout.setheadval('medminL', medmin[1], 'Minimum low gain median in the set of flats')
+            dataout.setheadval('medmaxL', medmax[1], 'Maximum low gain median in the set of flats')
+            dataout.setheadval('reduceby', reduceby, 'Reduction software')
+            dataout.header['bzero'] = 0.0
+            dataout.header['numfiles'] = flatnum
+            dataout.header['ambient'] = np.nanmean(ambient)
+            dataout.header['primary'] = np.nanmean(primary)
+            dataout.header['secondar'] = np.nanmean(secondar)
+            dataout.header['dewtem1'] = np.nanmean(dewtem1)
+
+            print('')
+
+            '''Save the output data file.'''
+
+            saveDF(dataout, flatname, outpath, overwrite=overwrite, ask=False, ignore=ignore)
 
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
