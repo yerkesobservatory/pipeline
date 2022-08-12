@@ -95,32 +95,38 @@
     # Folder to look for pfits, darks and flats
     lpfitfile = $MASTER_BDF_FOLDER/DARK/PFIT/*_bin1L_*.fits
     hpfitfile = $MASTER_BDF_FOLDER/DARK/PFIT/*_bin1H_*.fits
-    ldarkfile = $MASTER_BDF_FOLDER/DARK/DARK/*_bin1L_*.fits
-    hdarkfile = $MASTER_BDF_FOLDER/DARK/DARK/*_bin1H_*.fits
-    flatfile = $MASTER_BDF_FOLDER/FLAT/2022-07-19/*FLAT.fits
+    hflatfile = $MASTER_BDF_FOLDER/FLAT/2022-07-19/*_bin1H_*.fits
+    lflatfile = $MASTER_BDF_FOLDER/FLAT/2022-07-19/*_bin1L_*.fits
     # list of keys that need to match pfit dark and flat files
     lpfitfitkeys = NAXIS2
     hpfitfitkeys = NAXIS2
-    ldarkfitkeys = EXPTIME
-    hdarkfitkeys = EXPTIME
-    #ldarkfitkeys = NAXIS2
-    #hdarkfitkeys = NAXIS2
-    flatfitkeys = FILTER
+    hflatfitkeys = FILTER
+    lflatfitkeys = FILTER
     # Reload flag to force loading of new master files for each input file
     reload = True
     # Flag to save intermediate data products
-    intermediate = False
+    #intermediate = False
     # Crossover threshold for H/L combination
-    splice_thresh = 3000.0
+    #splice_thresh = 3000.0
     # list of header keywords to divide by samplefac
-    divkeys = CRPIX1, CRPIX2
-    multkeys = PIXSIZE1, PIXSIZE2, CD1_1, CD1_2, CD2_1, CD2_2, GAIN
+    #divkeys = CRPIX1, CRPIX2
+    #multkeys = PIXSIZE1, PIXSIZE2, CD1_1, CD1_2, CD2_1, CD2_2, GAIN
     # Input parameters for astroscrappy
     #remove_cosmics = True
     #psffwhm = 5.0
     #fsmode = 'convolve'
     #cleantype = 'medmask'
-    overscan_correct = False
+    #overscan_correct = False
+    
+    # I WILL NEED A LINE FOR EACH VARIABLE PARAMETER THAT CHANGES HOW THE STEP WORKS
+    # FOR EXAMPLE, THE BAD PIX THRESHOLD
+    # HOTPIXLIM SHOULD BE IN THE PARAMLIST IN THE SETUP FUNCTION OF THE STEP
+    # THERE WILL BE A DEFAULT IN THE STEP, BUT THERE WILL BE A LINE IN THE CODE BLOCK IN DCONF THAT ALLOWS TO CHANGE IT
+    # AL LIKES TO HAVE PLACEHOLDERS COMMENTED OUT FOR DEFAULT VALUES SO YOU DONT HAVE TO LOOK FOR THEM IF YOU WANT TO CHANGE
+    # should also add param for logainlim and higainlim (-1 and +1 defaults)(used in line 703 in step currently)
+    logainlim = 1.0
+    higainlim = 1.0
+    hotpixlim = 99.5
     
     
 # Loadinput step configuration
