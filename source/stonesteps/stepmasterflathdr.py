@@ -357,6 +357,25 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
 ######################################################################################################
 
 #   PART THAT REPLACES HISTOGRAM CODE FOR GAIN MASK GOES HERE
+#   WILL NEED TO REPLACE HOTPIX STUFF WITH HI AND LO GAIN LIMITS , DEFINED IN DCONF_FA
+            img = maskedgainratioimg
+            titlestring = ''
+            masklow, maskhigh = grat_median - logainlim, grat_median + higainlim
+            gainmask = np.where((img > masklow) & (img < maskhigh))
+        
+        #  AL: NOT SURE WHAT END PRODUCT OF THIS BLOCK SHOULD BE / IF I IMPLEMENTED THIS PROPERLY
+      
+
+
+            #print('')
+            #hotpixlim = 99.5                           # Input parameter for hot pixel limit
+            #print('hotpixlim =', hotpixlim)
+            #img = polydarkimg[0,0]
+            #uppercut = np.percentile(img, hotpixlim)
+            #print('uppercut =', uppercut)
+            #hotpix = np.where(img > uppercut)
+            #print('len hotpix =', len(hotpix[0]))
+            #print('')
 
 #######################################################################################################
 
