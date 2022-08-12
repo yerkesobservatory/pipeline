@@ -54,415 +54,37 @@ outliers. The threshold criteria can be tuned by changing parameters in the code
 from darepype.drp import DataFits # pipeline data object class
 from darepype.drp.stepmiparent import StepMIParent # pipestep Multi-Input parent
 from darepype.tools.steploadaux import StepLoadAux # pipestep steploadaux object class
-from astropy.convolution import Gaussian2DKernel, interpolate_replace_nans # For masking/replacing
+###from astropy.convolution import Gaussian2DKernel, interpolate_replace_nans # For masking/replacing
 
 import astropy
-import ccdproc # package for reducing optical CCD telescope data 
-import matplotlib.pyplot as plt
-from astropy import units as u
+#? from astropy import units as u
 from astropy.io import fits #package to recognize FITS files
 
-import scipy.ndimage as nd
+###import scipy.ndimage as nd
 import numpy as np
 import logging
-from skimage.measure import block_reduce
+###from skimage.measure import block_reduce
 
 
 ## BELOW: imports from Al's make_flat colab notebook 
 
  ## Variables used to control execution of the code.
-camera = 'SBIG'    # Identifies camera being used. Currently the choices are SBIG and FLI (CMOS and CCD, respectively).
-reduceby = 'make_flat_HDR_auto_51'  # Reduction software (this notebook)
+#? camera = 'SBIG'    # Identifies camera being used. Currently the choices are SBIG and FLI (CMOS and CCD, respectively).
+#? reduceby = 'make_flat_HDR_auto_51'  # Reduction software (this notebook)
  ## Core imports.
 import sys
 import os
-import numpy as np
 print(sys.executable) ## Check to see if Jupyter is using the correct path.
  ### Generally useful mports and system path additions. May contain some imports not required for this notebook. 
-from matplotlib import pyplot as plt        # A collection of modules. Needed here to display images and graphs.
-from matplotlib import pylab                # A collection of modules. Needed here to plot histograms.
-from darepype.drp.datafits import DataFits  # Gets the function that makes DataFits io objects.
-from astropy.io import fits                 # Need this if you want to use astropy.io io objects.
-from ipywidgets import interact             # Need this for interactive plots.
-from matplotlib.colors import LogNorm       # Machinery for LogNorm scaling of intensities.
-from matplotlib.colors import SymLogNorm    # Machinery for SymLogNorm scaling of intensities.
-from matplotlib.colors import PowerNorm     # Machinery for LogNorm (e.g., square root) scaling of intensities.
 from astropy.stats import mad_std           # The median absolute deviation, a more robust estimator than std.
-import scipy.ndimage as nd                  # Various algorithms for image transformations.
 from astropy.time import Time
-
-
-## BELOW: Al's paths, not sure if this bit is strictly necessary
- ## Specify the paths to the data input and output directories.
-
- # flatpath = '/Users/alex/_observing/_stone edge data/2021/2021-12-11/chultun'
- # polypath = '/Users/alex/_observing/_stone edge data/2021/all_2021-10_sdarks/mdark/mdark_17to23/polyfit'
-
-flatpath = '/Users/alex/_observing/_stone_edge_data/2022/2022-06-26/chultun'
-polypath = '/Users/alex/_observing/_stone_edge_data/2022/shortdarks-5C/mdark/polyfit'
-
- ## Set up output directory.
- ############################################################
- ## Direct assignment.
- # outpath = '/Users/alex/_observing/_stone edge data/2021/Masters_new/Flat'
- ############################################################
- ## Create or check for subdirectory.
-newdir = os.path.join(flatpath, 'mflat')
-if os.path.exists(newdir):
-    print(newdir, '\n'+'Directory already exists!')
-else:
-    os.mkdir(newdir)
-    print(newdir, '\n'+'Directory created!')
-outpath = newdir
- ############################################################
-
-config = os.path.join('/Users/alex/mycode/DarePype/pipeline/config', 'pipeconf_SEO.txt')
-
-print('')
-print('config =', config)
 
 ####
 ## BELOW: AL'S FUNCTIONS: SOME MAY NOT BE NECESSARY BUT SOME DEFINITELY ARE:
 ## ALSO: NOT SURE IF THESE SHOULD BE WITHIN THE CLASS DEFINITION OR BEFORE IT. WILL LEAVE HERE FOR NOW
 ###
-def timesort(filelist, datapath, date_key = 'date-obs', print_list = True):
-    '''
-    Sorts a list of fits files by a header keyword with a date/time value.
-    Arguments:
-        filelist   = a list of fits files
-        datapath   = the path to the files
-        date_key   = the header keyword containing the time/date data
-        print_list = if True, print the sorted file list
-    Returns:
-        tfiles     = the sorted file list
-        utime      = a list of the unix times of the observations
-    Author(s): Al Harper
-    Modified: 210807
-    Version: 1.0
-    '''    
-    date_obs = []                                           # Make a list to hold the date-obs keyword strings.
-    fd = DataFits(config=config)                            # Make a PipeData object.
-    for i in range(len(filelist)):                          # Make a PipeData object.
-        fd.loadhead(os.path.join(datapath,filelist[i]))
-        date_obs.append(fd.header.get('date-obs','None'))   # Add date information to list. of string objects.
-    t = Time(date_obs, format='isot', scale='utc')          # Make an astropy time object in 'isot' format.  
-    tsort = np.argsort(t)                                   # Make a list of indices that will sort by date_obs.
-    tfiles = []
-    utime = []
-    for i in tsort:
-        tfiles.append(filelist[i])
-        utime.append(t[i].unix)
-    if print_list == True:
-        for i in range(len(filelist)):
-            print( i, tfiles[i], utime[i])
-    return tfiles, utime
 
-
-def timesortHDR(filelist, datapath, date_key = 'date-obs', print_list = True):
-    '''
-    Sorts a list of fits files by a header keyword with a date/time value. In the case of an
-    SBIG CMOS camera RAW file, the date/time is read from the second HDU.
-    Arguments:
-        filelist   = a list of fits files
-        datapath   = the path to the files
-        date_key   = the header keyword containing the time/date data
-        print_list = if True, print the sorted file list
-    Returns:
-        tfiles     = the sorted file list
-        utime      = a list of the unix times of the observations
-    Author(s): Al Harper
-    Modified: 210807, 210815
-    Version: 1.1
-    '''
-    
-    date_obs = []                                                # Make a list to hold the date-obs keyword strings.
-    fd = DataFits(config=config)                                 # Make a PipeData object.
-    for i in range(len(filelist)):
-        fname = os.path.join(datapath,filelist[i])
-        if '_bin1L' in filelist[i] and '_RAW.' in filelist[i]:
-            fd.load(fname)                                       # Load the fits file into the PipeData object.
-            head = fd.getheader(fd.imgnames[1])                  # Get the header of the second HDU (index = [1]).
-            date_obs.append(head[date_key])                      # Add date information to list. of string objects.
-        else: 
-            fd.load(fname)                                       # Load the fits file.                                       # Load the fits file.
-            head = fd.getheader()                                # Get the header of the primary HDU (index = [0]).
-            date_obs.append(head[date_key])                      # Add date information to list. of string objects.
-    t = Time(date_obs, format='isot', scale='utc')               # Make an astropy time object in 'isot' format.  
-    tsort = np.argsort(t)                                        # Make a list of indices that will sort by date_obs.
-    tfiles = []
-    utime = []
-    for i in tsort:
-        tfiles.append(filelist[i])
-        utime.append(t[i].unix)
-    if print_list == True:
-        for i in range(len(filelist)):
-            print( i, tfiles[i], utime[i])
-    return tfiles, utime
-
-
-def expsortHDR(filelist, datapath, print_list = True):   
-    '''
-    Sorts a list of fits files by a header keyword with an exposure time value. In the case of an
-    SBIG CMOS camera RAW file, the exposure time is read from the second HDU.
-    Arguments:
-        filelist   = a list of fits files
-        datapath   = the path to the files
-        print_list = if True, print the sorted file list
-    Returns:
-        expfiles     = the sorted file list
-        exp          = a sorted list of the exposure times
-    Author(s): Carmen Choza
-    Modified: 210812
-    Version: 1.0
-    '''    
-    
-    exptime = []
-    df = DataFits()
-    for i in range(len(filelist)):
-        fname = os.path.join(datapath, filelist[i])
-        if '_bin1L' in filelist[i] and '_RAW.' in filelist[i]:
-            df.load(fname)
-            head = df.getheader(df.imgnames[1])
-            exptime.append(head['exptime'])
-        else:
-            df.loadhead(os.path.join(datapath, filelist[i]))
-            exptime.append(df.header.get('exptime', 'None'))
-        expsort = np.argsort(exptime)
-        expfiles = []
-        exp = []
-    for i in expsort:
-            expfiles.append(filelist[i])
-            exp.append(exptime[i])
-    if print_list == True:
-            for i in range(len(filelist)):
-                print(i, expfiles[i], exp[i])
-    return expfiles, exp
-
-
-
-def histogram2(img, titlestring = '', NBINS=800, percent=(.05,.05), figsize=(18,8), display_lims=(0,1000), \
-               mask_lims=[0,3500], use_percent=True):  
-    '''
-    Makes two histograms of an image. One includes all points and one includes all points within specified
-    limits. If there are nans in the image, they are set to a value just smaller than the minimum value of
-    the image and then eliminated from the flattened image before computing the histograms.
-    Returns:
-        undermask = mask identifying pixels with values less than mask_lims[0]
-        overmask  = mask identifying pixels with values greater than mask_lims[1]
-        mask_lims = list with the upper and lower limits, respectively, of undermask and overmask
-    Arguments:
-        img             = image to be analyzed
-        titlestring     = title of output graph
-        percent         = limit percentiles for masks to be applied by default to the second plot
-        figsize         = figure size
-        display_lims    = lower and upper limits of display of second histogram
-        mask_lims       = lower and upper limits used to create undermask and overmask
-        use_percent     = True if mask_lims is to be set automatically to the value of the "percent" kwarg
-                          and False if undermask and overmask limits are to be set by the mask_lims kwarg
-    Author(s): Al Harper
-    Modified: 210806, 210811
-    Version 1.1
-    '''
-
-    plt.figure(figsize = figsize)
-    
-    ## Set any nans to a value just smaller than img minimum so the histogram won't get confused.
-    newimg = img.copy()
-    imgmin = np.nanmin(img)
-    newmin = imgmin - 0.000001 * imgmin
-    oldmin_bool = newimg == imgmin
-    oldmin = np.sum(oldmin_bool)
-    nanmask = np.isnan(img)
-    newimg[nanmask] = newmin
-    print('Number of nans =', np.sum(nanmask))
-    print('image minimum =', imgmin)
-    print('Number of old mins =', oldmin)
-
-    ## Flatten the image, sort it, exclude formerly nan values, and find indices and image values
-    ## corresponding to the percent kwarg values.
-    flatpic = newimg.flatten()
-    sortpic = sorted(flatpic)
-    nans = np.sum(sortpic == newmin)
-    newsortpic = sortpic[nans:]
-    b = int(len(newsortpic)*(1 - percent[1]/100.0))
-    a = int(len(newsortpic)*(percent[0]/100.0))
-
-    upper_value = newsortpic[b]
-    lower_value = newsortpic[a]
-    print('Value at {} percentile = {:<0.4e}'.format(percent[0] , lower_value))
-    print('Value at {} percentile = {:<0.4e}'.format(100.0 - percent[1] , upper_value))
-
-    fpic = newsortpic[a:b]
-
-    ## Make masks and calculate how many pixels fall below and above limits.
-    if use_percent == True:
-        mask_lims[0], mask_lims[1] = lower_value, upper_value
-        
-    ## Create some masks for pixels below and above 
-    undermask, overmask = np.where(newimg < mask_lims[0]), np.where(newimg > mask_lims[1])
-    numberunder, numberover = len(undermask[0]), len(overmask[0])
-    if numberunder >= nans:
-        numberunder = numberunder - nans
-        print(numberunder, '<', mask_lims[0], '  exclusive of nans')
-    else:
-        numberunder = 0
-        print(numberunder, '<', mask_lims[0])
-    print( numberover, '>', mask_lims[1])
-    
-    ## Plot primary histogram.
-    plt.subplot(2,1,1)
-    plt.title(titlestring, fontsize=14)
-    plt.grid()
-    histogram = pylab.hist(newsortpic,NBINS,histtype='step',color='b',log=True)
-    
-    ## Plot secondary histogram.
-    plt.subplot(2,1,2)
-    plt.grid()
-    if use_percent == True:
-        histogram = pylab.hist(fpic, NBINS, histtype='step', color='b', log=True)
-    else:
-        histogram = pylab.hist(sortpic[nans:], NBINS, histtype='step', color='b', log=True, \
-                        range=(display_lims[0], display_lims[1]))
-        
-    plt.xlabel('median ={:.2e}  mean ={:.2e}   min = {:.2e}   max={:.2e}   {:d} >= {:.2e}   {:d} <= {:.2e}'\
-               .format(np.median(sortpic), np.mean(sortpic), np.min(sortpic), np.max(sortpic)\
-               ,numberover, mask_lims[1], numberunder, mask_lims[0]), fontsize=14)
-    
-    return undermask, overmask, mask_lims
-
-
-def read_oneDF(whichfiles, whichfile, whichpath, convert_raw=False):
-    '''
-    Read one fits file into a DataFits object. If the file is an SBIG CMOS camera RAW file, 
-    strip the overscan rows from the image and create a header keyword with value equal to
-    the mean value of the overscan region.
-    Returns:
-        df:              DataFits object
-    Arguments:
-        whichfiles:      List of fits files
-        whichfile:       Index number of file to be selected from list
-        whichpath:       Path to directory where files are stored
-        convert_raw:     If True, strip overscan columns from SBIG CMOS camera images 
-                         and add overscan mean to header. Default = False
-    Author(s): Al Harper
-    Modified: 210805
-    Version 1.0
-    '''
-
-    fitsfilename = os.path.join(whichpath,whichfiles[whichfile])
-    if 'bin1L' in fitsfilename and '_RAW.fit' in whichfiles[whichfile]:
-        ddf = DataFits(config=config)
-        ddf.load(fitsfilename)
-        df = DataFits(config=config)
-        df.header = ddf.getheader(ddf.imgnames[1]).copy()
-        del df.header['xtension']
-        df.header.insert(0,('simple',True,'file does conform to FITS standard'))
-        df.imageset(ddf.imageget(ddf.imgnames[1]))
-    else:
-        df = DataFits(config=config)                # Create a DataPype DataFits io object.
-        df.load(fitsfilename)                       # Loads the file.
-        
-    ## Crop over-scan columns from image and create over-scan image (only for bin=1L SBIG CMOS camera images).
-    if camera == 'SBIG' and '_RAW.fit' in whichfiles[0] and convert_raw == True:
-        osimg = df.image[:,4096:]
-        df.image = df.image[:,:4096]
-#         print('output image shape =',df.image.shape)
-        oscnmean = np.nanmean(osimg)
-        df.header['oscnmean'] = oscnmean
-
-    return df
-
-
-def make_stackDF(whichfiles, whichpath, print_list=True):
-    '''
-    Make a stack of images, a list of headers from those images, and calculate some medians 
-    and stds that will help set autoscaling parameters. If camera == 'SBIG', crop the
-    overscan columns and create an overscan image. If the data were taken in low-gain mode,
-    fix the FITS format of the low-gain image. If printout=True, print the filenames
-    as they are read.
-    
-    Returns:
-        image    =  a 3-dimensional image (an "image stack")
-        headlist =  a list of the primary headers of the imaes in the stack
-        stats    =  {'median':median,'std':std,'mad':mad}
-    Author(s): Al Harper
-    Modified: 210805, 210817, 211112
-    Version 1.2
-    '''
-
-    # Read one file to determine numbers of rows and columns.
-    ff = read_oneDF(whichfiles, 0, whichpath, convert_raw = True)
-    rows, cols = ff.image.shape[0], ff.image.shape[1]
-
-    image = np.zeros((len(whichfiles), rows,cols))  # 3D numpy array to hold the stack of images.
-    median = np.zeros((len(whichfiles)))            # 1D numpy array to hold array medians.
-    mean = np.zeros((len(whichfiles)))            # 1D numpy array to hold array medians.
-    std = np.zeros((len(whichfiles)))               # 1D numpy array to hold array stds.
-    mad = np.zeros((len(whichfiles)))            # 1D numpy array to hold median absolute deviations.
-
-    headlist = []                                   # Empty list to hold the headers.
-    for i in range(len(whichfiles)):
-        df = read_oneDF(whichfiles, i, whichpath, convert_raw = True)
-        image[i] = df.image
-        headlist.append(df.header.copy())
-        # Calculate some statistical information.
-        mad[i] = mad_std(image[i],ignore_nan=True)
-        median[i] = np.nanmedian(image[i])
-        mean[i] = np.nanmean(image[i])
-        std[i] = np.nanstd(image[i])
-#         print('')
-        if print_list == True:
-            print(i, whichfiles[i])
-#         print(median[i], mean[i], std[i], mad[i], np.nanmin(image[i]), np.nanmax(image[i]))
-        
-    stats = {'median':median, 'mean':mean, 'std':std, 'mad':mad}
-
-    return image, headlist, stats
-
-
-def saveDF(datafits, fname, path, overwrite=False, ask=True, ignore=False):
-    '''
-    Saves DataFits object to a file. Checks whether file exists and responds in manner 
-    determined by kwargs. If kwarg ignore = True, nothing will be saved.
-    Arguments:
-        datafits  = a DataFits object
-        fname     = the name of the file to be saved
-        path      = the path to the file to be saved
-        overwrite = if True will overwrite existing file, if False will print warning that file exists
-        ask       = if True will request a keyboard input ('y' or 'n') to proceed
-        ignore    = if True, no action will be taken by the cell and "No action taken" will be printed
-    Author(s) = Al Harper
-    Created: 2101-08-05
-    Modified: 210816
-    Version = 1.1 
-    ''' 
-    outf = os.path.join(path, fname)
-    file_exists = os.path.exists(outf)   
-    if os.path.exists(outf) == True and overwrite == False:
-        print('File already exists: ' + outf)
-    else:
-        if ignore == False:
-            if ask == True:
-                print('outfile =', outf)
-                yes_or_no = input('Save file? Enter "y" or "n":')
-                if yes_or_no == 'y':
-                    datafits.save(outf)
-                    if file_exists == True:
-                        print(outf + ' has been overwritten')
-                    else:
-                        print(outf + ' has been saved.')
-                else:
-                    print('OK-- file was not saved.')
-            else:
-                datafits.save(outf)
-                if file_exists == True:
-                    print(outf + ' has been overwritten')
-                else:
-                    print(outf + ' has been saved.')
-        else:
-            print('No action taken')
-
-
+## PUT INSIDE CLASS, JUST BEFORE RUN FUNCTION PROBABLY
 
 ###########################################################################
 
@@ -540,6 +162,48 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         # Get parameters for StepLoadAux, replace auxfile with pfit
         self.loadauxsetup('pfit')
 
+        
+    def timesortHDR(filelist, datapath, date_key = 'date-obs', print_list = True):
+      '''
+      Sorts a list of fits files by a header keyword with a date/time value. In the case of an
+      SBIG CMOS camera RAW file, the date/time is read from the second HDU.
+      Arguments:
+          filelist   = a list of fits files
+          datapath   = the path to the files
+          date_key   = the header keyword containing the time/date data
+          print_list = if True, print the sorted file list
+      Returns:
+          tfiles     = the sorted file list
+          utime      = a list of the unix times of the observations
+      Author(s): Al Harper
+      Modified: 210807, 210815
+      Version: 1.1
+      '''
+
+      date_obs = []                                                # Make a list to hold the date-obs keyword strings.
+      fd = DataFits(config=config)                                 # Make a PipeData object.
+      for i in range(len(filelist)):
+          fname = os.path.join(datapath,filelist[i])
+          if '_bin1L' in filelist[i] and '_RAW.' in filelist[i]:
+              fd.load(fname)                                       # Load the fits file into the PipeData object.
+              head = fd.getheader(fd.imgnames[1])                  # Get the header of the second HDU (index = [1]).
+              date_obs.append(head[date_key])                      # Add date information to list. of string objects.
+          else: 
+              fd.load(fname)                                       # Load the fits file.                                       # Load the fits file.
+              head = fd.getheader()                                # Get the header of the primary HDU (index = [0]).
+              date_obs.append(head[date_key])                      # Add date information to list. of string objects.
+      t = Time(date_obs, format='isot', scale='utc')               # Make an astropy time object in 'isot' format.  
+      tsort = np.argsort(t)                                        # Make a list of indices that will sort by date_obs.
+      tfiles = []
+      utime = []
+      for i in tsort:
+          tfiles.append(filelist[i])
+          utime.append(t[i].unix)
+      if print_list == True:
+          for i in range(len(filelist)):
+              print( i, tfiles[i], utime[i])
+      return tfiles, utime
+        
     def run(self):
         ## this bit taken from Al's colab notebook make_flat_HDR_auto_52_220803
         '''Loop to input and process RAW flatfiles'''
@@ -690,19 +354,12 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
                   np.nanmin(maskedstdgainratioimg))
             print('')
 
+######################################################################################################
 
-            '''Make a histogram and two masks from the masked gain ratio image in order to
-            eliminate outliers with anomalously high or low gain. The low and high limits have 
-            been chosen empirically. The values hard-coded in here will eliminate a small 
-            fraction of the total number of pixels while preserving the smooth (and presumably 
-            "physical") portion of the histogram. while eliminating outliers. However, at some 
-            time in the future one could, if desired, make the mask limits input parameters.'''
+#   PART THAT REPLACES HISTOGRAM CODE FOR GAIN MASK GOES HERE
 
-            img = maskedgainratioimg
-            titlestring = ''
-            masklow, maskhigh = grat_median - 1.0, grat_median + 1.0
-            mgrmasklow, mgrmaskhigh, mask_lims = histogram2(img, titlestring, NBINS=800, percent=[0.0001,0.0001], figsize=(18,8), \
-                            display_lims=(18.0,25.0), mask_lims=[masklow,maskhigh], use_percent=False)
+#######################################################################################################
+
 
             '''Subtract interpolated darks from the flat images.'''
 
@@ -913,6 +570,9 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             dataout.header['primary'] = np.nanmean(primary)
             dataout.header['secondar'] = np.nanmean(secondar)
             dataout.header['dewtem1'] = np.nanmean(dewtem1)
+            dataout.header['meandstd'] = np.nanmean(dstd)
+            ## might also be useful to have a max dstd column, if I use setheadval I can add a comment line
+            ## .header and .setheadval are somewhat interchangeable
 
             print('')
 
