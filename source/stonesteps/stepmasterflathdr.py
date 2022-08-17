@@ -183,17 +183,26 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         '''Loop to input and process RAW flatfiles'''
         
         '''Load and process a set of high and low gain flatfiles.'''
+        ### Load pfit files
+        self.hpfitname = self.loadauxname('hpfit', multi = False)
+        self.hpfit = DataFits(config = self.config)
+        self.hpfit.load(self.hpfitname)
 
-        ## FINIAN: is this the right place for this?
-        ## FINIAN: since flats are loaded in below here, is the bit about flats in the __init__ irrelevant?
+        self.lpfitname = self.loadauxname('lpfit', multi = False)
+        self.lpfit = DataFits(config = self.config)
+        self.lpfit.load(self.lpfitname)
         
+        #1st index low vs high, then intercepts and slopes of pfits
+        
+        polydarkimg = np.zeros(2,2,4096,4096)
+        ## could use np.zeros_like(flatimage)
         print('Begin reduction.')
 
         '''Prepare a hot pixel mask'''
-
         print('')
         hotpixlim = 99.5                           # Input parameter for hot pixel limit
         print('hotpixlim =', hotpixlim)
+        
         img = polydarkimg[0,0]
         uppercut = np.percentile(img, hotpixlim)
         print('uppercut =', uppercut)
@@ -201,62 +210,84 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         print('len hotpix =', len(hotpix[0]))
         print('')
 
-        for specfltr in bands:
-            plt.close('all')      # Close all open plots to free up memory.
+        plt.close('all')      # Close all open plots to free up memory.
 
-            '''Use list comprehensions to select subsets of files to load. Then sort files by exposure time.'''
+        '''Use list comprehensions to select subsets of files to load. Then sort files by exposure time.'''
 
-            flatfiles = [0, 0]
+        ### HERE CREATE TWO LISTS, ONE FOR HIGH GAIN AND ONE FOR LOW GAIN, THEN TIME SORT EACH OF THESE AND PUT INTO 4D NUMPY STRUCTURE
+        lowgainlist = []
+        highgainlist = []
+        for f in self.datain:
+            if '.fit' in f.getheadval('filename') and '_bin1L' in f.getheadval('filename'):
+                lowgainlist.append(f)
+            elif '.fit' in f.getheadval('filename') and '_bin1H' in f.getheadval('filename'):
+                highgainlist.append(f)
+          
+        highgainlist, utimeH = timesortHDR(highgainlist], flatpath, date_key = 'date-obs', \
+                                           print_list = False)
+        lowgainlist, utimeL = timesortHDR(lowgainlist, flatpath, date_key = 'date-obs', \
+                                           print_list = False)
 
-            flatfiles[0] = [f for f in os.listdir(flatpath) if '.fit' in f and '_bin1H' in f \
-                            and 'flat' in f and specfltr in f and 'RAW.fit' in f]
-            flatfiles[0], utimeH = timesortHDR(flatfiles[0], flatpath, date_key = 'date-obs', \
-                                               print_list = False)
+        '''Create output file name (assuming high and low gain flats are to be stored as
+        a 2D image).'''
 
-            flatfiles[1] = [f for f in os.listdir(flatpath) if '.fit' in f and '_bin1L' in f \
-                            and 'flat' in f and specfltr in f and 'RAW.fit' in f]
-            flatfiles[1], utimeL = timesortHDR(flatfiles[1], flatpath, date_key = 'date-obs', \
-                                               print_list = False)
+        lf = highgainlist[len(highgainlist[0])-1].split('_')
+        ff = highgainlist[0].split('_')
+        flatname = 'mflat_'+ff[1]+'_'+ff[3]+'DR'+'_'+ff[4]+'_'+ff[5]+'-'+lf[5]+'_'+ff[6]+'_'+ff[7]+'_'+'MFLAT.fits'
+        print('flatname =',flatname)
+        print('')
 
-            '''Create output file name (assuming high and low gain flats are to be stored as
-            a 2D image).'''
+        '''Make a 4D image of high and low gain flat files. Dimensions are [gain, stack, row, col].'''
 
-            lf = flatfiles[0][len(flatfiles[0])-1].split('_')
-            ff = flatfiles[0][0].split('_')
-            flatname = 'mflat_'+ff[1]+'_'+ff[3]+'DR'+'_'+ff[4]+'_'+ff[5]+'-'+lf[5]+'_'+ff[6]+'_'+ff[7]+'_'+'MFLAT.fits'
-            print('flatname =',flatname)
-            print('')
+        flatnum = len(highgainlist)
+        flatheadlist, flatstats = [[], []], [[], []]
+        flatimage = np.zeros((2, flatnum, rows, cols))
+        
+        ## NEED TO CREATE NP ARRAYS TO HOLD STATISTICAL INFORMATION
+        ## FILL THE ARRAYS WITHIN THESE LOOPS , LOOK AT TABLE TO MAKE SURE THEY'LL FILL IT CORRECTLY
+        ## REPLACE ALL PRINTS WITH SELF.LOG.DEBUG
+        for j in range(len(highgainlist)):
+            flatimage[0, j] = highgainlist[j]
+            # Calculate some statistical information.
+            mad[j] = mad_std(image[j],ignore_nan=True)
+            median[j] = np.nanmedian(image[j])
+            mean[j] = np.nanmean(image[j])
+            std[j] = np.nanstd(image[j])
+            
+        
+        for j in range(len(lowgainlist)):
+            flatimage[1, j] = lowgainlist[j]
+            # Calculate some statistical information.
+            mad[j] = mad_std(image[j],ignore_nan=True)
+            median[j] = np.nanmedian(image[j])
+            mean[j] = np.nanmean(image[j])
+            std[j] = np.nanstd(image[j])
+           
+                
+  ### EXTRACT HEADER FROM HIGH GAIN LIST TO USE FOR THIS
+        flatbaseheader = highgainlist[0].header.copy()
 
-            '''Make a 4D image of high and low gain flat files. Dimensions are [gain, stack, row, col].'''
-
-            flatnum = len(flatfiles[0])
-            flatheadlist, flatstats = [[], []], [[], []]
-            flatimage = np.zeros((2, flatnum, rows, cols))
-            for i in range(2):
-                flatimage[i], flatheadlist[i], flatstats[i] = make_stackDF(flatfiles[i], flatpath,\
-                                                                    print_list=False)
-            flatbaseheader = flatheadlist[0][0]
-
-            '''
+        ### NEED TO FIX INDENTATION BELOW THIS (minus four spaces)
+        '''
             Print list of the files and median signal values.
             Compile a list of exposure times. Set variables for max and min exposure
             time for inclusion in header.
-            '''
+        '''
 
-            print('Print filenames and image medians,')
+        print('Print filenames and image medians,')
+        print('')
+        for i in range(2):
+            flatexptimes = []
+            imedian = flatstats[i]['median']
+            for j in range(len(flatfiles[i])):
+                exptime = flatheadlist[i][j]['exptime']
+                flatexptimes.append(exptime)
+                print ('{:<4}{:<70}{:12.2f}'.format(j,flatfiles[i][j],imedian[j]))
             print('')
-            for i in range(2):
-                flatexptimes = []
-                imedian = flatstats[i]['median']
-                for j in range(len(flatfiles[i])):
-                    exptime = flatheadlist[i][j]['exptime']
-                    flatexptimes.append(exptime)
-                    print ('{:<4}{:<70}{:12.2f}'.format(j,flatfiles[i][j],imedian[j]))
-                print('')
-            xtimemin = np.min(flatexptimes)
-            xtimemax = np.max(flatexptimes)
-            print('xtimemin =', xtimemin, '  xtimemax =', xtimemax)
-            print('')
+        xtimemin = np.min(flatexptimes)
+        xtimemax = np.max(flatexptimes)
+        print('xtimemin =', xtimemin, '  xtimemax =', xtimemax)
+        print('')
 
 
             '''Construct a stack of dark images to match the flat image exposure times.'''
