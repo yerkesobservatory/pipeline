@@ -141,7 +141,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
 
         
     def timesortHDR(filelist, datapath, date_key = 'date-obs', print_list = True):
-          '''
+        '''
           Sorts a list of fits files by a header keyword with a date/time value. In the case of an
           SBIG CMOS camera RAW file, the date/time is read from the second HDU.
           Arguments:
@@ -155,7 +155,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
           Author(s): Al Harper
           Modified: 210807, 210815
           Version: 1.1
-          '''
+        '''
 
         date_obs = []                                                # Make a list to hold the date-obs keyword strings.
         fd = DataFits(config=config)                                 # Make a PipeData object.
