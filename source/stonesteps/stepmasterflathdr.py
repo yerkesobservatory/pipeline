@@ -1,34 +1,23 @@
 ### BUILDING STEPMASTERFLATHDR
 '''
 Pipestep Master Flat HDR
-
 Produces Master Flat images using pfit images and raw flats as inputs. 
-
 Uses StepLoadAux to load in pfit files. 
-
 FINIAN'S NOTES:
-
 - Some imports are currently redundant due to being drawn from multiple sources, this can be cleaned up later.
-
 - Potentially irrelevant code for loading in flats is in the __init__, there is code for loading them in the Run 
   funtion from Al's make_flat_HDR colab notebook. I believe this should be taken care of by the load input part
   of the config file, but am not sure exactly what to put in this notebook to load in the flats.
   
 - Some functions from Al's make_flat notebook may be irrelevant and able to be removed.
-
 - Unsure if the code to build the hotpix mask should be in here, and if so, where. 
   Al suggested moving the code that generates this mask to the code that creates the pfit, and loading it in
   using the loadaux functionality.
-
-
-
 STEP DESCRIPTION:
-
 Makes flat-field calibration images. Specialized for making HDR images for the SBIG CMOS camera.
 Also makes gain ratio images by comparing signals in the high and low gain channels when the camera is operated in 
 HDR mode. After bias-subtraction, the total signal (sky signal plus dark signal) of the high gain channel is 
 divided by the total signal of the low-gain channel.
-
 Input files are:
 -   RAW flat images, taken at dusk with a script that acquires flat images of approximately equal exposure level. 
     The script attempts to make the median value of the image approximately 3000 ADU (the high-gain channel 
@@ -42,13 +31,11 @@ Output is a file with the suffix MFLAT. It has three HDUs:
     flat and the second (index = 1) is the low-gain flat.
 -   The second HDU is the gain ratio image. The image name is 'GAIN RATIO'.
 -   The third HDU is a table with information about the individual RAW images used to make the MFLAT image.
-
 The table name is 'TABLE'.
 The notebook batch-processes files within a directory according to keywords in user-configurable lists, 
 one for gain and one for filter.
 The output flat image and gain image both contain NANS that identify pixels determined using histograms to be 
 outliers. The threshold criteria can be tuned by changing parameters in the code.
-
 '''
 
 from darepype.drp import DataFits # pipeline data object class
@@ -65,7 +52,6 @@ import numpy as np
 import logging
 ###from skimage.measure import block_reduce
 
-
 ## BELOW: imports from Al's make_flat colab notebook 
 
  ## Variables used to control execution of the code.
@@ -79,16 +65,6 @@ print(sys.executable) ## Check to see if Jupyter is using the correct path.
 from astropy.stats import mad_std           # The median absolute deviation, a more robust estimator than std.
 from astropy.time import Time
 
-####
-## BELOW: AL'S FUNCTIONS: SOME MAY NOT BE NECESSARY BUT SOME DEFINITELY ARE:
-## ALSO: NOT SURE IF THESE SHOULD BE WITHIN THE CLASS DEFINITION OR BEFORE IT. WILL LEAVE HERE FOR NOW
-###
-
-## PUT INSIDE CLASS, JUST BEFORE RUN FUNCTION PROBABLY
-
-###########################################################################
-
-#  BELOW HERE IS THE ACTUAL CLASS : SOME OF AL'S FUNCTIONS MAY NEED TO BE MOVED HERE
 
 ############################################################################
 
@@ -164,45 +140,45 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
 
         
     def timesortHDR(filelist, datapath, date_key = 'date-obs', print_list = True):
-      '''
-      Sorts a list of fits files by a header keyword with a date/time value. In the case of an
-      SBIG CMOS camera RAW file, the date/time is read from the second HDU.
-      Arguments:
-          filelist   = a list of fits files
-          datapath   = the path to the files
-          date_key   = the header keyword containing the time/date data
-          print_list = if True, print the sorted file list
-      Returns:
-          tfiles     = the sorted file list
-          utime      = a list of the unix times of the observations
-      Author(s): Al Harper
-      Modified: 210807, 210815
-      Version: 1.1
-      '''
+          '''
+          Sorts a list of fits files by a header keyword with a date/time value. In the case of an
+          SBIG CMOS camera RAW file, the date/time is read from the second HDU.
+          Arguments:
+              filelist   = a list of fits files
+              datapath   = the path to the files
+              date_key   = the header keyword containing the time/date data
+              print_list = if True, print the sorted file list
+          Returns:
+              tfiles     = the sorted file list
+              utime      = a list of the unix times of the observations
+          Author(s): Al Harper
+          Modified: 210807, 210815
+          Version: 1.1
+          '''
 
-      date_obs = []                                                # Make a list to hold the date-obs keyword strings.
-      fd = DataFits(config=config)                                 # Make a PipeData object.
-      for i in range(len(filelist)):
-          fname = os.path.join(datapath,filelist[i])
-          if '_bin1L' in filelist[i] and '_RAW.' in filelist[i]:
-              fd.load(fname)                                       # Load the fits file into the PipeData object.
-              head = fd.getheader(fd.imgnames[1])                  # Get the header of the second HDU (index = [1]).
-              date_obs.append(head[date_key])                      # Add date information to list. of string objects.
-          else: 
-              fd.load(fname)                                       # Load the fits file.                                       # Load the fits file.
-              head = fd.getheader()                                # Get the header of the primary HDU (index = [0]).
-              date_obs.append(head[date_key])                      # Add date information to list. of string objects.
-      t = Time(date_obs, format='isot', scale='utc')               # Make an astropy time object in 'isot' format.  
-      tsort = np.argsort(t)                                        # Make a list of indices that will sort by date_obs.
-      tfiles = []
-      utime = []
-      for i in tsort:
-          tfiles.append(filelist[i])
-          utime.append(t[i].unix)
-      if print_list == True:
-          for i in range(len(filelist)):
-              print( i, tfiles[i], utime[i])
-      return tfiles, utime
+        date_obs = []                                                # Make a list to hold the date-obs keyword strings.
+        fd = DataFits(config=config)                                 # Make a PipeData object.
+        for i in range(len(filelist)):
+            fname = os.path.join(datapath,filelist[i])
+            if '_bin1L' in filelist[i] and '_RAW.' in filelist[i]:
+                fd.load(fname)                                       # Load the fits file into the PipeData object.
+                head = fd.getheader(fd.imgnames[1])                  # Get the header of the second HDU (index = [1]).
+                date_obs.append(head[date_key])                      # Add date information to list. of string objects.
+            else:
+                fd.load(fname)                                       # Load the fits file.                                       # Load the fits file.
+                head = fd.getheader()                                # Get the header of the primary HDU (index = [0]).
+                date_obs.append(head[date_key])                      # Add date information to list. of string objects.
+        t = Time(date_obs, format='isot', scale='utc')               # Make an astropy time object in 'isot' format.  
+        tsort = np.argsort(t)                                        # Make a list of indices that will sort by date_obs.
+        tfiles = []
+        utime = []
+        for i in tsort:
+            tfiles.append(filelist[i])
+            utime.append(t[i].unix)
+        if print_list == True:
+            for i in range(len(filelist)):
+                print( i, tfiles[i], utime[i])
+        return tfiles, utime
         
     def run(self):
         ## this bit taken from Al's colab notebook make_flat_HDR_auto_52_220803
