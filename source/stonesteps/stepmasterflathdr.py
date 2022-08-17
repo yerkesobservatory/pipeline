@@ -136,7 +136,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         self.paramlist.append(['outputfolder','',
                                'Output directory location - default is the folder of the input files'])
         # Get parameters for StepLoadAux, replace auxfile with pfit
-        self.loadauxsetup('pfit')
+        self.loadauxsetup('lpfit')
+        self.loadauxsetup('hpfit')
 
         
     def timesortHDR(filelist, datapath, date_key = 'date-obs', print_list = True):
@@ -175,9 +176,6 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         for i in tsort:
             tfiles.append(filelist[i])
             utime.append(t[i].unix)
-        if print_list == True:
-            for i in range(len(filelist)):
-                print( i, tfiles[i], utime[i])
         return tfiles, utime
         
     def run(self):
