@@ -140,7 +140,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         self.loadauxsetup('hpfit')
 
         
-    def timesortHDR(filelist, date_key = 'date-obs', print_list = True):
+    def timesortHDR(filelist, date_key = 'date-obs'):
         '''
           Sorts a list of fits files by a header keyword with a date/time value. In the case of an
           SBIG CMOS camera RAW file, the date/time is read from the second HDU.
@@ -224,10 +224,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             elif '.fit' in f.filename and '_bin1H' in f.filename:
                 highgainlist.append(f)
           
-        highgainlist, utimeH = self.timesortHDR(highgainlist, date_key = 'date-obs', \
-                                           print_list = False)
-        lowgainlist, utimeL = self.timesortHDR(lowgainlist, date_key = 'date-obs', \
-                                           print_list = False)
+        highgainlist, utimeH = self.timesortHDR(highgainlist, date_key = 'date-obs')
+        lowgainlist, utimeL = self.timesortHDR(lowgainlist, date_key = 'date-obs')
 
         '''Create output file name (assuming high and low gain flats are to be stored as
         a 2D image).'''
