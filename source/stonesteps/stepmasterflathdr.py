@@ -158,10 +158,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         '''
 
         date_obs = []                                                # Make a list to hold the date-obs keyword strings.
-        #fd = DataFits(config=config)                                 # Make a PipeData object.
         for d in datalist:
-            fname = datalist[i].filename
-            if '_bin1L' in datalist[i] and '_RAW.' in datalist[i]:
+            if '_bin1L' in d.filename and '_RAW.' in d.filename:
                 head = d.getheader(d.imgnames[1])                  # Get the header of the second HDU (index = [1]).
                 date_obs.append(head[date_key])                      # Add date information to list. of string objects.
             else:
@@ -172,7 +170,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         tfiles = []
         utime = []
         for i in tsort:
-            tfiles.append(filelist[i])
+            tfiles.append(datalist[i])
             utime.append(t[i].unix)
         return tfiles, utime
         
