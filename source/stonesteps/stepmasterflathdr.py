@@ -218,9 +218,9 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         lowgainlist = []
         highgainlist = []
         for f in self.datain:
-            if '.fit' in f.getheadval('filename') and '_bin1L' in f.getheadval('filename'):
+            if '.fit' in f.filename and '_bin1L' in f.filename:
                 lowgainlist.append(f)
-            elif '.fit' in f.getheadval('filename') and '_bin1H' in f.getheadval('filename'):
+            elif '.fit' in f.filename and '_bin1H' in f.filename:
                 highgainlist.append(f)
           
         highgainlist, utimeH = timesortHDR(highgainlist, flatpath, date_key = 'date-obs', \
@@ -591,11 +591,6 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             ## might also be useful to have a max dstd column, if I use setheadval I can add a comment line
             ## .header and .setheadval are somewhat interchangeable
 
-        print('')
-
-        '''Save the output data file.'''
-
-        saveDF(dataout, flatname, outpath, overwrite=overwrite, ask=False, ignore=ignore)
 
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
