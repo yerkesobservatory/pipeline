@@ -158,17 +158,14 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         '''
 
         date_obs = []                                                # Make a list to hold the date-obs keyword strings.
-        fd = DataFits(config=config)                                 # Make a PipeData object.
-        for i in range(len(filelist)):
-            #fname = os.path.join(datapath,filelist[i])
-            fname = filelist[i].filename
-            if '_bin1L' in filelist[i] and '_RAW.' in filelist[i]:
-                fd.load(fname)                                       # Load the fits file into the PipeData object.
-                head = fd.getheader(fd.imgnames[1])                  # Get the header of the second HDU (index = [1]).
+        #fd = DataFits(config=config)                                 # Make a PipeData object.
+        for d in datalist:
+            fname = datalist[i].filename
+            if '_bin1L' in datalist[i] and '_RAW.' in datalist[i]:
+                head = d.getheader(d.imgnames[1])                  # Get the header of the second HDU (index = [1]).
                 date_obs.append(head[date_key])                      # Add date information to list. of string objects.
             else:
-                fd.load(fname)                                       # Load the fits file.                                       # Load the fits file.
-                head = fd.getheader()                                # Get the header of the primary HDU (index = [0]).
+                head = d.getheader()                                # Get the header of the primary HDU (index = [0]).
                 date_obs.append(head[date_key])                      # Add date information to list. of string objects.
         t = Time(date_obs, format='isot', scale='utc')               # Make an astropy time object in 'isot' format.  
         tsort = np.argsort(t)                                        # Make a list of indices that will sort by date_obs.
