@@ -160,6 +160,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         date_obs = []                                                # Make a list to hold the date-obs keyword strings.
         fd = DataFits(config=config)                                 # Make a PipeData object.
         for i in range(len(filelist)):
+            #fname = os.path.join(datapath,filelist[i])
             fname = filelist[i].filename
             if '_bin1L' in filelist[i] and '_RAW.' in filelist[i]:
                 fd.load(fname)                                       # Load the fits file into the PipeData object.
@@ -223,9 +224,9 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             elif '.fit' in f.filename and '_bin1H' in f.filename:
                 highgainlist.append(f)
           
-        highgainlist, utimeH = self.timesortHDR(highgainlist, flatpath, date_key = 'date-obs', \
+        highgainlist, utimeH = self.timesortHDR(highgainlist, date_key = 'date-obs', \
                                            print_list = False)
-        lowgainlist, utimeL = self.timesortHDR(lowgainlist, flatpath, date_key = 'date-obs', \
+        lowgainlist, utimeL = self.timesortHDR(lowgainlist, date_key = 'date-obs', \
                                            print_list = False)
 
         '''Create output file name (assuming high and low gain flats are to be stored as
