@@ -223,9 +223,9 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             elif '.fit' in f.filename and '_bin1H' in f.filename:
                 highgainlist.append(f)
           
-        highgainlist, utimeH = timesortHDR(highgainlist, flatpath, date_key = 'date-obs', \
+        highgainlist, utimeH = self.timesortHDR(highgainlist, flatpath, date_key = 'date-obs', \
                                            print_list = False)
-        lowgainlist, utimeL = timesortHDR(lowgainlist, flatpath, date_key = 'date-obs', \
+        lowgainlist, utimeL = self.timesortHDR(lowgainlist, flatpath, date_key = 'date-obs', \
                                            print_list = False)
 
         '''Create output file name (assuming high and low gain flats are to be stored as
