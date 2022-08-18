@@ -225,8 +225,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         '''Create output file name (assuming high and low gain flats are to be stored as
         a 2D image).'''
 
-        lf = highgainlist[len(highgainlist[0])-1].split('_')
-        ff = highgainlist[0].split('_')
+        lf = highgainlist[len(highgainlist[0].filename)-1].split('_')
+        ff = highgainlist[0].filename.split('_')
         flatname = 'mflat_'+ff[1]+'_'+ff[3]+'DR'+'_'+ff[4]+'_'+ff[5]+'-'+lf[5]+'_'+ff[6]+'_'+ff[7]+'_'+'MFLAT.fits'
         print('flatname =',flatname)
         print('')
