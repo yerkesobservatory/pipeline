@@ -223,7 +223,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             elif '.fit' in f.getheadval('filename') and '_bin1H' in f.getheadval('filename'):
                 highgainlist.append(f)
           
-        highgainlist, utimeH = timesortHDR(highgainlist], flatpath, date_key = 'date-obs', \
+        highgainlist, utimeH = timesortHDR(highgainlist, flatpath, date_key = 'date-obs', \
                                            print_list = False)
         lowgainlist, utimeL = timesortHDR(lowgainlist, flatpath, date_key = 'date-obs', \
                                            print_list = False)
@@ -290,83 +290,83 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         print('')
 
 
-            '''Construct a stack of dark images to match the flat image exposure times.'''
+        '''Construct a stack of dark images to match the flat image exposure times.'''
 
-            darkimage = np.zeros_like(flatimage)
-            for i in range(2):
-                for j in range(flatimage.shape[1]):
-                    darkimage[i,j] = polydarkimg[i,1] + polydarkimg[i,0] * flatexptimes[j]
-
-
-            '''Derive relative gain images for each HDR flat image in the stack. Note that
-            we are measuring the total signal above bias resulting from both photons and
-            dark current.'''
-
-            biasimage = np.zeros((2, rows, cols))
-            biasimage[0] = polydarkimg[0, 1]
-            biasimage[1] = polydarkimg[1, 1]
-
-            gainratiostack = np.zeros_like(flatimage[0])
-            print('Medians of gain ratio images.')
-            for i in range(len(flatfiles[0])):
-                gainratiostack[i] = (flatimage[0][i] - biasimage[0]) / (flatimage[1][i] - biasimage[1])
-                print(np.nanmedian(gainratiostack[i]))
-            print('')
-
-            '''
-            Create median gain ratio image and std gain ratio image from the stack of gain 
-            ratio images. Calculate and print some statistics of the two images, ignoring 
-            masked values.
-            '''
-
-            # Take the median and std along the stack axis of gainratiostack.
-            mediangainratioimg = np.nanmedian(gainratiostack, axis = 0)
-            stdgainratioimg = np.nanstd(gainratiostack, axis = 0)
-
-            # Take image medians and means of the two 2D images derived above.
-            grat_median = np.nanmedian(mediangainratioimg)
-            grat_mean = np.nanmean(mediangainratioimg)
-            stdgrat_median = np.nanmedian(stdgainratioimg)
-            stdgrat_mean = np.nanmean(stdgainratioimg)
-            print('median, mean of median gain ratio image =', grat_median, grat_mean)
-            print('max, min =', np.nanmax(mediangainratioimg), np.nanmin(mediangainratioimg))
-            print('')
-            print('median, mean of std gain ratio image =', stdgrat_median, stdgrat_mean)
-            print('max, min =', np.nanmax(stdgainratioimg), np.nanmin(stdgainratioimg))
-            print('')
+        darkimage = np.zeros_like(flatimage)
+        for i in range(2):
+            for j in range(flatimage.shape[1]):
+                darkimage[i,j] = polydarkimg[i,1] + polydarkimg[i,0] * flatexptimes[j]
 
 
-            '''
-            Create masked median gain ratio image and masked std image with nans replacing 
-            masked pixels. Mask used here is hotpix (a hot pixel mask made from a dark exposure 
-            in a preceding cell). Print some statistics, ignoring masked values.
-            '''
+        '''Derive relative gain images for each HDR flat image in the stack. Note that
+        we are measuring the total signal above bias resulting from both photons and
+        dark current.'''
 
-            maskedgainratioimg = mediangainratioimg.copy()
-            maskedgainratioimg[hotpix] = np.nan
+        biasimage = np.zeros((2, rows, cols))
+        biasimage[0] = polydarkimg[0, 1]
+        biasimage[1] = polydarkimg[1, 1]
 
-            maskedstdgainratioimg = stdgainratioimg.copy()
-            maskedstdgainratioimg[hotpix] = np.nan
+        gainratiostack = np.zeros_like(flatimage[0])
+        print('Medians of gain ratio images.')
+        for i in range(len(flatfiles[0])):
+            gainratiostack[i] = (flatimage[0][i] - biasimage[0]) / (flatimage[1][i] - biasimage[1])
+            print(np.nanmedian(gainratiostack[i]))
+        print('')
 
-            print('median, mean of masked gain ratio image =', np.nanmedian(maskedgainratioimg), 
-                  np.nanmean(maskedgainratioimg))
-            print('max, min = of masked gain ratio image', np.nanmax(maskedgainratioimg), 
-                  np.nanmin(maskedgainratioimg))
-            print('')
-            print('median, mean of masked std gain ratio image =', np.nanmedian(maskedstdgainratioimg), 
-                  np.nanmean(maskedstdgainratioimg))
-            print('max, min of masked std gain ratio image =', np.nanmax(maskedstdgainratioimg), 
-                  np.nanmin(maskedstdgainratioimg))
-            print('')
+        '''
+        Create median gain ratio image and std gain ratio image from the stack of gain 
+        ratio images. Calculate and print some statistics of the two images, ignoring 
+        masked values.
+        '''
+
+        # Take the median and std along the stack axis of gainratiostack.
+        mediangainratioimg = np.nanmedian(gainratiostack, axis = 0)
+        stdgainratioimg = np.nanstd(gainratiostack, axis = 0)
+
+        # Take image medians and means of the two 2D images derived above.
+        grat_median = np.nanmedian(mediangainratioimg)
+        grat_mean = np.nanmean(mediangainratioimg)
+        stdgrat_median = np.nanmedian(stdgainratioimg)
+        stdgrat_mean = np.nanmean(stdgainratioimg)
+        print('median, mean of median gain ratio image =', grat_median, grat_mean)
+        print('max, min =', np.nanmax(mediangainratioimg), np.nanmin(mediangainratioimg))
+        print('')
+        print('median, mean of std gain ratio image =', stdgrat_median, stdgrat_mean)
+        print('max, min =', np.nanmax(stdgainratioimg), np.nanmin(stdgainratioimg))
+        print('')
+
+
+        '''
+        Create masked median gain ratio image and masked std image with nans replacing 
+        masked pixels. Mask used here is hotpix (a hot pixel mask made from a dark exposure 
+        in a preceding cell). Print some statistics, ignoring masked values.
+        '''
+
+        maskedgainratioimg = mediangainratioimg.copy()
+        maskedgainratioimg[hotpix] = np.nan
+
+        maskedstdgainratioimg = stdgainratioimg.copy()
+        maskedstdgainratioimg[hotpix] = np.nan
+
+        print('median, mean of masked gain ratio image =', np.nanmedian(maskedgainratioimg), 
+            np.nanmean(maskedgainratioimg))
+        print('max, min = of masked gain ratio image', np.nanmax(maskedgainratioimg), 
+            np.nanmin(maskedgainratioimg))
+        print('')
+        print('median, mean of masked std gain ratio image =', np.nanmedian(maskedstdgainratioimg), 
+            np.nanmean(maskedstdgainratioimg))
+        print('max, min of masked std gain ratio image =', np.nanmax(maskedstdgainratioimg), 
+            np.nanmin(maskedstdgainratioimg))
+        print('')
 
 ######################################################################################################
 
 #   PART THAT REPLACES HISTOGRAM CODE FOR GAIN MASK GOES HERE
 #   WILL NEED TO REPLACE HOTPIX STUFF WITH HI AND LO GAIN LIMITS , DEFINED IN DCONF_FA
-            img = maskedgainratioimg
-            titlestring = ''
-            masklow, maskhigh = grat_median - logainlim, grat_median + higainlim
-            gainmask = np.where((img > masklow) & (img < maskhigh))
+        img = maskedgainratioimg
+        titlestring = ''
+        masklow, maskhigh = grat_median - logainlim, grat_median + higainlim
+        gainmask = np.where((img > masklow) & (img < maskhigh))
         
         #  AL: NOT SURE WHAT END PRODUCT OF THIS BLOCK SHOULD BE / IF I IMPLEMENTED THIS PROPERLY
       
@@ -385,224 +385,224 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
 #######################################################################################################
 
 
-            '''Subtract interpolated darks from the flat images.'''
+        '''Subtract interpolated darks from the flat images.'''
 
-            if '_RAW.fit' in flatfiles[0][0]:
-                flatimageDS = flatimage - darkimage
+        if '_RAW.fit' in flatfiles[0][0]:
+            flatimageDS = flatimage - darkimage
         #     print(flatimageDS.shape)
 
-            '''
-            Normalize each of the images in the high and low-gain flat image stack to its own median,
-            and apply the gain-outlier mask derived above. From this point on, there will be nans
-            for every pixel in both the hotpix and mgrmask masks.'''
+        '''
+        Normalize each of the images in the high and low-gain flat image stack to its own median,
+        and apply the gain-outlier mask derived above. From this point on, there will be nans
+        for every pixel in both the hotpix and mgrmask masks.'''
 
-            flatimageDSN = np.zeros_like(flatimageDS)
-            flatmediansDS = np.zeros((2, flatnum))
-            flatmadstdsDSN = np.zeros((2, flatnum))
-            for i in range(2):
-                for j in range(flatnum):
-                    flatimageDS[i,j][mgrmasklow] = np.nan
-                    flatimageDS[i,j][mgrmaskhigh] = np.nan
-                    flatmediansDS[i,j] = np.nanmedian(flatimageDS[i,j])
-                    flatimageDSN[i,j] = flatimageDS[i,j] / flatmediansDS[i,j]
-                    flatmadstdsDSN[i,j] = mad_std(flatimageDSN[i,j], ignore_nan=True)
+        flatimageDSN = np.zeros_like(flatimageDS)
+        flatmediansDS = np.zeros((2, flatnum))
+        flatmadstdsDSN = np.zeros((2, flatnum))
+        for i in range(2):
+            for j in range(flatnum):
+                flatimageDS[i,j][mgrmasklow] = np.nan
+                flatimageDS[i,j][mgrmaskhigh] = np.nan
+                flatmediansDS[i,j] = np.nanmedian(flatimageDS[i,j])
+                flatimageDSN[i,j] = flatimageDS[i,j] / flatmediansDS[i,j]
+                flatmadstdsDSN[i,j] = mad_std(flatimageDSN[i,j], ignore_nan=True)
         #     print(flatimageDSN.shape, flatmediansDS.shape)
 
 
-            '''Make median high and low gain flats from the stacks and compute their respective
-            median, mean, std, and mad. The result is a 3D image with high and low-gain planes.'''
+        '''Make median high and low gain flats from the stacks and compute their respective
+        median, mean, std, and mad. The result is a 3D image with high and low-gain planes.'''
 
-            flat = np.nanmedian(flatimageDSN, axis=1)
+        flat = np.nanmedian(flatimageDSN, axis=1)
 
-            flatmedian, flatmean, flatstd, flatmadstd = [0,0], [0,0], [0,0], [0,0]
+        flatmedian, flatmean, flatstd, flatmadstd = [0,0], [0,0], [0,0], [0,0]
 
-            for i in range(2):  
-                flatmedian[i] = np.nanmedian(flat[i])                   # Median of the median flat.
-                flatmean[i] = np.nanmean(flat[i])                       # Mean of the median flat.
-                flatstd[i] = np.nanstd(flat[i])                         # mad_std of the median flat.
-                flatmadstd[i] = mad_std(flat[i],ignore_nan=True)        # mad_std of the median flat.
+        for i in range(2):  
+            flatmedian[i] = np.nanmedian(flat[i])                   # Median of the median flat.
+            flatmean[i] = np.nanmean(flat[i])                       # Mean of the median flat.
+            flatstd[i] = np.nanstd(flat[i])                         # mad_std of the median flat.
+            flatmadstd[i] = mad_std(flat[i],ignore_nan=True)        # mad_std of the median flat.
         #     print('')
-            print('Median flat median =', flatmedian )
-            print('Mean flat median =', flatmean )
-            print('Median flat std =', flatstd)
-            print('Median flat mad_std =', flatmadstd)
-            print('')
+        print('Median flat median =', flatmedian )
+        print('Mean flat median =', flatmean )
+        print('Median flat std =', flatstd)
+        print('Median flat mad_std =', flatmadstd)
+        print('')
 
 
-            '''Print a list of the medians of the dark-subtracted high and low gain flat images.'''
-            print('List of medians of dark-subtracted high and low gain flat images')
-            for i in range(flatimage.shape[1]):
-                print('{:<3}{:<10.2f}{:<10.2f}'.format(i, flatmediansDS[0,i], flatmediansDS[1,i]))
-            print('')
+        '''Print a list of the medians of the dark-subtracted high and low gain flat images.'''
+        print('List of medians of dark-subtracted high and low gain flat images')
+        for i in range(flatimage.shape[1]):
+            print('{:<3}{:<10.2f}{:<10.2f}'.format(i, flatmediansDS[0,i], flatmediansDS[1,i]))
+        print('')
 
-            '''Find minimum and maximum values of the image medians for inclusion in output header.'''
+        '''Find minimum and maximum values of the image medians for inclusion in output header.'''
 
-            medmin, medmax = [0,0], [0,0]
-            medmin[0] = np.nanmin(flatmediansDS[0])
-            medmax[0] = np.nanmax(flatmediansDS[0])
-            medmin[1] = np.nanmin(flatmediansDS[1])
-            medmax[1] = np.nanmax(flatmediansDS[1])
-            print('minimum medians =', medmin, '   ', 'maximum medians =', medmax )
-            print('')
+        medmin, medmax = [0,0], [0,0]
+        medmin[0] = np.nanmin(flatmediansDS[0])
+        medmax[0] = np.nanmax(flatmediansDS[0])
+        medmin[1] = np.nanmin(flatmediansDS[1])
+        medmax[1] = np.nanmax(flatmediansDS[1])
+        print('minimum medians =', medmin, '   ', 'maximum medians =', medmax )
+        print('')
 
-            '''
-            Re-normalize the median flats (H and L) to their medians and mask out pixels with 
-            gains greater than or less than 1.0 from the median gain. Replace the masked pixels 
-            with np.nan. Hence, when a sky image is divided by the flat, those pixels will also 
-            be masked (will be np.nan) in the flat-fielded sky image (in addition to the pixela
-            aleady replaced with nans using the hotpix mask).
-            '''
+        '''
+        Re-normalize the median flats (H and L) to their medians and mask out pixels with 
+        gains greater than or less than 1.0 from the median gain. Replace the masked pixels 
+        with np.nan. Hence, when a sky image is divided by the flat, those pixels will also 
+        be masked (will be np.nan) in the flat-fielded sky image (in addition to the pixela
+        aleady replaced with nans using the hotpix mask).
+        '''
 
-            mflat = np.zeros_like(flat)
-            mflatmedian = np.zeros((2))
-            mflatmadstd = np.zeros((2))
-            for i in range(2):
-                mflat[i] = flat[i] / flatmedian[i]
-                mflatmedian[i] = np.nanmedian(mflat[i])
-                mflat[i][mgrmasklow] = np.nan
-                mflat[i][mgrmaskhigh] = np.nan
-                mflatmadstd[i] = mad_std(mflat[i], ignore_nan=True)
-            print('mflatmedian, mflatmadstd =', mflatmedian, mflatmadstd)
-            print('')
+        mflat = np.zeros_like(flat)
+        mflatmedian = np.zeros((2))
+        mflatmadstd = np.zeros((2))
+        for i in range(2):
+            mflat[i] = flat[i] / flatmedian[i]
+            mflatmedian[i] = np.nanmedian(mflat[i])
+            mflat[i][mgrmasklow] = np.nan
+            mflat[i][mgrmaskhigh] = np.nan
+            mflatmadstd[i] = mad_std(mflat[i], ignore_nan=True)
+        print('mflatmedian, mflatmadstd =', mflatmedian, mflatmadstd)
+        print('')
 
-            '''Free up memory being used by in-line images.'''
+        '''Free up memory being used by in-line images.'''
 
-            plt.close('all')    # Free up memory being used by inline images.
-
-
-            '''
-            Compute the differences of each of the individual normalized flat images from the
-            median flat of the stack. Compute and print the median, std, and mad_std of
-            each of the difference images. If display = True, also show the images.
-            '''
-
-            g = 0           # Gain = 0 for high-gain, 1 for low-gain.
-
-            display = show_difimages  # If True, display the individual difference images.
-
-            vmx = mflatmadstd[g] * 2.0
-            vmn = - mflatmadstd[g] * 2.0
-
-            difimage = np.zeros_like(flatimageDS)  # Ratio of inidvidual flat images to the median flat image.
-            difmadstd = np.zeros((flatnum))
-            difstd = np.zeros((flatnum))
-            difmean = np.zeros((flatnum))
-            difmedian = np.zeros((flatnum))
+        plt.close('all')    # Free up memory being used by inline images.
 
 
-            print('List difimage median, mean, std, and mad_std')
-            for i in range(flatimageDS.shape[1]):
-                difimage[g,i] = flatimageDSN[g,i]-mflat[g]
-                difmadstd[i] = mad_std(difimage[g,i],ignore_nan=True)
-                difstd[i] = np.nanstd(difimage[g,i])
-                difmean[i] = np.nanmean(difimage[g,i])
-                difmedian[i] = np.nanmedian(difimage[g,i])
-                print(i, difmedian[i], difmean[i], difstd[i], difmadstd[i])
-                if display == True:
-                    plt.figure(figsize = (10,10))
-                    plt.grid()
-                    plt.title(flatfiles[g][i])  # + '  Mean ='+ str(difmean) + '  mad_std =' + str(difmadstd))
-                    plt.imshow(difimage[g,i], 'rainbow', interpolation='nearest', vmin = vmn, vmax = vmx)
-                    plt.colorbar(shrink=0.8)   
+        '''
+        Compute the differences of each of the individual normalized flat images from the
+        median flat of the stack. Compute and print the median, std, and mad_std of
+        each of the difference images. If display = True, also show the images.
+        '''
+
+        g = 0           # Gain = 0 for high-gain, 1 for low-gain.
+
+        display = show_difimages  # If True, display the individual difference images.
+
+        vmx = mflatmadstd[g] * 2.0
+        vmn = - mflatmadstd[g] * 2.0
+
+        difimage = np.zeros_like(flatimageDS)  # Ratio of inidvidual flat images to the median flat image.
+        difmadstd = np.zeros((flatnum))
+        difstd = np.zeros((flatnum))
+        difmean = np.zeros((flatnum))
+        difmedian = np.zeros((flatnum))
 
 
-            '''Create output DataFits object and fill with image data.'''
+        print('List difimage median, mean, std, and mad_std')
+        for i in range(flatimageDS.shape[1]):
+            difimage[g,i] = flatimageDSN[g,i]-mflat[g]
+            difmadstd[i] = mad_std(difimage[g,i],ignore_nan=True)
+            difstd[i] = np.nanstd(difimage[g,i])
+            difmean[i] = np.nanmean(difimage[g,i])
+            difmedian[i] = np.nanmedian(difimage[g,i])
+            print(i, difmedian[i], difmean[i], difstd[i], difmadstd[i])
+            if display == True:
+                plt.figure(figsize = (10,10))
+                plt.grid()
+                plt.title(flatfiles[g][i])  # + '  Mean ='+ str(difmean) + '  mad_std =' + str(difmadstd))
+                plt.imshow(difimage[g,i], 'rainbow', interpolation='nearest', vmin = vmn, vmax = vmx)
+                plt.colorbar(shrink=0.8)   
 
-            dataout = DataFits(config=config)
-            dataout.header = flatbaseheader.copy()
-            dataout.image = mflat
-            dataout.imageset(maskedgainratioimg, 'GAIN RATIO')
+
+        '''Create output DataFits object and fill with image data.'''
+
+        dataout = DataFits(config=config)
+        dataout.header = flatbaseheader.copy()
+        dataout.image = mflat
+        dataout.imageset(maskedgainratioimg, 'GAIN RATIO')
 
 
-            '''
-            Create numpy arrays with information from headers, make_stack, and timesortDF functions.
-            '''
+        '''
+        Create numpy arrays with information from headers, make_stack, and timesortDF functions.
+        '''
 
-            imedianH, imadH, imeanH, istdH = flatstats[0]['median'], flatstats[0]['mad']\
-                                            , flatstats[0]['mean'], flatstats[0]['std']     # From make_stackDF
-            imedianL, imadL, imeanL, istdL = flatstats[1]['median'], flatstats[1]['mad']\
-                                            , flatstats[1]['mean'], flatstats[1]['std']     # From make_stackDF
+        imedianH, imadH, imeanH, istdH = flatstats[0]['median'], flatstats[0]['mad']\
+                                        , flatstats[0]['mean'], flatstats[0]['std']     # From make_stackDF
+        imedianL, imadL, imeanL, istdL = flatstats[1]['median'], flatstats[1]['mad']\
+                                        , flatstats[1]['mean'], flatstats[1]['std']     # From make_stackDF
 
-            utime = np.asarray(utimeH)  # From time_sortDF.
-            etime = utime - utime[0]    # Time elepased from the beginning of the first exposure of the sequence.
-            index = np.arange(flatnum)  # Make a column with the file sequence numbers 
+        utime = np.asarray(utimeH)  # From time_sortDF.
+        etime = utime - utime[0]    # Time elepased from the beginning of the first exposure of the sequence.
+        index = np.arange(flatnum)  # Make a column with the file sequence numbers 
 
-            # From header:
-            ambient = np.zeros((flatnum))
-            primary = np.zeros((flatnum))
-            secondar = np.zeros((flatnum))
-            dewtem1 = np.zeros((flatnum))
-            for i in range(flatnum):
-                ambient[i] = flatheadlist[0][i]['ambient']
-                primary[i] = flatheadlist[0][i]['primary']
-                secondar[i] = flatheadlist[0][i]['secondar']
-                dewtem1[i] = flatheadlist[0][i]['dewtem1']
+        # From header:
+        ambient = np.zeros((flatnum))
+        primary = np.zeros((flatnum))
+        secondar = np.zeros((flatnum))
+        dewtem1 = np.zeros((flatnum))
+        for i in range(flatnum):
+            ambient[i] = flatheadlist[0][i]['ambient']
+            primary[i] = flatheadlist[0][i]['primary']
+            secondar[i] = flatheadlist[0][i]['secondar']
+            dewtem1[i] = flatheadlist[0][i]['dewtem1']
 
-            '''Now put put derived and header data into a fits table and add it to the output object.'''
+        '''Now put put derived and header data into a fits table and add it to the output object.'''
 
-            # Make file identifiers:
-            IDs = []
-            for i in range(flatnum):
-                fi = flatfiles[0][i].split('_')
-                IDs.append(fi[4]+'_'+fi[5])
-            fileIDs = np.asarray(IDs)
+        # Make file identifiers:
+        IDs = []
+        for i in range(flatnum):
+            fi = flatfiles[0][i].split('_')
+            IDs.append(fi[4]+'_'+fi[5])
+        fileIDs = np.asarray(IDs)
 
-            # Make a list of fits column objects.
-            tcols = []
-            tcols.append(fits.Column(name='index', format='I', array=index))
-            tcols.append(fits.Column(name='fileID', format='20A', array=fileIDs))
-            tcols.append(fits.Column(name='median', format='D', array=imedianH, unit='ADU'))
-            tcols.append(fits.Column(name='mean', format='D', array=imeanH, unit='ADU'))
-            tcols.append(fits.Column(name='std', format='D', array=istdH, unit='ADU'))
-            tcols.append(fits.Column(name='mad', format='D', array=imadH, unit='ADU'))
-            tcols.append(fits.Column(name='dmedian', format='D', array=difmedian, unit='ADU'))
-            tcols.append(fits.Column(name='dmean', format='D', array=difmean, unit='ADU'))
-            tcols.append(fits.Column(name='dstd', format='D', array=difstd, unit='ADU'))
-            tcols.append(fits.Column(name='dmad', format='D', array=difmadstd, unit='ADU'))
-            tcols.append(fits.Column(name='ambient', format='D', array=ambient, unit='C'))
-            tcols.append(fits.Column(name='primary', format='D', array=primary, unit='C'))
-            tcols.append(fits.Column(name='secondar', format='D', array=secondar, unit='C'))
-            tcols.append(fits.Column(name='dewtem1', format='D', array=dewtem1, unit='C'))
-            tcols.append(fits.Column(name='elapsed time', format='D', array=etime, unit='seconds'))
+        # Make a list of fits column objects.
+        tcols = []
+        tcols.append(fits.Column(name='index', format='I', array=index))
+        tcols.append(fits.Column(name='fileID', format='20A', array=fileIDs))
+        tcols.append(fits.Column(name='median', format='D', array=imedianH, unit='ADU'))
+        tcols.append(fits.Column(name='mean', format='D', array=imeanH, unit='ADU'))
+        tcols.append(fits.Column(name='std', format='D', array=istdH, unit='ADU'))
+        tcols.append(fits.Column(name='mad', format='D', array=imadH, unit='ADU'))
+        tcols.append(fits.Column(name='dmedian', format='D', array=difmedian, unit='ADU'))
+        tcols.append(fits.Column(name='dmean', format='D', array=difmean, unit='ADU'))
+        tcols.append(fits.Column(name='dstd', format='D', array=difstd, unit='ADU'))
+        tcols.append(fits.Column(name='dmad', format='D', array=difmadstd, unit='ADU'))
+        tcols.append(fits.Column(name='ambient', format='D', array=ambient, unit='C'))
+        tcols.append(fits.Column(name='primary', format='D', array=primary, unit='C'))
+        tcols.append(fits.Column(name='secondar', format='D', array=secondar, unit='C'))
+        tcols.append(fits.Column(name='dewtem1', format='D', array=dewtem1, unit='C'))
+        tcols.append(fits.Column(name='elapsed time', format='D', array=etime, unit='seconds'))
 
-            # Make table
-            c = fits.ColDefs(tcols)
-            table = fits.BinTableHDU.from_columns(c)
-            tabhead = table.header
+        # Make table
+        c = fits.ColDefs(tcols)
+        table = fits.BinTableHDU.from_columns(c)
+        tabhead = table.header
 
-            # Add table to the datafits output object.
-            dataout.tableset(table.data, tablename = 'table', tableheader=tabhead)
+        # Add table to the datafits output object.
+        dataout.tableset(table.data, tablename = 'table', tableheader=tabhead)
 
-            '''Populate output header with new keyword data.'''
+        '''Populate output header with new keyword data.'''
 
-            dataout.header['notes'] = 'High and low gain master flats (3D image)'
-            dataout.header['notes2'] = '2nd HDU is a gain ratio image. Contains nans'
-            dataout.header['notes3'] = 'Table contains statistical and environmental data'
-            dataout.header['filelist'] = filestring
-            dataout.header['oscnmean'] = 0.0
-            dataout.header['imagetyp'] = 'HDR MFLAT'
-            dataout.setheadval('xtimemin', xtimemin, 'Minimum exposure in the set of flats')
-            dataout.setheadval('xtimemax', xtimemax, 'Maximum exposure in the set of flats')
-            dataout.setheadval('medminH', medmin[0], 'Minimum high gain median in the set of flats')
-            dataout.setheadval('medmaxH', medmax[0], 'Maximum high gain median in the set of flats')
-            dataout.setheadval('medminL', medmin[1], 'Minimum low gain median in the set of flats')
-            dataout.setheadval('medmaxL', medmax[1], 'Maximum low gain median in the set of flats')
-            dataout.setheadval('reduceby', reduceby, 'Reduction software')
-            dataout.header['bzero'] = 0.0
-            dataout.header['numfiles'] = flatnum
-            dataout.header['ambient'] = np.nanmean(ambient)
-            dataout.header['primary'] = np.nanmean(primary)
-            dataout.header['secondar'] = np.nanmean(secondar)
-            dataout.header['dewtem1'] = np.nanmean(dewtem1)
-            dataout.header['meandstd'] = np.nanmean(dstd)
+        dataout.header['notes'] = 'High and low gain master flats (3D image)'
+        dataout.header['notes2'] = '2nd HDU is a gain ratio image. Contains nans'
+        dataout.header['notes3'] = 'Table contains statistical and environmental data'
+        dataout.header['filelist'] = filestring
+        dataout.header['oscnmean'] = 0.0
+        dataout.header['imagetyp'] = 'HDR MFLAT'
+        dataout.setheadval('xtimemin', xtimemin, 'Minimum exposure in the set of flats')
+        dataout.setheadval('xtimemax', xtimemax, 'Maximum exposure in the set of flats')
+        dataout.setheadval('medminH', medmin[0], 'Minimum high gain median in the set of flats')
+        dataout.setheadval('medmaxH', medmax[0], 'Maximum high gain median in the set of flats')
+        dataout.setheadval('medminL', medmin[1], 'Minimum low gain median in the set of flats')
+        dataout.setheadval('medmaxL', medmax[1], 'Maximum low gain median in the set of flats')
+        dataout.setheadval('reduceby', reduceby, 'Reduction software')
+        dataout.header['bzero'] = 0.0
+        dataout.header['numfiles'] = flatnum
+        dataout.header['ambient'] = np.nanmean(ambient)
+        dataout.header['primary'] = np.nanmean(primary)
+        dataout.header['secondar'] = np.nanmean(secondar)
+        dataout.header['dewtem1'] = np.nanmean(dewtem1)
+        dataout.header['meandstd'] = np.nanmean(dstd)
             ## might also be useful to have a max dstd column, if I use setheadval I can add a comment line
             ## .header and .setheadval are somewhat interchangeable
 
-            print('')
+        print('')
 
-            '''Save the output data file.'''
+        '''Save the output data file.'''
 
-            saveDF(dataout, flatname, outpath, overwrite=overwrite, ask=False, ignore=ignore)
+        saveDF(dataout, flatname, outpath, overwrite=overwrite, ask=False, ignore=ignore)
 
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
