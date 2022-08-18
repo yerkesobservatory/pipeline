@@ -140,7 +140,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         self.loadauxsetup('hpfit')
 
         
-    def timesortHDR(self, filelist, date_key = 'date-obs'):
+    def timesortHDR(self, datalist, date_key = 'date-obs'):
         '''
           Sorts a list of fits files by a header keyword with a date/time value. In the case of an
           SBIG CMOS camera RAW file, the date/time is read from the second HDU.
