@@ -210,7 +210,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         print('len hotpix =', len(hotpix[0]))
         print('')
 
-        plt.close('all')      # Close all open plots to free up memory.
+
 
         '''Use list comprehensions to select subsets of files to load. Then sort files by exposure time.'''
 
@@ -467,7 +467,6 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
 
         '''Free up memory being used by in-line images.'''
 
-        plt.close('all')    # Free up memory being used by inline images.
 
 
         '''
@@ -497,13 +496,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             difstd[i] = np.nanstd(difimage[g,i])
             difmean[i] = np.nanmean(difimage[g,i])
             difmedian[i] = np.nanmedian(difimage[g,i])
-            print(i, difmedian[i], difmean[i], difstd[i], difmadstd[i])
-            if display == True:
-                plt.figure(figsize = (10,10))
-                plt.grid()
-                plt.title(flatfiles[g][i])  # + '  Mean ='+ str(difmean) + '  mad_std =' + str(difmadstd))
-                plt.imshow(difimage[g,i], 'rainbow', interpolation='nearest', vmin = vmn, vmax = vmx)
-                plt.colorbar(shrink=0.8)   
+            print(i, difmedian[i], difmean[i], difstd[i], difmadstd[i])  
 
 
         '''Create output DataFits object and fill with image data.'''
