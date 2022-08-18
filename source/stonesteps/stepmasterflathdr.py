@@ -200,6 +200,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         print('hotpixlim =', hotpixlim)
         
         img = polydarkimg[0,0]
+        rows, cols = polydarkimg.shape[2], polydarkimg.shape[3]
         uppercut = np.percentile(img, hotpixlim)
         print('uppercut =', uppercut)
         hotpix = np.where(img > uppercut)
