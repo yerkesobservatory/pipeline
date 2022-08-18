@@ -194,7 +194,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         
         #1st index low vs high, then intercepts and slopes of pfits
         
-        polydarkimg = np.zeros(2,2,4096,4096)
+        polydarkimg = np.zeros((2,2,4096,4096))
         ## could use np.zeros_like(flatimage)
         print('Begin reduction.')
 
