@@ -299,7 +299,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             for j in range(len(flatfiles[i])):
                 exptime = flatheadlist[i][j]['exptime']
                 flatexptimes.append(exptime)
-                #print ('{:<4}{:<70}{:12.2f}'.format(j,flatfiles[i][j],imedian[j]))
+                print ('{:<4}{:<70}{:12.2f}'.format(j,flatfiles[i][j],imedian[j]))
             print('')
         xtimemin = np.min(flatexptimes)
         xtimemax = np.max(flatexptimes)
