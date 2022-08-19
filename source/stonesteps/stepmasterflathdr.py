@@ -247,7 +247,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         ## NEED TO CREATE NP ARRAYS TO HOLD STATISTICAL INFORMATION
         ## FILL THE ARRAYS WITHIN THESE LOOPS , LOOK AT TABLE TO MAKE SURE THEY'LL FILL IT CORRECTLY
         ## REPLACE ALL PRINTS WITH SELF.LOG.DEBUG
-                for j in range(len(highgainlist)):
+        for j in range(len(highgainlist)):
             #print(flatimage[0,j])
             flatimage[0, j] = highgainlist[j].image[:,:4096]
             #print('after line', flatimage[0,j])
