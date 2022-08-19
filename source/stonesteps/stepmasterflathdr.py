@@ -127,7 +127,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         self.log = logging.getLogger('pipe.step.%s' % self.name)
         ### Set Parameter list
         # Clear Parameter list
-        #self.paramlist = []
+        self.paramlist = []
         # Append parameters !!!! WHAT PARAMETERS ARE NEEDED ????? !!!!!
         
         # FINIAN: Al says I will need to change these parameters here
@@ -135,6 +135,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
                                'Specifies how the files should be combined - options are median, average, sum'])
         self.paramlist.append(['outputfolder','',
                                'Output directory location - default is the folder of the input files'])
+        self.paramlist.append(['logainlim', 1.0, 'defines what will be subtracted from med. to get low mask'])
+        self.paramlist.append(['higainlim', 1.0, 'defines what will be added to med. to get high mask'])
         # Get parameters for StepLoadAux, replace auxfile with pfit
         self.loadauxsetup('lpfit')
         self.loadauxsetup('hpfit')
