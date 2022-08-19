@@ -248,8 +248,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         ## FILL THE ARRAYS WITHIN THESE LOOPS , LOOK AT TABLE TO MAKE SURE THEY'LL FILL IT CORRECTLY
         ## REPLACE ALL PRINTS WITH SELF.LOG.DEBUG
         for j in range(len(highgainlist)):
-            print(highgainlist[j].image)
-            print(highgainlist[j].image.shape)
+            print(highgainlist[j].image[:,:4096].shape)
 
             flatimage[0, j] = highgainlist[j].image[:,:4096]
             # Calculate some statistical information.
