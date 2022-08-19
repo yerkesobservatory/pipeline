@@ -250,7 +250,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         for j in range(len(highgainlist)):
             #print(flatimage[0,j])
             flatimage[0, j] = highgainlist[j].image[:,:4096]
-            flatheadlist[0].append(highgainlist[j].header.copy())
+            #flatheadlist[0].append(highgainlist[j].header.copy())
             #print('after line', flatimage[0,j])
             # Calculate some statistical information.
             mad[j] = mad_std(flatimage[0, j],ignore_nan=True)
@@ -268,7 +268,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         for j in range(len(lowgainlist)):
             print(highgainlist[j].imgnames)
             flatimage[1, j] = lowgainlist[j].imgdata[1][:,:4096]
-            flatheadlist[1].append(lowgainlist[j].header.copy())
+            #flatheadlist[1].append(lowgainlist[j].header.copy())
             # Calculate some statistical information.
             mad[j] = mad_std(flatimage[1, j],ignore_nan=True)
             median[j] = np.nanmedian(flatimage[1, j])
@@ -288,6 +288,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             time for inclusion in header.
         '''
         
+        
         print('Print filenames and image medians,')
         print('')
         flatexptimes = []
@@ -295,7 +296,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         for j in range(len(highgainlist)):
             exptime = highgainlist[j].header['exptime']
             flatexptimes.append(exptime)
-            #print ('{:<4}{:<70}{:12.2f}'.format(j,highgainlist[j],imedian[j]))
+            print ('{:<4}{:<70}{:12.2f}'.format(j,highgainlist[j],imedian[j]))
         print('')
         xtimemin = np.min(flatexptimes)
         xtimemax = np.max(flatexptimes)
@@ -321,7 +322,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
 
         gainratiostack = np.zeros_like(flatimage[0])
         print('Medians of gain ratio images.')
-        for i in range(len(flatfiles[0])):
+        for i in range(len(highgainlist)):
             gainratiostack[i] = (flatimage[0][i] - biasimage[0]) / (flatimage[1][i] - biasimage[1])
             print(np.nanmedian(gainratiostack[i]))
         print('')
@@ -400,7 +401,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
 
         '''Subtract interpolated darks from the flat images.'''
 
-        if '_RAW.fit' in flatfiles[0][0]:
+        if '_RAW.fit' in highgainlist[0]:
             flatimageDS = flatimage - darkimage
         #     print(flatimageDS.shape)
 
@@ -549,7 +550,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         # Make file identifiers:
         IDs = []
         for i in range(flatnum):
-            fi = flatfiles[0][i].split('_')
+            fi = highgainlist[i].split('_')
             IDs.append(fi[4]+'_'+fi[5])
         fileIDs = np.asarray(IDs)
 
