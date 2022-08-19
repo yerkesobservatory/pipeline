@@ -287,20 +287,16 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             Compile a list of exposure times. Set variables for max and min exposure
             time for inclusion in header.
         '''
-        ##try defining flatfiles using high and low gain lists to rejoin Al's conventions
-        flatfiles = [highgainlist, lowgainlist]
-
         
         print('Print filenames and image medians,')
         print('')
-        for i in range(2):
-            flatexptimes = []
-            imedian = flatstats[i]['median']
-            for j in range(len(flatfiles[i])):
-                exptime = flatheadlist[i][j]['exptime']
-                flatexptimes.append(exptime)
-                print ('{:<4}{:<70}{:12.2f}'.format(j,flatfiles[i][j],imedian[j]))
-            print('')
+        flatexptimes = []
+        imedian = flatstats[0]['median']
+        for j in range(len(highgainlist)):
+            exptime = highgainlist[j].header[‘exptime’]
+            flatexptimes.append(exptime)
+            print ('{:<4}{:<70}{:12.2f}'.format(j,highgainlist[j],imedian[j]))
+        print('')
         xtimemin = np.min(flatexptimes)
         xtimemax = np.max(flatexptimes)
         print('xtimemin =', xtimemin, '  xtimemax =', xtimemax)
