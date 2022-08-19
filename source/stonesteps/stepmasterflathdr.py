@@ -242,7 +242,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         ## FILL THE ARRAYS WITHIN THESE LOOPS , LOOK AT TABLE TO MAKE SURE THEY'LL FILL IT CORRECTLY
         ## REPLACE ALL PRINTS WITH SELF.LOG.DEBUG
         for j in range(len(highgainlist)):
-            flatimage[(0, j)] = highgainlist[j]
+            flatimage[0, j] = highgainlist[j].image
             # Calculate some statistical information.
             mad[j] = mad_std(image[j],ignore_nan=True)
             median[j] = np.nanmedian(image[j])
