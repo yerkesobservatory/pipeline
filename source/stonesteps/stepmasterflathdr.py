@@ -293,7 +293,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         flatexptimes = []
         imedian = flatstats[0]['median']
         for j in range(len(highgainlist)):
-            exptime = highgainlist[j].header[‘exptime’]
+            exptime = highgainlist[j].header['exptime']
             flatexptimes.append(exptime)
             print ('{:<4}{:<70}{:12.2f}'.format(j,highgainlist[j],imedian[j]))
         print('')
