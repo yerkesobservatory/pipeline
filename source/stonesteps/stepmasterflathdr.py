@@ -403,7 +403,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
 
         '''Subtract interpolated darks from the flat images.'''
 
-        if '_RAW.fit' in highgainlist[0]:
+        if '_RAW.fit' in highgainlist[0].filename:
             flatimageDS = flatimage - darkimage
         #     print(flatimageDS.shape)
 
