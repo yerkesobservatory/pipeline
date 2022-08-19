@@ -251,8 +251,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             #print(flatimage[0,j])
             #flatimage[0, j] = highgainlist[j].image[:,:4096]
             #print('after line', flatimage[0,j])
-            hg1 = highgainlist[j]
-            flatimage[0, j] = hg1.imageget(hg1.imgnames[1])[:,:4096]
+            flatimage[0, j] = highgainlist[j].imageget(highgainlist[j].imgnames[1])[:,:4096]
             # Calculate some statistical information.
             mad[j] = mad_std(flatimage[0, j],ignore_nan=True)
             median[j] = np.nanmedian(flatimage[0, j])
