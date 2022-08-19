@@ -379,7 +379,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
 #   WILL NEED TO REPLACE HOTPIX STUFF WITH HI AND LO GAIN LIMITS , DEFINED IN DCONF_FA
         img = maskedgainratioimg
         titlestring = ''
-        masklow, maskhigh = grat_median - lowgainlim, grat_median + highgainlim
+        masklow, maskhigh = grat_median - logainlim, grat_median + higainlim
         gainmask = np.where((img > masklow) & (img < maskhigh))
         
         #  AL: NOT SURE WHAT END PRODUCT OF THIS BLOCK SHOULD BE / IF I IMPLEMENTED THIS PROPERLY
