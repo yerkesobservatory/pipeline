@@ -239,6 +239,10 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         flatnum = len(highgainlist)
         flatheadlist, flatstats = [[], []], [[], []]
         flatimage = np.zeros((2, flatnum, rows, cols))
+        median = np.zeros((len(highgainlist)))            # 1D numpy array to hold array medians.
+        mean = np.zeros((len(highgainlist)))            # 1D numpy array to hold array medians.
+        std = np.zeros((len(highgainlist)))               # 1D numpy array to hold array stds.
+        mad = np.zeros((len(highgainlist))) 
         
         ## NEED TO CREATE NP ARRAYS TO HOLD STATISTICAL INFORMATION
         ## FILL THE ARRAYS WITHIN THESE LOOPS , LOOK AT TABLE TO MAKE SURE THEY'LL FILL IT CORRECTLY
