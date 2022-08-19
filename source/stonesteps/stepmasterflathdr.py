@@ -247,7 +247,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         ## NEED TO CREATE NP ARRAYS TO HOLD STATISTICAL INFORMATION
         ## FILL THE ARRAYS WITHIN THESE LOOPS , LOOK AT TABLE TO MAKE SURE THEY'LL FILL IT CORRECTLY
         ## REPLACE ALL PRINTS WITH SELF.LOG.DEBUG
-        for j in range(len(highgainlist)):
+                for j in range(len(highgainlist)):
             #print(flatimage[0,j])
             flatimage[0, j] = highgainlist[j].image[:,:4096]
             #print('after line', flatimage[0,j])
@@ -257,6 +257,12 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             mean[j] = np.nanmean(flatimage[0, j])
             std[j] = np.nanstd(flatimage[0, j])
             
+        flatstats[0] = {'median':median, 'mean':mean, 'std':std, 'mad':mad}
+        
+        median = np.zeros((len(lowgainlist)))            # 1D numpy array to hold array medians.
+        mean = np.zeros((len(lowgainlist)))            # 1D numpy array to hold array medians.
+        std = np.zeros((len(lowgainlist)))               # 1D numpy array to hold array stds.
+        mad = np.zeros((len(lowgainlist)))
         
         for j in range(len(lowgainlist)):
             print(highgainlist[j].imgnames)
@@ -266,6 +272,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             median[j] = np.nanmedian(flatimage[1, j])
             mean[j] = np.nanmean(flatimage[1, j])
             std[j] = np.nanstd(flatimage[1, j])
+            
+        flatstats[1] = {'median':median, 'mean':mean, 'std':std, 'mad':mad}
            
                 
   ### EXTRACT HEADER FROM HIGH GAIN LIST TO USE FOR THIS
