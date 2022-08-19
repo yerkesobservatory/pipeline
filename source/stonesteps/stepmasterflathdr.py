@@ -191,6 +191,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         #1st index low vs high, then intercepts and slopes of pfits
         
         polydarkimg = np.zeros((2,2,4096,4096))
+        rows, cols = polydarkimg.shape[2], polydarkimg.shape[3]
         ## could use np.zeros_like(flatimage)
         print('Begin reduction.')
 
@@ -200,7 +201,6 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         print('hotpixlim =', hotpixlim)
         
         img = polydarkimg[0,0]
-        rows, cols = polydarkimg.shape[2], polydarkimg.shape[3]
         uppercut = np.percentile(img, hotpixlim)
         print('uppercut =', uppercut)
         hotpix = np.where(img > uppercut)
@@ -219,17 +219,15 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
                 lowgainlist.append(f)
             elif '.fit' in f.filename and '_bin1H' in f.filename:
                 highgainlist.append(f)
-          
-        print('before timesort', highgainlist[1].image.shape)
-          
+                
+
         highgainlist, utimeH = self.timesortHDR(highgainlist, date_key = 'date-obs')
         lowgainlist, utimeL = self.timesortHDR(lowgainlist, date_key = 'date-obs')
-        
-        print('after timesort', highgainlist[1].image.shape)
-        
+
+
         '''Create output file name (assuming high and low gain flats are to be stored as
         a 2D image).'''
-        
+
         lf = highgainlist[-1].filename.split('_')
         ff = highgainlist[0].filename.split('_')
         flatname = 'mflat_'+ff[1]+'_'+ff[3]+'DR'+'_'+ff[4]+'_'+ff[5]+'-'+lf[5]+'_'+ff[6]+'_'+ff[7]+'_'+'MFLAT.fits'
@@ -248,21 +246,22 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         for j in range(len(highgainlist)):
             print(highgainlist[j].image)
             print(highgainlist[j].image.shape)
-            flatimage[0, j] = highgainlist[j].image
+
+            flatimage[0, j] = highgainlist[j].image[:,:4096]
             # Calculate some statistical information.
-            mad[j] = mad_std(image[j],ignore_nan=True)
-            median[j] = np.nanmedian(image[j])
-            mean[j] = np.nanmean(image[j])
-            std[j] = np.nanstd(image[j])
+            mad[j] = mad_std(flatimage[0, j],ignore_nan=True)
+            median[j] = np.nanmedian(flatimage[0, j])
+            mean[j] = np.nanmean(flatimage[0, j])
+            std[j] = np.nanstd(flatimage[0, j])
             
         
         for j in range(len(lowgainlist)):
-            flatimage[1, j] = lowgainlist[j]
+            flatimage[1, j] = lowgainlist[j].image[:,:4096]
             # Calculate some statistical information.
-            mad[j] = mad_std(image[j],ignore_nan=True)
-            median[j] = np.nanmedian(image[j])
-            mean[j] = np.nanmean(image[j])
-            std[j] = np.nanstd(image[j])
+            mad[j] = mad_std(flatimage[1, j],ignore_nan=True)
+            median[j] = np.nanmedian(flatimage[1, j])
+            mean[j] = np.nanmean(flatimage[1, j])
+            std[j] = np.nanstd(flatimage[1, j])
            
                 
   ### EXTRACT HEADER FROM HIGH GAIN LIST TO USE FOR THIS
