@@ -127,7 +127,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         self.log = logging.getLogger('pipe.step.%s' % self.name)
         ### Set Parameter list
         # Clear Parameter list
-        self.paramlist = []
+        #self.paramlist = []
         # Append parameters !!!! WHAT PARAMETERS ARE NEEDED ????? !!!!!
         
         # FINIAN: Al says I will need to change these parameters here
