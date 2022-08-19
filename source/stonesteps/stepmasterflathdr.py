@@ -220,9 +220,13 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             elif '.fit' in f.filename and '_bin1H' in f.filename:
                 highgainlist.append(f)
           
+        print('before timesort', highgainlist[1].image.shape)
+          
         highgainlist, utimeH = self.timesortHDR(highgainlist, date_key = 'date-obs')
         lowgainlist, utimeL = self.timesortHDR(lowgainlist, date_key = 'date-obs')
-
+        
+        print('after timesort', highgainlist[1].image.shape)
+        
         '''Create output file name (assuming high and low gain flats are to be stored as
         a 2D image).'''
         
