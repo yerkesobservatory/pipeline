@@ -296,7 +296,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         for j in range(len(highgainlist)):
             exptime = highgainlist[j].header['exptime']
             flatexptimes.append(exptime)
-            print ('{:<4}{:<70}{:12.2f}'.format(j,highgainlist[j],imedian[j]))
+            #print ('{:<4}{:<70}{:12.2f}'.format(j,highgainlist[j],imedian[j]))
         print('')
         xtimemin = np.min(flatexptimes)
         xtimemax = np.max(flatexptimes)
