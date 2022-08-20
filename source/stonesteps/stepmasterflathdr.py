@@ -522,7 +522,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
 
         '''Create output DataFits object and fill with image data.'''
 
-        dataout = DataFits(config=config)
+        dataout = DataFits(config=self.config)
         dataout.header = flatbaseheader.copy()
         dataout.image = mflat
         dataout.imageset(maskedgainratioimg, 'GAIN RATIO')
