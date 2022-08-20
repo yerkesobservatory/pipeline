@@ -382,6 +382,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         img = maskedgainratioimg
         titlestring = ''
         masklow, maskhigh = grat_median - self.getarg('logainlim'), grat_median + self.getarg('higainlim')
+        gainmasklow, gainmaskhigh = np.where(img < mask_high), np.where(newimg > mask_low)
         gainmask = np.where((img > masklow) & (img < maskhigh))
         print('masklow', masklow)
         print('masklow shape', masklow.shape)
@@ -421,8 +422,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         flatmadstdsDSN = np.zeros((2, flatnum))
         for i in range(2):
             for j in range(flatnum):
-                flatimageDS[i,j][masklow] = np.nan
-                flatimageDS[i,j][maskhigh] = np.nan
+                flatimageDS[i,j][gainmasklow] = np.nan
+                flatimageDS[i,j][gainmaskhigh] = np.nan
                 flatmediansDS[i,j] = np.nanmedian(flatimageDS[i,j])
                 flatimageDSN[i,j] = flatimageDS[i,j] / flatmediansDS[i,j]
                 flatmadstdsDSN[i,j] = mad_std(flatimageDSN[i,j], ignore_nan=True)
