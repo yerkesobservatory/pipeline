@@ -404,7 +404,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         '''Subtract interpolated darks from the flat images.'''
         if '_RAW.fit' in highgainlist[0].filename:
             flatimageDS = flatimage - darkimage
-        #     print(flatimageDS.shape)
+            print(flatimageDS)
+            print(flatimageDS.shape)
 
         '''
         Normalize each of the images in the high and low-gain flat image stack to its own median,
@@ -416,8 +417,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         flatmadstdsDSN = np.zeros((2, flatnum))
         for i in range(2):
             for j in range(flatnum):
-                flatimageDS[i,j][masklow] = np.nan
-                flatimageDS[i,j][maskhigh] = np.nan
+                flatimageDS[i,j][mgrmasklow] = np.nan
+                flatimageDS[i,j][mgrmaskhigh] = np.nan
                 flatmediansDS[i,j] = np.nanmedian(flatimageDS[i,j])
                 flatimageDSN[i,j] = flatimageDS[i,j] / flatmediansDS[i,j]
                 flatmadstdsDSN[i,j] = mad_std(flatimageDSN[i,j], ignore_nan=True)
@@ -474,8 +475,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         for i in range(2):
             mflat[i] = flat[i] / flatmedian[i]
             mflatmedian[i] = np.nanmedian(mflat[i])
-            mflat[i][masklow] = np.nan
-            mflat[i][maskhigh] = np.nan
+            mflat[i][mgrmasklow] = np.nan
+            mflat[i][mgrmaskhigh] = np.nan
             mflatmadstd[i] = mad_std(mflat[i], ignore_nan=True)
         print('mflatmedian, mflatmadstd =', mflatmedian, mflatmadstd)
         print('')
