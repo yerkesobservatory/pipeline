@@ -268,7 +268,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         mad = np.zeros((len(lowgainlist)))
         
         for j in range(len(lowgainlist)):
-            print(highgainlist[j].imgnames)
+            #print(highgainlist[j].imgnames)
             flatimage[1, j] = lowgainlist[j].imgdata[1][:,:4096]
             #flatheadlist[1].append(lowgainlist[j].header.copy())
             # Calculate some statistical information.
@@ -290,7 +290,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             time for inclusion in header.
         '''
         
-        
+        ## IS THIS BLOCK JUST FOR PRINT STATEMENTS? / CAN IT BE REMOVED?
         print('Print filenames and image medians,')
         print('')
         flatexptimes = []
@@ -404,8 +404,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         '''Subtract interpolated darks from the flat images.'''
         if '_RAW.fit' in highgainlist[0].filename:
             flatimageDS = flatimage - darkimage
-            print(flatimageDS)
-            print(flatimageDS.shape)
+            print('flatimageDS', flatimageDS)
+            print('flatimageDS shape', flatimageDS.shape)
 
         '''
         Normalize each of the images in the high and low-gain flat image stack to its own median,
