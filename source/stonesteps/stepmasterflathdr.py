@@ -382,7 +382,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         img = maskedgainratioimg
         titlestring = ''
         masklow, maskhigh = grat_median - self.getarg('logainlim'), grat_median + self.getarg('higainlim')
-        gainmasklow, gainmaskhigh = np.where(img < maskhigh), np.where(newimg > masklow)
+        gainmasklow, gainmaskhigh = np.where(img < maskhigh), np.where(img > masklow)
         gainmask = np.where((img > masklow) & (img < maskhigh))
         print('masklow', masklow)
         print('masklow shape', masklow.shape)
