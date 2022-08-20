@@ -480,8 +480,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         for i in range(2):
             mflat[i] = flat[i] / flatmedian[i]
             mflatmedian[i] = np.nanmedian(mflat[i])
-            mflat[i][masklow] = np.nan
-            mflat[i][maskhigh] = np.nan
+            mflat[i][gainmasklow] = np.nan
+            mflat[i][gainmaskhigh] = np.nan
             mflatmadstd[i] = mad_std(mflat[i], ignore_nan=True)
         print('mflatmedian, mflatmadstd =', mflatmedian, mflatmadstd)
         print('')
