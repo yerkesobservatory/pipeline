@@ -498,7 +498,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
 
         g = 0           # Gain = 0 for high-gain, 1 for low-gain.
 
-        display = show_difimages  # If True, display the individual difference images.
+        #display = show_difimages  # If True, display the individual difference images.
 
         vmx = mflatmadstd[g] * 2.0
         vmn = - mflatmadstd[g] * 2.0
