@@ -60,7 +60,7 @@
         redstepname = StepHdr
         groupkeys = DATE-OBS
         
-# Master Flat Hdr Mode - to make master flat files from SBIG Aluma AC4040 data
+# MasterFlatHdr Mode - to make master flat files from SBIG Aluma AC4040 data
 [mode_masterflathdr]
     stepslist = StepLoadInput,StepDataGroup, save
     # BDF load step configuration
@@ -72,7 +72,7 @@
     # Data group step configuration
     [[datagroup]]
         redstepname = StepMasterFlatHdr
-        groupkeys = GAIN|FILTER
+        groupkeys = SIMPLE        #GAIN|FILTER
         
 # Master Flat Mode - to make master flat files
 [mode_masterflat]

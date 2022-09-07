@@ -69,7 +69,7 @@ import logging
 from astropy.stats import mad_std    # The median absolute deviation, a more robust estimator than std.
 from astropy.time import Time
 #?import sys
-#?import os
+import os
 #?import astropy
 #? from astropy import units as u
 
@@ -152,6 +152,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         self.paramlist.append(['logainlim', 1.0, 'What to subtract from median gain to define low mask'])
         self.paramlist.append(['higainlim', 1.0, 'What to add to median gain to define high mask'])
         self.paramlist.append(['hotpxlim', 99.5, 'Hot pixel limit percentile'])
+        self.paramlist.append(['reload', False,'Set to True to look for new pfit files for every input'])
                 
         ### Set parameters for StepLoadAux
         self.loadauxsetup('lpfit')
@@ -201,31 +202,45 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         First image plane contains pixel dark currents. Second contains intercepts of
         linear fits to dark current (a bias image).
         '''
-        self.hpfitname = self.loadauxname('hpfit', multi = False)
-        self.hpfit = DataFits(config = self.config)
-        self.hpfit.load(self.hpfitname)
-        self.lpfitname = self.loadauxname('lpfit', multi = False)
-        self.lpfit = DataFits(config = self.config)
-        self.lpfit.load(self.lpfitname)
-        
-        #1st index low vs high, then intercepts and slopes of pfits
-        
-        polydarkimg = np.zeros((2,2,4096,4096))
-        rows, cols = polydarkimg.shape[2], polydarkimg.shape[3]
-        #print('Begin reduction.')
+        # Set loaded flags to false if reload flag is set
+        if self.getarg('reload'):
+            self.lpfitloaded = False
+            self.hpfitloaded = False
+            self.hdarkloaded = False
+            self.ldarkloaded = False
+            self.flatloaded = False
+        # Load pfit file
+        if not self.hpfitloaded:
+            self.hpfitname = self.loadauxname('hpfit', multi = False)
+            self.hpfit = DataFits(config = self.config)
+            self.hpfit.load(self.hpfitname)
+            self.hpfitloaded = True
+        if not self.lpfitloaded:
+            self.lpfitname = self.loadauxname('lpfit', multi = False)
+            self.lpfit = DataFits(config = self.config)
+            self.lpfit.load(self.lpfitname)
+            self.lpfitloaded = True
 
+        '''
+        Get image data from low- and high-gain PFIT files and load it into
+        a 4D image.
+        '''
+        hpfitimg = self.hpfit.image   # high-gain PFIT image
+        lpfitimg = self.lpfit.image   # low-gain PFIT image
+        print('shapes of hpfitimg and lpfitimg images =', hpfitimg.shape, lpfitimg.shape)
+        polydarkimg = np.asarray([hpfitimg, lpfitimg])
+        rows, cols = polydarkimg.shape[2], polydarkimg.shape[3]
         '''
         Prepare a hot pixel mask
         '''
-        #print('')
         hotpxlim = self.getarg('hotpxlim')
-        #print('hotpxlim =', hotpxlim)
+        print('hotpxlim =', hotpxlim)
         img = polydarkimg[0,0]
         uppercut = np.percentile(img, hotpxlim)  # Value of img at hotpxlim percentile
-        #print('uppercut =', uppercut)
+        print('uppercut =', uppercut)
         hotpix = np.where(img > uppercut)
-        #print('len hotpix =', len(hotpix[0]))
-        #print('')
+        print('number of hot pixels =', len(hotpix[0]))
+        print('')
 
         '''
         Make two separate lists of input DataFits objects, one for high gain
@@ -233,6 +248,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         order to get matched lists of high and low gain images associated with
         the same identical exposure.
         '''
+        print('length of datain =', len(self.datain))
         lowgainlist = []
         highgainlist = []
         for f in self.datain:
@@ -242,17 +258,23 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
                 highgainlist.append(f)
         highgainlist, utimeH = self.timesortHDR(highgainlist, date_key = 'date-obs')
         lowgainlist, utimeL = self.timesortHDR(lowgainlist, date_key = 'date-obs')
+        print('highlength, lowlength =', len(highgainlist), len(lowgainlist))
 
 
         '''
         Create output file name (assuming high and low gain flats are to be stored as
         a 2D image).
         '''
-        lf = highgainlist[-1].filename.split('_')  # Last filename of time-sorted list.
-        ff = highgainlist[0].filename.split('_')   # First filename of time-sorted list.
+        print('length of highgainlist =', len(highgainlist))
+        lfname = os.path.split(highgainlist[-1].filename)[1]
+        ffname = os.path.split(highgainlist[0].filename)[1]
+        lf = lfname.split('_')  # Last filename of time-sorted list.
+        ff = ffname.split('_')   # First filename of time-sorted list.
+        print('lfname =', lfname)
+        print('ffname =', ffname)
         flatname = 'mflat_'+ff[1]+'_'+ff[3]+'DR'+'_'+ff[4]+'_'+ff[5]+'-'+lf[5]+'_'+ff[6]+'_'+ff[7]+'_'+'MFLAT.fits'
-        #print('flatname =',flatname)
-        #print('')
+        print('flatname =',flatname)
+        print('')
 
         '''
         Make a 4D image of high- and low-gain flat files.
@@ -270,7 +292,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         mean = np.zeros((numflats))       # 1D numpy array to hold array medians.
         std = np.zeros((numflats))        # 1D numpy array to hold array stds.
         mad = np.zeros((numflats))        # 1D numpy array to hold array mad_stds.        
-        for j in range(numflats)):
+        for j in range(numflats):
             #print(flatimage[0,j])
             flatimage[0, j] = highgainlist[j].image[:,:4096]
             #print('after line', flatimage[0,j])
@@ -286,10 +308,10 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         '''         
         median = np.zeros((numflats))     # 1D numpy array to hold array medians.
         mean = np.zeros((numflats))       # 1D numpy array to hold array medians.
-        std = np.zeros((lnumflats))       # 1D numpy array to hold array stds.
+        std = np.zeros((numflats))        # 1D numpy array to hold array stds.
         mad = np.zeros((numflats))        # 1D numpy array to hold array mad_stds.
         for j in range(len(lowgainlist)):
-        	# Fill 4D arrray with low-gain flat image data.
+            # Fill 4D arrray with low-gain flat image data.
             flatimage[1, j] = lowgainlist[j].imgdata[1][:,:4096]
             # Calculate some statistical information.
             mad[j] = mad_std(flatimage[1, j],ignore_nan=True)
@@ -297,11 +319,11 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             mean[j] = np.nanmean(flatimage[1, j])
             std[j] = np.nanstd(flatimage[1, j])
         flatstats[1] = {'median':median, 'mean':mean, 'std':std, 'mad':mad}
-           
-  		'''
-  		Extract header from first high-gain DataFits input object
-  		to use as the basis for the output object header.
-  		'''
+
+        '''
+        Extract header from first high-gain DataFits input object to use
+        as the basis for the output object header.
+        '''
         flatbaseheader = highgainlist[0].header.copy()
 
         '''
@@ -334,11 +356,13 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         biasimage[0] = polydarkimg[0, 1]
         biasimage[1] = polydarkimg[1, 1]
         gainratiostack = np.zeros_like(flatimage[0])
+        gainratiomedians = np.zeros((numflats))
         #print('Medians of gain ratio images.')
         for i in range(len(highgainlist)):
             gainratiostack[i] = (flatimage[0][i] - biasimage[0]) / (flatimage[1][i] - biasimage[1])
-            #print(np.nanmedian(gainratiostack[i]))
-        #print('')
+            gainratiomedians[i] = np.nanmedian(gainratiostack[i])
+            print(gainratiomedians[i])
+        print('')
 
         '''
         Create median gain ratio image and std gain ratio image from the stack of gain 
@@ -378,12 +402,13 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         the histogram.
         '''
         img = maskedgainratioimg
-        masklow, maskhigh = grat_median - self.getarg('logainlim'), grat_median + self.getarg('higainlim')
-        gainmasklow, gainmaskhigh = np.where(img < maskhigh), np.where(img > masklow)
-        #print('masklow', masklow)
-        #print('masklow shape', gainmasklow[0].shape)
-        #print('maskhigh', maskhigh)
-        #print('maskhigh shape', gainmaskhigh[1].shape)
+        logainlim, higainlim = self.getarg('logainlim'), self.getarg('higainlim')
+        masklow, maskhigh = grat_median - logainlim, grat_median + higainlim
+        gainmasklow, gainmaskhigh = np.where(img > maskhigh), np.where(img < masklow)
+        print('masklow', masklow)
+        print('masklow shape', gainmasklow[0].shape)
+        print('maskhigh', maskhigh)
+        print('maskhigh shape', gainmaskhigh[1].shape)
 
         '''
         Subtract interpolated darks from the flat images.
@@ -418,12 +443,12 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             flatmean[i] = np.nanmean(flat[i])                # Mean of the median flat.
             flatstd[i] = np.nanstd(flat[i])                  # mad_std of the median flat.
             flatmadstd[i] = mad_std(flat[i],ignore_nan=True) # mad_std of the median flat.
-        #     print('')
-        #print('Median flat median =', flatmedian )
-        #print('Mean flat median =', flatmean )
-        #print('Median flat std =', flatstd)
-        #print('Median flat mad_std =', flatmadstd)
-        #print('')
+        print('')
+        print('Median flat median =', flatmedian )
+        print('Mean flat median =', flatmean )
+        print('Median flat std =', flatstd)
+        print('Median flat mad_std =', flatmadstd)
+        print('')
 
         '''
         Print a list of the medians of the dark-subtracted high and low gain flat images.
@@ -513,10 +538,10 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         secondar = np.zeros((numflats))
         dewtem1 = np.zeros((numflats))
         for i in range(numflats):
-            ambient[i] = flatheadlist[0][i]['ambient']
-            primary[i] = flatheadlist[0][i]['primary']
-            secondar[i] = flatheadlist[0][i]['secondar']
-            dewtem1[i] = flatheadlist[0][i]['dewtem1']
+            ambient[i] = highgainlist[i].header['ambient']
+            primary[i] = highgainlist[i].header['primary']
+            secondar[i] = highgainlist[i].header['secondar']
+            dewtem1[i] = highgainlist[i].header['dewtem1']
             
         # Make a column with the file sequence numbers.
         index = np.arange(numflats)
@@ -527,7 +552,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         # Make file identifiers:
         IDs = []
         for i in range(numflats):
-            fi = highgainlist[i].split('_')
+            fi = highgainlist[i].filename.split('_')
             IDs.append(fi[4]+'_'+fi[5])
         fileIDs = np.asarray(IDs)
 
@@ -577,15 +602,15 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         dataout.setheadval('medmaxH', medmax[0], 'Maximum high gain median in the set of flats')
         dataout.setheadval('medminL', medmin[1], 'Minimum low gain median in the set of flats')
         dataout.setheadval('medmaxL', medmax[1], 'Maximum low gain median in the set of flats')
-    	dataout.setheadval('dstdmean', dstdmean, 'Mean std in the set of difference images')
-    	dataout.setheadval('dstdpcnt', dstdpcnt, '(dstdmax-dstdmin)*100.0/dstdmean')
-    	dataout.setheadval('gainmean', gainmean, 'Mean gain ratio')
-    	dataout.setheadval('gainpcnt', gainpcnt, '(gainmax-gainmin)*100.0/gainmean')
-    	dataout.setheadval('numfiles', flatnum, 'Number of RAW exposures in input datasets')
-    	dataout.setheadval('lgainlim', logainlim, 'Lower limit for unmasked pixel gains')
-    	dataout.setheadval('hgainlim', higainlim, 'Upper limit for unmasked pixel gains')
-    	dataout.setheadval('hotpxlim', hotpxlim, 'Upper limit percentile for unmasked dark current')
-
+        dataout.setheadval('dstdmean', dstdmean, 'Mean std in the set of difference images')
+        dataout.setheadval('dstdpcnt', dstdpcnt, '(dstdmax-dstdmin)*100.0/dstdmean')
+        #dataout.setheadval('gainmean', grat_mean, 'Mean gain ratio')
+        #dataout.setheadval('gainpcnt', gainpcnt, '(gainmax-gainmin)*100.0/gainmean')
+        dataout.setheadval('numfiles', numflats, 'Number of RAW exposures in input datasets')
+        dataout.setheadval('lgainlim', logainlim, 'Lower limit for unmasked pixel gains')
+        dataout.setheadval('hgainlim', higainlim, 'Upper limit for unmasked pixel gains')
+        dataout.setheadval('hotpxlim', hotpxlim, 'Upper limit percentile for unmasked dark current')
+        #print(dataout.header)
 
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
