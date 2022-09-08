@@ -21,7 +21,7 @@
     datakeys = "OBSERVAT=StoneEdge"
     #datakeys = "NAXIS1" # Added this one when having a problem with "OBSERVAT=StoneEdge"
     # list of steps
-    #stepslist = load, StepAddKeys, StepLoadInput, StepDataGroup, StepAstrometryLocal, save
+    #stepslist = StepLoadInput, StepAddKeys, StepLoadInput, StepDataGroup, StepAstrometryLocal, save
     stepslist = StepLoadInput,StepDataGroup,StepAstrometryLocal,save,StepSrcExtPy,save,StepFluxCal,save
     #stepslist = StepLoadInput,StepDataGroup, save
     #stepslist = load, StepFluxCal, save
@@ -29,8 +29,8 @@
     [[datagroup]]
         redstepname = StepHdr
         groupkeys = DATE-OBS
+        saveoutput = True
         
-
 # Mode to reduce after BDF/HDR step has created BDF.fits files
 [mode_postbdf]
     # List of keyword=values required in file header to select this pipeline mode
@@ -59,6 +59,34 @@
     [[datagroup]]
         redstepname = StepHdr
         groupkeys = DATE-OBS
+        
+# MasterFlatHdr Mode - to make master flat files from SBIG Aluma AC4040 data
+[mode_masterflathdr]
+    stepslist = StepLoadInput,StepDataGroup, save
+    # BDF load step configuration
+    [[loadinput]]
+        # location of folder(s)/file(s) to be reduced
+        filelocation = '/Users/alex/_observing/_stone_edge_data/2022/pipe/flat*RAW.fits' 
+        # strings which must not be present in the filename for the file to be loaded, separate with |
+        fileexclude = MFLAT|UNK|LOAD
+    # Data group step configuration
+    [[datagroup]]
+        redstepname = StepMasterFlatHdr
+        groupkeys = SIMPLE        #GAIN|FILTER
+        
+# Master Flat Mode - to make master flat files
+[mode_masterflat]
+    stepslist = StepLoadInput, StepOverCut, save, StepDataGroup, save
+    # BDF load step configuration
+    [[loadinput]]
+        # location of bdf folder(s)/file(s) to be reduced
+        filelocation = '$RAW_BDF_FOLDER/*/flat*RAW.fits'
+        # strings which must not be present in the filename for the file to be loaded, separate with |
+        fileexclude = MFLAT|UNK|LOAD
+    # Data group step configuration
+    [[datagroup]]
+        redstepname = StepMasterFlat
+        groupkeys = XBIN|FILTER
         
 
 # Local Astrometry step section
@@ -95,7 +123,7 @@
     hpfitfile = $MASTER_BDF_FOLDER/DARK/PFIT/*_bin1H_*.fits
     ldarkfile = $MASTER_BDF_FOLDER/DARK/DARK/*_bin1L_*.fits
     hdarkfile = $MASTER_BDF_FOLDER/DARK/DARK/*_bin1H_*.fits
-    flatfile = $MASTER_BDF_FOLDER/FLAT/2022-07-19/*FLAT.fits
+    flatfile = $MASTER_BDF_FOLDER/FLAT/2022-07-27/*FLAT.fits
     # list of keys that need to match pfit dark and flat files
     lpfitfitkeys = NAXIS2
     hpfitfitkeys = NAXIS2
@@ -130,11 +158,11 @@
     #includeheadvals = OBSERVAT=StoneEdge
     includeheadvals =
     # keywords and keyword values (ex. OBSERVAT=StoneEdge) which must not be present in the .fits header for the file to be loaded, separate with |
-    excludeheadvals =    
+    excludeheadvals =
     # strings which must be present in the filename for the file to be loaded, separate with |
     fileinclude =     
     # strings which must not be present in the filename for the file to be loaded, separate with |
-    fileexclude = MFLAT|UNK|LOAD
+    fileexclude = MFLAT|UNK|LOAD|pinpoint
  
     
 # SrcExtPy step configuration
@@ -163,3 +191,19 @@
     save_background = true
     #The image most likely wants the bytes to be swapped during analysis, but some formats do not want them swapped
     byte_swap = true
+    
+    
+# MasterFlatHDR step configuration
+[masterflathdr]
+   # Folder to look for pfits, darks and flats
+    lpfitfile = '/Users/alex/_observing/_stone_edge_data/2022/PFIT/*_bin1L_*.fits'
+    hpfitfile = '/Users/alex/_observing/_stone_edge_data/2022/PFIT/*_bin1H_*.fits'
+    # list of keys that need to match pfit dark and flat files
+    lpfitfitkeys = NAXIS2
+    hpfitfitkeys = NAXIS2
+    # Reload flag to force loading of new master files for each input file
+    reload = True
+    # Flag to save intermediate data products
+    #intermediate = False
+    # Input parameters for masterflathdr   # If none, defaults will be used
+
