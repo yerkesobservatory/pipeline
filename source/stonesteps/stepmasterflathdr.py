@@ -136,7 +136,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         # Name of the pipeline reduction step
         self.name='masterflathdr'
         # Shortcut for pipeline reduction step and identifier for saved file names.
-        self.procname = 'HFLAT'
+        self.procname = 'HDRFLAT'
         
         ### Set Logger for this pipe step
         self.log = logging.getLogger('pipe.step.%s' % self.name)
@@ -153,7 +153,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         self.paramlist.append(['higainlim', 1.0, 'What to add to median gain to define high mask'])
         self.paramlist.append(['hotpxlim', 99.5, 'Hot pixel limit percentile'])
         self.paramlist.append(['reload', False,'Set to True to look for new pfit files for every input'])
-                
+        self.paramlist.append(['outputfolder', '','Output directory path'])
         ### Set parameters for StepLoadAux
         self.loadauxsetup('lpfit')
         self.loadauxsetup('hpfit')
@@ -237,7 +237,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         print('hotpxlim =', hotpxlim)
         img = polydarkimg[0,0]
         uppercut = np.percentile(img, hotpxlim)  # Value of img at hotpxlim percentile
-        print('uppercut =', uppercut)
+        print('hot pixel cutoff =', uppercut)
         hotpix = np.where(img > uppercut)
         print('number of hot pixels =', len(hotpix[0]))
         print('')
@@ -258,23 +258,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
                 highgainlist.append(f)
         highgainlist, utimeH = self.timesortHDR(highgainlist, date_key = 'date-obs')
         lowgainlist, utimeL = self.timesortHDR(lowgainlist, date_key = 'date-obs')
-        print('highlength, lowlength =', len(highgainlist), len(lowgainlist))
-
-
-        '''
-        Create output file name (assuming high and low gain flats are to be stored as
-        a 2D image).
-        '''
-        print('length of highgainlist =', len(highgainlist))
-        lfname = os.path.split(highgainlist[-1].filename)[1]
-        ffname = os.path.split(highgainlist[0].filename)[1]
-        lf = lfname.split('_')  # Last filename of time-sorted list.
-        ff = ffname.split('_')   # First filename of time-sorted list.
-        print('lfname =', lfname)
-        print('ffname =', ffname)
-        flatname = 'mflat_'+ff[1]+'_'+ff[3]+'DR'+'_'+ff[4]+'_'+ff[5]+'-'+lf[5]+'_'+ff[6]+'_'+ff[7]+'_'+'MFLAT.fits'
-        print('flatname =',flatname)
-        print('')
+        print('highgainlength, lowgainlength =', len(highgainlist), len(lowgainlist))
 
         '''
         Make a 4D image of high- and low-gain flat files.
@@ -293,9 +277,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         std = np.zeros((numflats))        # 1D numpy array to hold array stds.
         mad = np.zeros((numflats))        # 1D numpy array to hold array mad_stds.        
         for j in range(numflats):
-            #print(flatimage[0,j])
             flatimage[0, j] = highgainlist[j].image[:,:4096]
-            #print('after line', flatimage[0,j])
             mad[j] = mad_std(flatimage[0, j],ignore_nan=True)
             median[j] = np.nanmedian(flatimage[0, j])
             mean[j] = np.nanmean(flatimage[0, j])
@@ -311,9 +293,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         std = np.zeros((numflats))        # 1D numpy array to hold array stds.
         mad = np.zeros((numflats))        # 1D numpy array to hold array mad_stds.
         for j in range(len(lowgainlist)):
-            # Fill 4D arrray with low-gain flat image data.
             flatimage[1, j] = lowgainlist[j].imgdata[1][:,:4096]
-            # Calculate some statistical information.
             mad[j] = mad_std(flatimage[1, j],ignore_nan=True)
             median[j] = np.nanmedian(flatimage[1, j])
             mean[j] = np.nanmean(flatimage[1, j])
@@ -327,7 +307,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         flatbaseheader = highgainlist[0].header.copy()
 
         '''
-        Compile a list of exposure times. Set variables for max and min exposure
+        Compile a list of exposure times. Set keyword variables for max and min exposure
         times for inclusion in header.
         '''
         flatexptimes = []
@@ -337,7 +317,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             flatexptimes.append(exptime)
         xtimemin = np.min(flatexptimes)
         xtimemax = np.max(flatexptimes)
-        #print('xtimemin =', xtimemin, '  xtimemax =', xtimemax)
+        print('xtimemin =', xtimemin, '  xtimemax =', xtimemax)
 
         '''
         Construct a stack of dark images to match the flat image exposure times.
@@ -357,11 +337,14 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         biasimage[1] = polydarkimg[1, 1]
         gainratiostack = np.zeros_like(flatimage[0])
         gainratiomedians = np.zeros((numflats))
-        #print('Medians of gain ratio images.')
+        print('Medians of gain ratio images.')
         for i in range(len(highgainlist)):
             gainratiostack[i] = (flatimage[0][i] - biasimage[0]) / (flatimage[1][i] - biasimage[1])
             gainratiomedians[i] = np.nanmedian(gainratiostack[i])
             print(gainratiomedians[i])
+        gainmean, gainmax, gainmin = np.nanmean(gainratiomedians), np.nanmax(gainratiomedians), np.nanmin(gainratiomedians)
+        gainpcnt = (gainmax - gainmin)*100/gainmean
+        print('Shape of gain ratio images:', gainratiostack[0].shape)
         print('')
 
         '''
@@ -377,12 +360,11 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         grat_mean = np.nanmean(mediangainratioimg)
         stdgrat_median = np.nanmedian(stdgainratioimg)
         stdgrat_mean = np.nanmean(stdgainratioimg)
-        #print('median, mean of median gain ratio image =', grat_median, grat_mean)
-        #print('max, min =', np.nanmax(mediangainratioimg), np.nanmin(mediangainratioimg))
-        #print('')
-        #print('median, mean of std gain ratio image =', stdgrat_median, stdgrat_mean)
-        #print('max, min =', np.nanmax(stdgainratioimg), np.nanmin(stdgainratioimg))
-        #print('')
+        print('median, mean of median gain ratio image =', grat_median, grat_mean)
+        print('max, min =', np.nanmax(mediangainratioimg), np.nanmin(mediangainratioimg))
+        print('median, mean of std gain ratio image =', stdgrat_median, stdgrat_mean)
+        print('max, min =', np.nanmax(stdgainratioimg), np.nanmin(stdgainratioimg))
+        print('')
 
         '''
         Create masked median gain ratio image and masked std image with nans replacing 
@@ -409,6 +391,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         print('masklow shape', gainmasklow[0].shape)
         print('maskhigh', maskhigh)
         print('maskhigh shape', gainmaskhigh[1].shape)
+        print('')
 
         '''
         Subtract interpolated darks from the flat images.
@@ -443,11 +426,12 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             flatmean[i] = np.nanmean(flat[i])                # Mean of the median flat.
             flatstd[i] = np.nanstd(flat[i])                  # mad_std of the median flat.
             flatmadstd[i] = mad_std(flat[i],ignore_nan=True) # mad_std of the median flat.
-        print('')
         print('Median flat median =', flatmedian )
         print('Mean flat median =', flatmean )
         print('Median flat std =', flatstd)
         print('Median flat mad_std =', flatmadstd)
+        print('Shape of flatimgage:', flatimage.shape)
+        print('Shape of flat:', flat.shape)
         print('')
 
         '''
@@ -466,8 +450,9 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         medmax[0] = np.nanmax(flatmediansDS[0])
         medmin[1] = np.nanmin(flatmediansDS[1])
         medmax[1] = np.nanmax(flatmediansDS[1])
-        #print('minimum medians =', medmin, '   ', 'maximum medians =', medmax )
-        #print('')
+        print('minimum medians =', medmin)
+        print('maximum medians =', medmax)
+        print('')
 
         '''
         Re-normalize the median flats (H and L) to their medians and mask out pixels with 
@@ -485,8 +470,8 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             mflat[i][gainmasklow] = np.nan
             mflat[i][gainmaskhigh] = np.nan
             mflatmadstd[i] = mad_std(mflat[i], ignore_nan=True)
-        #print('mflatmedian, mflatmadstd =', mflatmedian, mflatmadstd)
-        #print('')
+        print('mflatmedian, mflatmadstd =', mflatmedian, mflatmadstd)
+        print('')
 
         '''
         Compute the differences of each of the individual normalized flat images
@@ -514,24 +499,49 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         '''
         Create output DataFits object and fill with image data.
         '''
-        dataout = DataFits(config=self.config)
-        dataout.header = flatbaseheader.copy()
-        dataout.image = mflat
-        dataout.imageset(maskedgainratioimg, 'GAIN RATIO')
-
+        self.dataout = DataFits(config=self.config)
+        self.dataout.header = flatbaseheader.copy()
+        self.dataout.image = mflat
+        self.dataout.imageset(maskedgainratioimg, 'GAIN RATIO')
+        
         '''
-        Create numpy arrays with information from headers and timesortDF functions.
+        Create output file name.
+        '''
+        print('length of highgainlist =', len(highgainlist))
+        infolder = os.path.split(highgainlist[0].filename)[0]
+        lfname = os.path.split(highgainlist[-1].filename)[1]
+        ffname = os.path.split(highgainlist[0].filename)[1]
+        print('lfname =', lfname)
+        print('ffname =', ffname)
+        lf = lfname.split('_')  # Last filename of time-sorted list.
+        ff = ffname.split('_')   # First filename of time-sorted list.
+        flatname = 'mflat_'+ff[1]+'_'+ff[3]+'DR'+'_'+ff[4]+'_'+ff[5]+'-'+lf[5]+'_'+ff[6]+'_'+ff[7]+'_'+'XXX.fits'
+        print('flatname =',flatname)
+        print('')
+        
+        '''
+        Rename output filename
+        '''
+        outputfolder = self.getarg('outputfolder')
+        if outputfolder != '':
+            outputfolder = os.path.expandvars(outputfolder)
+            self.dataout.filename = os.path.join(outputfolder, flatname)
+        else:
+            self.dataout.filename = os.path.join(infolder, flatname)
+        
+        
+        '''
+        Create numpy arrays with information about input data from headers
+        and timesortDF functions.
         '''
         # From statistical calculations on input data:
         imedianH, imadH, imeanH, istdH = flatstats[0]['median'], flatstats[0]['mad']\
                                         , flatstats[0]['mean'], flatstats[0]['std']
         imedianL, imadL, imeanL, istdL = flatstats[1]['median'], flatstats[1]['mad']\
-                                        , flatstats[1]['mean'], flatstats[1]['std']
-                                        
+                                        , flatstats[1]['mean'], flatstats[1]['std']                          
         # From time_sortDF:
         utime = np.asarray(utimeH)
         etime = utime - utime[0]   # Time elepased from beginning of first exposure of sequence.
-          
         # From header:
         ambient = np.zeros((numflats))
         primary = np.zeros((numflats))
@@ -542,7 +552,6 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             primary[i] = highgainlist[i].header['primary']
             secondar[i] = highgainlist[i].header['secondar']
             dewtem1[i] = highgainlist[i].header['dewtem1']
-            
         # Make a column with the file sequence numbers.
         index = np.arange(numflats)
         
@@ -556,7 +565,9 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             IDs.append(fi[4]+'_'+fi[5])
         fileIDs = np.asarray(IDs)
 
-        # Make a list of fits column objects.
+        '''
+        Make a list of fits column objects.
+        '''
         tcols = []
         tcols.append(fits.Column(name='index', format='I', array=index))
         tcols.append(fits.Column(name='fileID', format='20A', array=fileIDs))
@@ -575,43 +586,50 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         tcols.append(fits.Column(name='elapsed time', format='D', array=etime, unit='seconds'))
         tcols.append(fits.Column(name='gain ratio', format='D', array=gainratiomedians, unit='ADU'))
 
-        # Make table
+        '''
+        Make table and add it to the output object.
+        '''
         c = fits.ColDefs(tcols)
         table = fits.BinTableHDU.from_columns(c)
         tabhead = table.header
-
-        # Add table to the datafits output object.
-        dataout.tableset(table.data, tablename = 'table', tableheader=tabhead)
+        self.dataout.tableset(table.data, tablename = 'table', tableheader=tabhead)
 
         '''
         Populate output header with new keyword data.
         '''
-        dataout.header['notes'] = '1st HDU: 3D mflat image (img[0]=higain, img[1]=logain)'
-        dataout.header['notes2'] = '2nd HDU: gain ratio image (higain/logain)'
-        dataout.header['notes3'] = 'Table HDU: statistical and environmental data'
-        dataout.header['imagetyp'] = 'HDR MFLAT'
-        dataout.header['bzero'] = 0.0
-        dataout.header['ambient'] = np.nanmean(ambient)
-        dataout.header['primary'] = np.nanmean(primary)
-        dataout.header['secondar'] = np.nanmean(secondar)
-        dataout.header['dewtem1'] = np.nanmean(dewtem1)        
+        self.dataout.header['notes'] = '1st HDU: 3D mflat image (img[0]=higain, img[1]=logain)'
+        self.dataout.header['notes2'] = '2nd HDU: gain ratio image (higain/logain)'
+        self.dataout.header['notes3'] = 'Table HDU: statistical and environmental data'
+        self.dataout.header['imagetyp'] = 'HDR MFLAT'
+        self.dataout.header['bzero'] = 0.0
+        self.dataout.header['ambient'] = np.nanmean(ambient)
+        self.dataout.header['primary'] = np.nanmean(primary)
+        self.dataout.header['secondar'] = np.nanmean(secondar)
+        self.dataout.header['dewtem1'] = np.nanmean(dewtem1)        
         
-        dataout.setheadval('xtimemin', xtimemin, 'Minimum exposure in the set of flats')
-        dataout.setheadval('xtimemax', xtimemax, 'Maximum exposure in the set of flats')
-        dataout.setheadval('medminH', medmin[0], 'Minimum high gain median in the set of flats')
-        dataout.setheadval('medmaxH', medmax[0], 'Maximum high gain median in the set of flats')
-        dataout.setheadval('medminL', medmin[1], 'Minimum low gain median in the set of flats')
-        dataout.setheadval('medmaxL', medmax[1], 'Maximum low gain median in the set of flats')
-        dataout.setheadval('dstdmean', dstdmean, 'Mean std in the set of difference images')
-        dataout.setheadval('dstdpcnt', dstdpcnt, '(dstdmax-dstdmin)*100.0/dstdmean')
-        #dataout.setheadval('gainmean', grat_mean, 'Mean gain ratio')
-        #dataout.setheadval('gainpcnt', gainpcnt, '(gainmax-gainmin)*100.0/gainmean')
-        dataout.setheadval('numfiles', numflats, 'Number of RAW exposures in input datasets')
-        dataout.setheadval('lgainlim', logainlim, 'Lower limit for unmasked pixel gains')
-        dataout.setheadval('hgainlim', higainlim, 'Upper limit for unmasked pixel gains')
-        dataout.setheadval('hotpxlim', hotpxlim, 'Upper limit percentile for unmasked dark current')
-        #print(dataout.header)
-
+        self.dataout.setheadval('xtimemin', xtimemin, 'Minimum exposure in the set of flats')
+        self.dataout.setheadval('xtimemax', xtimemax, 'Maximum exposure in the set of flats')
+        self.dataout.setheadval('medminH', medmin[0], 'Minimum high gain median in the set of flats')
+        self.dataout.setheadval('medmaxH', medmax[0], 'Maximum high gain median in the set of flats')
+        self.dataout.setheadval('medminL', medmin[1], 'Minimum low gain median in the set of flats')
+        self.dataout.setheadval('medmaxL', medmax[1], 'Maximum low gain median in the set of flats')
+        self.dataout.setheadval('dstdmean', dstdmean, 'Mean std in the set of difference images')
+        self.dataout.setheadval('dstdpcnt', dstdpcnt, '(dstdmax-dstdmin)*100.0/dstdmean')
+        self.dataout.setheadval('gainmean', grat_mean, 'Mean gain ratio')
+        self.dataout.setheadval('gainpcnt', gainpcnt, '(gainmax-gainmin)*100.0/gainmean')
+        self.dataout.setheadval('numfiles', numflats, 'Number of RAW exposures in input datasets')
+        self.dataout.setheadval('lgainlim', logainlim, 'Lower limit for unmasked pixel gains')
+        self.dataout.setheadval('hgainlim', higainlim, 'Upper limit for unmasked pixel gains')
+        self.dataout.setheadval('hotpxlim', hotpxlim, 'Upper limit percentile for unmasked dark current')
+        
+        '''
+        Add history
+        '''
+        self.dataout.setheadval('HISTORY','HDR Master Flat made from %d x 2 files' % numflats)
+        print(self.dataout.header)
+        
+        
+        
 if __name__ == '__main__':
     """ Main function to run the pipe step from command line on a file.
             Command:
