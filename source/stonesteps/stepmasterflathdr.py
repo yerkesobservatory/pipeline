@@ -462,7 +462,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         Re-normalize the median flats (H and L) to their medians and mask out pixels with 
         gains greater than or less than 1.0 from the median gain. Replace the masked pixels 
         with np.nan. Hence, when a sky image is divided by the flat, those pixels will also 
-        be masked (will be np.nan) in the flat-fielded sky image (in addition to the pixela
+        be masked (will be np.nan) in the flat-fielded sky image (in addition to any pixela
         aleady replaced with nans using the hotpix mask).
         '''
         mflat = np.zeros_like(flat)
@@ -562,7 +562,11 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         '''
         Now put derived and header data into a fits table and add it to the output object.
         '''
-        # Make file identifiers:
+        
+        '''
+        Make file identifiers. The file identifiers are the date and time fields
+        of the input filenames.
+        '''
         IDs = []
         for i in range(numflats):
             fi = highgainlist[i].filename.split('_')
@@ -627,9 +631,9 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         self.dataout.setheadval('hotpxlim', hotpxlim, 'Upper limit percentile for unmasked dark current')
         
         '''
-        Add history
+        Add a history keyword
         '''
-        self.dataout.setheadval('HISTORY','HDR Master Flat made from %d x 2 files' % numflats)
+        self.dataout.setheadval('HISTORY','HDR Master Flat: made from %d x 2 files' % numflats)
         if pt: print(self.dataout.header)
         
         
