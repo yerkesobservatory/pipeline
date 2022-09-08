@@ -13,7 +13,7 @@
     The step requires as input two files, a low gain file and a high gain file.
     It produces one output file.
     
-    It uses StepLoadAux functions to call the following files:
+    It uses StepLoadAux functions to access the following auxiliary files:
         - masterpfit (x2): A 3D image containing one HDU with two planes, constructed
             by performing a polynomial fit (currently linear) to a set of 
             short-exposure darks taken at different exposure times (currently between 1s
