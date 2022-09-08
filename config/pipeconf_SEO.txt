@@ -183,7 +183,8 @@
 # ADDKEYS step configuration
 [addkeys]
     # List of valid strings for filter names (only used if FILTER keyword is not set)
-    filternames = 'u-band', 'g-band', 'i-band', 'r-band', 'z-band', 'h-alpha', 'clear'
+    filternames = u-band, g-band, i-band, r-band, z-band, h-alpha, clear
+    keystocopy = OBSERVER, OBJECT, FILTER, GAIN, RA, DEC
 
 # Local Astrometry Step Configuration
 [astrometrylocal]

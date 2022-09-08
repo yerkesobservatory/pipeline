@@ -4,6 +4,9 @@
     This pipe step adds FITS keywords to the file based on information
     in the file name.
     
+    The step also copies selected keywords which are not available in the 
+    primary HDU but are present in other HDUs.
+    
     @author: Joe Polk
 """
 
@@ -47,17 +50,32 @@ class StepAddKeys(StepParent):
         self.paramlist = []
         # Append parameters
         self.paramlist.append(['filternames', ['unknown'], 'List of valid strings for filter names'])
+        self.paramlist.append(['keystocopy',[],'List of Keywords to copy to primary HDU if they are missing there (default is empty [] list)'])
 
     def run(self):
         """ Runs the data reduction algorithm. The self.datain is run
             through the code, the result is in self.dataout.
         """
+        ### Add keywords to primary HDU
+        keystocopy = self.getarg('keystocopy')
+        for key in keystocopy:
+            # See if the key is in primary header
+            try:
+                val = self.datain.getheadval(key, errmsg = False)
+            except KeyError:
+                # Key is not in primary header - look in all headers
+                try: 
+                    val = self.datain.getheadval(key, dataname = 'allheaders', errmsg = False)
+                    self.datain.setheadval(key, val)
+                    self.log.debug('Setting primary header[%s] to %s' % (key,repr(val)))
+                except KeyError:
+                    self.log.debug('Header key %s not found in data' % key)
         ### Get file name only (no path)
         fileonly = os.path.split(self.datain.filename)[1]
-        ### Add Observer
+        ### Add OBSERVER
         # Check if observer keyword exists and is valid
         try:
-            observer = self.datain.getheadval('OBSERVER')
+            observer = self.datain.getheadval('OBSERVER', errmsg = False)
             # Make sure it's not invalid entry
             if observer.lower() in ['', 'unk', 'unknown', 'remote', 'sirius'] :
                 got_observer = False
@@ -90,13 +108,14 @@ class StepAddKeys(StepParent):
             obsTemp = re.split(obsbefore[fileindex],self.datain.filename)[-1]
             #splits file name after observer name
             observer = re.split(obsafter[fileindex],obsTemp)[0]
-            self.log.debug('File name is type %d, which fits regexp pattern \'%s\'' % (fileindex, filepatt[fileindex]))
+            self.log.debug('File name is type %d, which fits regexp pattern \'%s\', found observer = %s'
+                           % (fileindex, filepatt[fileindex], observer ) )
         else:
             self.log.debug('Observer from header = ' + observer)
-        ### Add Object name
+        ### Add OBJECT name
         got_object = False # assume it's not there
         try:
-            objname = self.datain.getheadval('OBJECT')
+            objname = self.datain.getheadval('OBJECT', errmsg = False)
             # Make sure it's not invalid entry
             if not objname.lower() in ['', 'unk', 'unknown'] :
                 got_object = True
@@ -140,10 +159,10 @@ class StepAddKeys(StepParent):
                 got_object=True
             else:
                 objname='unknown'
-        ### Add Filter
+        ### Add FILTER
         got_filter = False # assume it's not there
         try:
-            filtername = self.datain.getheadval('FILTER')
+            filtername = self.datain.getheadval('FILTER', errmsg = False)
             if not filtername.lower() in ['', 'unk', 'unknown'] :
                 got_filter = True
         except KeyError:
