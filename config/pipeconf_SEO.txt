@@ -183,7 +183,8 @@
 # ADDKEYS step configuration
 [addkeys]
     # List of valid strings for filter names (only used if FILTER keyword is not set)
-    filternames = 'u-band', 'g-band', 'i-band', 'r-band', 'z-band', 'h-alpha', 'clear'
+    filternames = u-band, g-band, i-band, r-band, z-band, h-alpha, clear
+    keystocopy = OBSERVER, OBJECT, FILTER, GAIN, RA, DEC
 
 # Local Astrometry Step Configuration
 [astrometrylocal]
@@ -253,30 +254,6 @@
     #     (default is '' indicating all data has to be re-reduced)
     fileidkey = ''
     
-# HDR Step configuration
-[hdr]
-    # Folder to look for pfits, darks and flats
-    lpfitfile = $MASTER_BDF_FOLDER/PFIT/*_bin1L_*_PFIT.fits
-    hpfitfile = $MASTER_BDF_FOLDER/PFIT/*_bin1H_*PFIT.fits
-    ldarkfile = $MASTER_BDF_FOLDER/DARK/*_bin1L_*.fits
-    hdarkfile = $MASTER_BDF_FOLDER/DARK/*_bin1H_*.fits
-    flatfile = $MASTER_BDF_FOLDER/FLAT*/*.fits
-    # list of keys that need to match pfit dark and flat files
-    lpfitfitkeys = NAXIS2
-    hpfitfitkeys = NAXIS2
-    ldarkfitkeys = EXPTIME
-    hdarkfitkeys = EXPTIME
-    flatfitkeys = FILTER
-    # Reload flag to force loading of new master files for each input file
-    reload = True
-    # Flat to save intermediate data products
-    intermediate = False
-    # Crossover threshold for H/L combination
-    splice_thresh = 3000.0
-    # list of header keywords to divide by samplefac
-    divkeys = CRPIX1, CRPIX2
-    multkeys = PIXSIZE1, PIXSIZE2, CD1_1, CD1_2, CD2_1, CD2_2, GAIN
-
 # FluxCal Step configuration
 [fluxcal]
 	# Percentile for BZERO value
@@ -313,6 +290,30 @@
 	sourcetableformat = csv
 	# Flag for saving a background image
 	savebackground = False
+
+# HDR Step configuration
+[hdr]
+    # Folder to look for pfits, darks and flats
+    lpfitfile = $MASTER_BDF_FOLDER/PFIT/*_bin1L_*_PFIT.fits
+    hpfitfile = $MASTER_BDF_FOLDER/PFIT/*_bin1H_*PFIT.fits
+    ldarkfile = $MASTER_BDF_FOLDER/DARK/*_bin1L_*.fits
+    hdarkfile = $MASTER_BDF_FOLDER/DARK/*_bin1H_*.fits
+    flatfile = $MASTER_BDF_FOLDER/FLAT*/*.fits
+    # list of keys that need to match pfit dark and flat files
+    lpfitfitkeys = NAXIS2
+    hpfitfitkeys = NAXIS2
+    ldarkfitkeys = EXPTIME
+    hdarkfitkeys = EXPTIME
+    flatfitkeys = FILTER
+    # Reload flag to force loading of new master files for each input file
+    reload = True
+    # Flat to save intermediate data products
+    intermediate = False
+    # Crossover threshold for H/L combination
+    splice_thresh = 3000.0
+    # list of header keywords to divide by samplefac
+    divkeys = CRPIX1, CRPIX2
+    multkeys = PIXSIZE1, PIXSIZE2, CD1_1, CD1_2, CD2_1, CD2_2, GAIN
 
 # Hotpix step configuration
 [hotpix]
