@@ -154,6 +154,10 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         self.paramlist.append(['hotpxlim', 99.5, 'Hot pixel limit percentile'])
         self.paramlist.append(['reload', False,'Set to True to look for new pfit files for every input'])
         self.paramlist.append(['outputfolder', '','Output directory path'])
+        self.paramlist.append(['outputfolder2', '','Alternate output directory path'])
+        self.paramlist.append(['gainpcntlim', 0.3,'gain quality threshold'])
+        self.paramlist.append(['dstdpcntlim', 10.0,'dstd quality threshold'])
+        self.paramlist.append(['numfilelim', 8,'Minumum number of input files'])
         ### Set parameters for StepLoadAux
         self.loadauxsetup('lpfit')
         self.loadauxsetup('hpfit')
@@ -176,7 +180,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
 
         date_obs = []                                   # Make a list to hold the date-obs keyword strings.
         for d in datalist:
-            if '_bin1L' in d.filename and '_RAW.' in d.filename:
+            if '_bin1L' in d.filename:
                 head = d.getheader(d.imgnames[1])       # Get the header of the second HDU (index = [1]).
                 date_obs.append(head[date_key])         # Add date information to list. of string objects.
             else:
@@ -199,7 +203,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         '''
         Define boolean to enable print statements for debugging. Set = True to print.
         '''
-        pt = False
+        pt = True
         
         '''
         Load PFIT files (3D images containing slopes and intercepts of dark current.
@@ -281,6 +285,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         std = np.zeros((numflats))        # 1D numpy array to hold array stds.
         mad = np.zeros((numflats))        # 1D numpy array to hold array mad_stds.        
         for j in range(numflats):
+            if pt: print(highgainlist[j].filename, highgainlist[j].image.shape)
             flatimage[0, j] = highgainlist[j].image[:,:4096]
             mad[j] = mad_std(flatimage[0, j],ignore_nan=True)
             median[j] = np.nanmedian(flatimage[0, j])
@@ -297,6 +302,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         std = np.zeros((numflats))        # 1D numpy array to hold array stds.
         mad = np.zeros((numflats))        # 1D numpy array to hold array mad_stds.
         for j in range(len(lowgainlist)):
+            if pt: print(lowgainlist[j].filename, lowgainlist[j].imgdata[1].shape)
             flatimage[1, j] = lowgainlist[j].imgdata[1][:,:4096]
             mad[j] = mad_std(flatimage[1, j],ignore_nan=True)
             median[j] = np.nanmedian(flatimage[1, j])
@@ -400,8 +406,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         '''
         Subtract interpolated darks from the flat images.
         '''
-        if '_RAW.fit' in highgainlist[0].filename:
-            flatimageDS = flatimage - darkimage
+        flatimageDS = flatimage - darkimage
 
         '''
         Normalize each of the images in the high and low-gain flat image stack to its
@@ -525,14 +530,27 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         
         '''
         Rename output filename
+    
         '''
+        gainpcntlim = self.getarg('gainpcntlim')
+        dstdpcntlim = self.getarg('dstdpcntlim')
+        numfilelim = self.getarg('numfilelim')
+        quality = gainpcnt < gainpcntlim and dstdpcnt < dstdpcntlim and numflats >= numfilelim
         outputfolder = self.getarg('outputfolder')
-        if outputfolder != '':
+        outputfolder2 = self.getarg('outputfolder2')
+        if (outputfolder != '') and (quality == True):
             outputfolder = os.path.expandvars(outputfolder)
             self.dataout.filename = os.path.join(outputfolder, flatname)
+        elif (outputfolder != '') and (quality == False): 
+            outputfolder = os.path.expandvars(outputfolder2)
+            self.dataout.filename = os.path.join(outputfolder2, flatname)
         else:
             self.dataout.filename = os.path.join(infolder, flatname)
-        
+        if pt: print('outputfolder = ',outputfolder)
+        if pt: print('outputfolder2 = ',outputfolder2)
+        if pt: print('dstdpcntlim = ',dstdpcntlim)
+        if pt: print('gainpcntlim = ',gainpcntlim)
+        if pt: print('numfilelim = ',numfilelim)
         
         '''
         Create numpy arrays with information about input data from headers

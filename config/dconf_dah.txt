@@ -60,33 +60,27 @@
         redstepname = StepHdr
         groupkeys = DATE-OBS
         
-# MasterFlatHdr Mode - to make master flat files from SBIG Aluma AC4040 data
+# MasterFlatHdr Mode - to make master flat files from SBIG Aluma AC4040 HDR images
 [mode_masterflathdr]
-    stepslist = StepLoadInput,StepDataGroup, save
+    stepslist = StepLoadInput,StepAddKeys,StepDataGroup, save
     # BDF load step configuration
     [[loadinput]]
-        # location of folder(s)/file(s) to be reduced
-        filelocation = '/Users/alex/_observing/_stone_edge_data/2022/pipe/flat*RAW.fits' 
+        # location of folder(s)/file(s) to be reduced (use globs to identify file type)
+        filelocation = '/Users/alex/_observing/_stone_edge_data/2022/pipe/flat*_RAW.fits*' 
         # strings which must not be present in the filename for the file to be loaded, separate with |
-        fileexclude = MFLAT|UNK|LOAD
+        fileexclude = MFLAT|UNK|LOAD|HDRFLAT
+        # strings which must be present in the filename for the file to be loaded, separate with |
+        fileinclude = _RAW.fit|flat_
+    # addkeys step configuration
+    [[addkeys]]
+    	# List of valid strings for filter names (only used if FILTER keyword is not set)
+    	filternames = u-band, g-band, i-band, r-band, z-band, h-alpha, clear
+    	# List of keywords to copy from 2nd HDU header to primary header (for bin1L files)
+    	keystocopy = OBSERVER, OBJECT, FILTER, GAIN, RA, DEC, DATE-OBS, XBIN, YBIN
     # Data group step configuration
     [[datagroup]]
         redstepname = StepMasterFlatHdr
-        groupkeys = SIMPLE        #GAIN|FILTER
-        
-# Master Flat Mode - to make master flat files
-[mode_masterflat]
-    stepslist = StepLoadInput, StepOverCut, save, StepDataGroup, save
-    # BDF load step configuration
-    [[loadinput]]
-        # location of bdf folder(s)/file(s) to be reduced
-        filelocation = '$RAW_BDF_FOLDER/*/flat*RAW.fits'
-        # strings which must not be present in the filename for the file to be loaded, separate with |
-        fileexclude = MFLAT|UNK|LOAD
-    # Data group step configuration
-    [[datagroup]]
-        redstepname = StepMasterFlat
-        groupkeys = XBIN|FILTER
+        groupkeys = FILTER|XBIN
         
 
 # Local Astrometry step section
@@ -203,7 +197,9 @@
     hpfitfitkeys = NAXIS2
     # Reload flag to force loading of new master files for each input file
     reload = True
-    # Flag to save intermediate data products
-    #intermediate = False
     # Input parameters for masterflathdr   # If none, defaults will be used
-
+    outputfolder = '/Users/alex/_observing/_stone_edge_data/2022/pipe/mflat'
+    outputfolder2 = '/Users/alex/_observing/_stone_edge_data/2022/pipe/mflat/anomalous'
+    #dstdpcntlim = 10.0
+    #gainpcntlim = 3.0
+    #numfileslim = 8
