@@ -56,82 +56,85 @@ class StepAddKeys(StepParent):
         """ Runs the data reduction algorithm. The self.datain is run
             through the code, the result is in self.dataout.
         """
+        ### Copy input file to output file
+        self.dataout = self.datain.copy()
         ### Add keywords to primary HDU
         keystocopy = self.getarg('keystocopy')
         for key in keystocopy:
             # See if the key is in primary header
             try:
-                val = self.datain.getheadval(key, errmsg = False)
+                val = self.dataout.getheadval(key, errmsg = False)
             except KeyError:
                 # Key is not in primary header - look in all headers
                 try: 
-                    val = self.datain.getheadval(key, dataname = 'allheaders', errmsg = False)
-                    self.datain.setheadval(key, val)
+                    val = self.dataout.getheadval(key, dataname = 'allheaders', errmsg = False)
+                    self.dataout.setheadval(key, val)
                     self.log.debug('Setting primary header[%s] to %s' % (key,repr(val)))
                 except KeyError:
                     self.log.debug('Header key %s not found in data' % key)
         ### Get file name only (no path)
-        fileonly = os.path.split(self.datain.filename)[1]
+        fileonly = os.path.split(self.dataout.filename)[1]
         ### Add OBSERVER
         # Check if observer keyword exists and is valid
+        got_observer = False
         try:
-            observer = self.datain.getheadval('OBSERVER', errmsg = False)
+            observer = self.dataout.getheadval('OBSERVER', errmsg = False)
             # Make sure it's not invalid entry
-            if observer.lower() in ['', 'unk', 'unknown', 'remote', 'sirius'] :
-                got_observer = False
-            else:
+            if not observer.lower() in ['', 'unk', 'unknown', 'remote', 'sirius'] :
                 got_observer = True
         except KeyError:
             # if there's a key error -> there's no OBSERVER
-            got_observer = False
+            pass # as got_observer is already false
         if not got_observer:
             ## File patterns:
-                # filepatt[0] <==> OBJECT_BAND_EXPOSURE_BINNING_YYMMDD_HHMMSS_OBSERVER_seo_FILENUM_RAW.fits (format starting spring 2018)
-                # filepatt[1] <==> OBJECT_BAND_EXPOSURE_BINNING_OBSERVER_DATE(YYYYMmmDD)_TIME(11h11m11s)_num0000_HjfyiYt5_seo.fits
-                # filepatt[2] <==> OBJECT_BAND_EXPOSURE_BINNING_YYYYmmmDD_OBSERVER_OBSNUM_seo.fits
-                # filepatt[3] <==> YYYY-MM-DD_OBSERVER_OBJECT_Ez5/ (astroclass)
+            # filepatt[0] <==> OBJECT_BAND_EXPOSURE_BINNING_YYMMDD_HHMMSS_OBSERVER_seo_FILENUM_RAW.fits (format starting spring 2018)
+            # filepatt[1] <==> OBJECT_BAND_EXPOSURE_BINNING_OBSERVER_DATE(YYYYMmmDD)_TIME(11h11m11s)_num0000_HjfyiYt5_seo.fits
+            # filepatt[2] <==> OBJECT_BAND_EXPOSURE_BINNING_YYYYmmmDD_OBSERVER_OBSNUM_seo.fits
+            # filepatt[3] <==> YYYY-MM-DD_OBSERVER_OBJECT_Ez5/ (astroclass)
 
-            filepatt = ['(_\d{6}){2}',
-                        'bin\d_[a-zA-Z]',
-                        'bin\d_\d{4}[a-z]{3}\d{2}',
-                        '^20\d{2}\-[0-1]\d\-[0-3]\d']
+            filepatt = ['(_\d{6}){2}', # two sets of 6 numbers (date and time)
+                        'bin\d_[a-zA-Z]', # Binning followed by alphabetic character (observer)
+                        'bin\d_\d{4}[a-z]{3}\d{2}', # Binning followed by Date in YYYYmmmDD format
+                        '^20\d{2}\-[0-1]\d\-[0-3]\d'] # Starts with date in YYYY-MM-DD format
 
             obsbefore = ['\d{6}_','bin\d_','20\d{2}[a-z]{3}\d{2}_','^.{11}']
             obsafter = ['_seo_','_20\d{2}','_num','_[a-zA-Z]|_\d']
 
             fileindex = 0
             for i in range(len(filepatt)):
-                if re.compile(filepatt[i]).search(self.datain.filename):
+                if re.compile(filepatt[i]).search(self.dataout.filename):
                     fileindex = i
                     break
             # splits file name before observer name
-            obsTemp = re.split(obsbefore[fileindex],self.datain.filename)[-1]
+            obsTemp = re.split(obsbefore[fileindex],self.dataout.filename)[-1]
             #splits file name after observer name
             observer = re.split(obsafter[fileindex],obsTemp)[0]
             self.log.debug('File name is type %d, which fits regexp pattern \'%s\', found observer = %s'
                            % (fileindex, filepatt[fileindex], observer ) )
         else:
-            self.log.debug('Observer from header = ' + observer)
+            self.log.debug('Observer in header = ' + observer)
         ### Add OBJECT name
         got_object = False # assume it's not there
         try:
-            objname = self.datain.getheadval('OBJECT', errmsg = False)
+            objname = self.dataout.getheadval('OBJECT', errmsg = False)
             # Make sure it's not invalid entry
             if not objname.lower() in ['', 'unk', 'unknown'] :
                 got_object = True
+                self.log.debug('Object in header = ' + objname)
         except KeyError:
             pass # b/c got_object is already false
         if not got_object:
-            # Getting the object from the file name
+            # Getting the object from the file name (all before first "_")
             objname = fileonly.split('_')[0]
-            self.log.debug('Object = ' + fileonly.split('_')[0])
+            self.log.debug('Object from Filename = ' + fileonly.split('_')[0])
         if objname.lower() in  ['', 'unk', 'unknown']:
+            # Finds and formats RA/DEC values from the fits header if present,
+            # if not sets objname to unknown
             objname = ''
             self.log.info('Object unknown, changeing object name to RA/DEC')
-            #Finds and formats RA/DEC values from the fits header if present, if not sets objname to unknown
             try:
-                ra = self.datain.getheadval('RA')
-                dec = self.datain.getheadval('DEC')
+                ra = self.dataout.getheadval('RA')
+                dec = self.dataout.getheadval('DEC')
                 # Make sure it's not invalid entry
                 if ra.lower() in ['', 'unk', 'unknown'] or dec.lower in ['', 'unk', 'unknown']:
                     got_radec = False
@@ -141,19 +144,19 @@ class StepAddKeys(StepParent):
                 # if there's a key error -> there's no RA or DEC
                 got_radec = False
             if got_radec==True:
-                regexRA=r'(\d{2}):(\d{2}):(\d{2}).?(\d{2})?(\d{1})?'
-                RAre=re.findall(regexRA, self.datain.getheadval('RA'))
+                regexRA=r'(\d{1,2}):(\d{2}):(\d{2}).?(\d{1,2})?'
+                RAre=re.findall(regexRA, self.dataout.getheadval('RA'))
                 if RAre[0][3]=='':
-                    obsRA=RAre[0][0]+"h"+RAre[0][1]+"m"+RAre[0][2]+"."+RAre[0][3]+RAre[0][4]+"0"+"s"
+                    obsRA=RAre[0][0]+"h"+RAre[0][1]+"m"+RAre[0][2]+".0"+"s"
                 else:
-                    obsRA=RAre[0][0]+"h"+RAre[0][1]+"m"+RAre[0][2]+"."+RAre[0][3]+RAre[0][4]+"s"
-                regexDEC=r'(\d{2}):(\d{2}):(\d{2}).?(\d{2})?(\d{1})?'
-                DECre=re.findall(regexDEC, self.datain.getheadval('DEC'))
-                DECsign=self.datain.getheadval('DEC')[0]
+                    obsRA=RAre[0][0]+"h"+RAre[0][1]+"m"+RAre[0][2]+"."+RAre[0][3]+"s"
+                regexDEC=r'(\d{1,2}):(\d{2}):(\d{2}).?(\d{1,2})?'
+                DECre=re.findall(regexDEC, self.dataout.getheadval('DEC'))
+                DECsign=self.dataout.getheadval('DEC')[0]
                 if DECre[0][3]=='':
-                    obsDEC=DECsign+DECre[0][0]+"d"+DECre[0][1]+"m"+DECre[0][2]+"."+DECre[0][3]+DECre[0][4]+"0"+"s"
+                    obsDEC=DECsign+DECre[0][0]+"d"+DECre[0][1]+"m"+DECre[0][2]+".0"+"s"
                 else:
-                    obsDEC=DECsign+DECre[0][0]+"d"+DECre[0][1]+"m"+DECre[0][2]+"."+DECre[0][3]+DECre[0][4]+"s"
+                    obsDEC=DECsign+DECre[0][0]+"d"+DECre[0][1]+"m"+DECre[0][2]+"."+DECre[0][3]+"s"
                 objname = obsRA+obsDEC
                 self.log.debug('Object RA/DEC = ' + objname)
                 got_object=True
@@ -162,23 +165,21 @@ class StepAddKeys(StepParent):
         ### Add FILTER
         got_filter = False # assume it's not there
         try:
-            filtername = self.datain.getheadval('FILTER', errmsg = False)
+            filtername = self.dataout.getheadval('FILTER', errmsg = False)
             if not filtername.lower() in ['', 'unk', 'unknown'] :
                 got_filter = True
         except KeyError:
             pass # b/c got_filter is already false
         if not got_filter:
-            # Getting the filter from the file name
-#             filtername = 'unknown' # in case no filter name is found
+            # Getting the filter from the file name (second '_' separated part)
             filtername = fileonly.split('_')[1]
+#             filtername = 'unknown' # in case no filter name is found
 #             for f in self.getarg('filternames'):
 #                 if f in fileonly:
 #                     filtername = f
 #                     break # exit the for loop
             self.log.debug('Filter = ' + filtername)
         ### Make changes to file
-        # Copy input file to output file
-        self.dataout = self.datain.copy()
         # Put keyword into the output file
         # (need: OBSERVER and OBJECT keywords with values from the filename)
         self.dataout.setheadval('OBSERVER', observer )
