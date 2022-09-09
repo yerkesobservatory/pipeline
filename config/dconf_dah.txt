@@ -200,6 +200,7 @@
     # Input parameters for masterflathdr   # If none, defaults will be used
     outputfolder = '/Users/alex/_observing/_stone_edge_data/2022/pipe/mflat'
     outputfolder2 = '/Users/alex/_observing/_stone_edge_data/2022/pipe/mflat/anomalous'
-    #dstdpcntlim = 10.0
+    dstdpcntlim = 20.0
     #gainpcntlim = 3.0
     #numfileslim = 8
+    #print_switch = True     # Set to true to print diagnostic data for debugging

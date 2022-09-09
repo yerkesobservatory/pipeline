@@ -158,6 +158,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         self.paramlist.append(['gainpcntlim', 0.3,'gain quality threshold'])
         self.paramlist.append(['dstdpcntlim', 10.0,'dstd quality threshold'])
         self.paramlist.append(['numfilelim', 8,'Minumum number of input files'])
+        self.paramlist.append(['print_switch', False,'Set True to turn on print statements'])
         ### Set parameters for StepLoadAux
         self.loadauxsetup('lpfit')
         self.loadauxsetup('hpfit')
@@ -203,7 +204,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         '''
         Define boolean to enable print statements for debugging. Set = True to print.
         '''
-        pt = True
+        pt = self.getarg('print_switch')
         
         '''
         Load PFIT files (3D images containing slopes and intercepts of dark current.
