@@ -52,6 +52,7 @@ class StepReSample(StepParent):
         self.paramlist.append(['samplefac', 2, 'Downsample factor - integer'])
         #self.paramlist.append(['subframe', ':,:', 'subframe to keep in numpy ( i:j, k:l ) notation. Default is :,: i.e. full image'])
         #self.paramlist.append(['keysmulti','', '| separated list of fits keywords to multiply with downsample'])
+        self.paramlist.append(['method','median','Combine method: median (default), sum or average'])
         self.paramlist.append(['divkeys', [], 'list of header keywords to divide by samplefac'])
         self.paramlist.append(['multkeys', [], 'list of header keywords to multiply by samplefac'])
 
@@ -70,7 +71,16 @@ class StepReSample(StepParent):
         imgout[...,1] = self.datain.image[range(1,imgsiz[0],sfac),:][:,range(0,imgsiz[1],sfac)]
         imgout[...,2] = self.datain.image[range(0,imgsiz[0],sfac),:][:,range(1,imgsiz[1],sfac)]
         imgout[...,3] = self.datain.image[range(1,imgsiz[0],sfac),:][:,range(1,imgsiz[1],sfac)]
-        self.dataout.image = np.median(imgout,axis=2)
+        method = self.getarg('method').lower()
+        if 'med' in method:
+            self.dataout.image = np.median(imgout,axis=2)
+        elif 'sum' in method:
+            self.dataout.image = np.sum(imgout,axis=2)
+        elif 'ave' in method:
+            self.dataout.image = np.average(imgout,axis=2)
+        else:
+            self.log.warn('Invalid method = %s - using median' % method)
+            self.dataout.image = np.median(imgout,axis=2)
         # Divide keywords by sfac
         for key in self.getarg('divkeys'):
             if not key in self.datain.header: continue
