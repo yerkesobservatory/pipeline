@@ -153,7 +153,6 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
         self.paramlist.append(['higainlim', 1.0, 'What to add to median gain to define high mask'])
         self.paramlist.append(['hotpxlim', 99.5, 'Hot pixel limit percentile'])
         self.paramlist.append(['reload', False,'Set to True to look for new pfit files for every input'])
-        self.paramlist.append(['outputfolder', '','Output directory path'])
         self.paramlist.append(['outputfolder2', '','Alternate output directory path'])
         self.paramlist.append(['gainpcntlim', 0.3,'gain quality threshold'])
         self.paramlist.append(['dstdpcntlim', 10.0,'dstd quality threshold'])
