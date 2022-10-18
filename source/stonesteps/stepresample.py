@@ -13,6 +13,8 @@
 import logging # logging object library
 import numpy as np # Numeric library
 from darepype.drp.stepparent import StepParent
+from astropy.nddata import block_reduce
+#from skimage.measure import block_reduce
 
 class StepReSample(StepParent):
     """ DarePype Step ReSample Object
@@ -73,14 +75,21 @@ class StepReSample(StepParent):
         imgout[...,3] = self.datain.image[range(1,imgsiz[0],sfac),:][:,range(1,imgsiz[1],sfac)]
         method = self.getarg('method').lower()
         if 'med' in method:
-            self.dataout.image = np.median(imgout,axis=2)
+            methfunc = np.median
+            #self.dataout.image = np.median(imgout,axis=2)
         elif 'sum' in method:
-            self.dataout.image = np.sum(imgout,axis=2)
-        elif 'ave' in method:
-            self.dataout.image = np.average(imgout,axis=2)
+            methfunc = np.sum
+            #self.dataout.image = np.sum(imgout,axis=2)
+        elif 'average' in method or 'avg' in method:
+            methfunc = np.average
+            #self.dataout.image = np.average(imgout,axis=2)
         else:
             self.log.warn('Invalid method = %s - using median' % method)
-            self.dataout.image = np.median(imgout,axis=2)
+            methfunc = np.median
+            #self.dataout.image = np.median(imgout,axis=2)
+        # Downsample the image
+        # ( The 1.0* fixes problems with certain integer format images )
+        self.dataout.image = 1.0*block_reduce(self.datain.image, sfac, func = methfunc)
         # Divide keywords by sfac
         for key in self.getarg('divkeys'):
             if not key in self.datain.header: continue
@@ -103,5 +112,6 @@ if __name__ == '__main__':
     StepReSample().execute()
 
 """ === History ===
+    2022-10: Updated for any sfac using block_reduce
     2021-4: Wrote first version - Marc Berthoud
 """
