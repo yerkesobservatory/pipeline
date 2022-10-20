@@ -542,7 +542,7 @@ class StepMasterFlatHdr(StepLoadAux, StepMIParent):
             outputfolder = os.path.expandvars(outputfolder)
             self.dataout.filename = os.path.join(outputfolder, flatname)
         elif (outputfolder != '') and (quality == False): 
-            outputfolder = os.path.expandvars(outputfolder2)
+            outputfolder2 = os.path.expandvars(outputfolder2)
             self.dataout.filename = os.path.join(outputfolder2, flatname)
         else:
             self.dataout.filename = os.path.join(infolder, flatname)
