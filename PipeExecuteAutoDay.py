@@ -74,7 +74,7 @@ def execute():
     # make objectlist as a cleaned version of rawlist
     # -- guaranteed to only contain the actual object folders from topdirectory
     for Object in rawlist:
-        if not '.' in Object:            # This line makes sure to exlude any stray files
+        if os.path.isdir(os.path.join(topdirectory,Object)):            # This line makes sure to exlude any stray files
             if not 'itzamna' in Object:  # Exclude unsorted files
                 objectlist.append(Object)
     log.info('Object list = %s' %repr(objectlist))
@@ -102,9 +102,12 @@ def execute():
         if len(imagelist) == 0 :
             log.warning('Image List is Empty, skipping object = %s' % entry)
             continue
+        pipe.reset()
+        # Cut the imagelist to 100 images
+        if len(imagelist) > 100:
+            imagelist = imagelist[:100]
         # Now the program will run the files placed in imagelist through the pipeline.
         # It will do this for every entry in objectlist (i.e. for every object)
-        pipe.reset()
         # Run the pipeline (return with error message)
         #result = pipe(imagelist)
         try:
@@ -142,6 +145,8 @@ except Exception as e:
 
 ''' 
 HISTORY:
+2022: - Updated for not reducing shutter files
+      - Added code to only reduce 100 files per observation
 2017/06/23: This version processes all inputs into the pipeine instead of just 3
             inputs, so StepMakeRGB can get the desired  3 best inputs for a jpg
             image -- Atreyo Pal
