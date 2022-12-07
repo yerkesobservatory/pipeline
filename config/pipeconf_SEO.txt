@@ -49,7 +49,7 @@
 
 # Stoneedge User Mode - for reducing data on your own computer
 #     Use this if you don't have sextractor installed
-[mode_seo_user]
+[mode_seo_user_ccd]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
@@ -99,7 +99,7 @@
 
 # Stoneedge Server Mode - for reducing data on the server from 2020
 #     Use this if you have sextractor and astrometry installed but no HDR images
-[mode_seo_server_2020]
+[mode_seo_server_ccd]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"

@@ -94,7 +94,7 @@ def execute():
             if not re.search(r'(_0|RAW|seo|SRT)\.fits(?:\.gz)?\Z',image):
                 continue
             # Ignore dark, flat or bias images
-            if 'dark' in image or 'flat' in image or 'bias' in image or 'pinpoint' in image or 'shutter' in image:
+            if 'dark' in image or 'flat' in image or 'bias' in image or 'pinpoint' in image or 'shutter' in image or 'status' in image:
                 continue
             # Adds the correct images to imagelist
             imagelist.append(os.path.join(fullentry,image))
@@ -112,7 +112,7 @@ def execute():
         #result = pipe(imagelist)
         try:
             #pass
-            result = pipe(imagelist, pipemode = 'seo_server_2020',force=True)
+            result = pipe(imagelist, pipemode = 'seo_server_ccd',force=True)
             #result = pipe(imagelist, pipemode = 'seo_server_hdr',force=True)
         except Exception as e:
             log.warning("Pipeline for object = %s returned Error" % entry)

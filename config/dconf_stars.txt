@@ -18,7 +18,7 @@
 
 # Stoneedge Server Mode - for reducing data on the server from 2020
 #     Use this if you have sextractor and astrometry installed but no HDR images
-[mode_seo_server_2020]
+[mode_seo_server_ccd]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
@@ -83,7 +83,24 @@
     #hdarkfile = $MASTER_BDF_FOLDER/DARK/TFIT/*/*/*_bin1H_*.fits
     #flatfile = $MASTER_BDF_FOLDER/FLAT/*/*.fits
 
+# MasterBias step configuration
+[masterbias]
+    # Outputfolder: Output directory location - default is the folder of the input files
+    outputfolder = $MASTER_BDF_FOLDER/AutoBias
+
+# MasterDark step configuration
+[masterdark]
+    # Outputfolder: Output directory location - default is the folder of the input files
+    outputfolder = $MASTER_BDF_FOLDER/AutoDark
+
+# MasterFlat step configuration
+[masterflat]
+    # Outputfolder: Output directory location - default is the folder of the input files
+    outputfolder = $MASTER_BDF_FOLDER/AutoFlat
+
+
 # SrcExtPy step configuration
 [srcextpy]
     #Extraction Threshold, used during source extraction as the signal to noise ratio required to be recorded
     ext_thresh = 5.0
+
