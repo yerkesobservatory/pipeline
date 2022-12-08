@@ -13,17 +13,20 @@
     Inputs: 
         A FITS image file and input parameters defined in a config file.
     Table outputs (in DataFits output object):
-        A table of extracted sources (from sep.extract() with additional columns with other data derived from the SEP output).
-        A table of sources deemed to be stars, along with their fluxes (in ADU) and x and y positions (in physical pixel coordinates). The table is ordered by descending flux and is optimized to provide a list of stars to be analyzed by a subsequent astrometry step to determine a WCS.
-        Another starlist like the second table described above, but with an extraction threshold set to a multiple of its threshold. This table is included because it may provide a more complete and accurate extraction of bright stars.
-        Optional table outputs (as separate FITS files):
-        ASCII versions of the second and third tables above in CSV format, saved as separate files.
+        A table of extracted sources (from sep.extract() with additional columns with
+            other data derived from the SEP output).
+        A table of sources deemed to be stars, along with their fluxes (in ADU) and
+            x and y positions (in physical pixel coordinates). The table is ordered
+            by descending flux and is optimized to provide a list of stars to be
+            analyzed by a subsequent astrometry step to determine a WCS.
+        ASCII versions of the second and third tables above in CSV format,
+            saved as separate files.
     Image outputs (HDUs in DataFits output object):
         The primary image HDU passed through from the input file.
+        An image which is the difference of the original image and the background image.
     Optional image HDU outputs:
         An image of the background provided by the function sep.Background().
         An image of the rms background noise.
-        An image which is the difference of the original image and the background image.
 
     For more info check out the read the docs for SEP: https://sep.readthedocs.io/
     
@@ -38,22 +41,16 @@
 import os # os library
 import sys # sys library
 import numpy as np # numpy library
-import scipy # scipy library
+#import scipy # scipy library
 import string # string library
 import logging # logging object library
-import subprocess # running a subprocess library
-import requests # http request library
-import astropy.table # Read astropy tables
+#import subprocess # running a subprocess library
+#import requests # http request library
+#import astropy.table # Read astropy tables
 import sep # Extracts Sources and Calculates Flux
 from astropy.io import fits
 from astropy.io import ascii
-#from astropy.coordinates import SkyCoord # To make RA/Dec as float
-#from astropy import units as u # To help with SkyCoord
 from astropy.stats import mad_std
-#import matplotlib # to make plots
-#matplotlib.use('Agg') # Set pixel image
-import pylab as plt # pylab library for plotting
-from lmfit import minimize, Parameters # For brightness correction fit
 from darepype.drp import StepParent # pipestep stepparent object
 from darepype.drp.datafits import DataFits
 
@@ -128,7 +125,7 @@ class StepSrcExtPy(StepParent):
         self.paramlist.append(['ext_bfactor', 10.0,
                                 'brightness factor for creating highlevel threshold'])
         self.paramlist.append(['ext_deblend', 256,
-                                'deblend threshold for source extration'])
+                                'deblend threshold for source extraction'])
         self.paramlist.append(['phot_kronf', 2.5,
                                 'factor multiplied into kronrad to get radius for integration'])
         self.paramlist.append(['save_background', True,
@@ -139,14 +136,16 @@ class StepSrcExtPy(StepParent):
         self.log.debug('Setup: done')
 
     def run(self):
-        """ Runs the calibrating algorithm. The calibrated data is
-            returned in self.dataout
+        """ Runs the source extraction algorithm. The extracted object data are
+            returned in a table. The input image, and background-subtracted image
+            are stored in HDUs in self.dataout. If desired, the background image
+            is also stored in an HDU.
         """
-        ### Preparation
+        
+        '''Prepare data. Byte swap and convert to float64, if necessary.'''
+        
         binning = self.datain.getheadval('XBIN')
-        ### Perform Source Extraction
-        # Open data out of fits file for use in SEP
-        psimage = self.datain.image.copy()
+        psimage = self.datain.image.copy()   # Get image data from fits file.
         # Byteswap if required
         maxexp = np.max(np.abs(np.frexp(psimage)[1]))
         self.log.debug('Initial max exponent value: %d' % maxexp)
@@ -157,15 +156,14 @@ class StepSrcExtPy(StepParent):
         else:
             self.log.debug("No byte swap required")
             image = psimage
-
+        # Convert to float64, if necessary.
         self.log.debug("Initial data type: %s" % psimage.dtype)
         if psimage.dtype != np.float64:
             self.log.debug("Converting to float64")
-            #image = image.byteswap(inplace=True).newbyteorder()
             image = image.astype(np.float64)
 
-        #These variables are used for the background analysis. 
-        #We grab the values from the paramlist
+        '''Get variable values used to compute background (from paramlist).'''
+        
         maskthresh = self.getarg('bkg_maskthreshold')
         backwh= self.getarg('bkg_wh')
         filwh= self.getarg('bkg_filterwh')
@@ -173,125 +171,134 @@ class StepSrcExtPy(StepParent):
         fw, fh = filwh[0], filwh[1]
         fthresh = self.getarg('bkg_fthreshold')
 
-        #Create the background image and it's error
+        '''Create the background image and its error image.'''
+        
         bkg = sep.Background(image, maskthresh=maskthresh,bw=bw, bh=bh, fw=fw,
-        fh=fh, fthresh=fthresh) 
-
+            fh=fh, fthresh=fthresh) 
         bkg_image=bkg.back()
-
         bkg_rms =bkg.rms()
         self.log.debug('Background image global')
         if bkg.globalback < np.nanmin(image) or bkg.globalback > np.nanmax(image):
             self.log.warn('Background has out of bounds values - image may not reduce')
-        #Subtract the background from the image
+            
+        '''Subtract the background from the image. Calculate its median and mad.'''
+        
         image_sub = image - bkg_image
-        #Calculate the Median and STD of the Subtracted Image
         imsubmed = np.nanmedian(image_sub)
         imsubmad = mad_std(image_sub)
         
-        # save background image ###############################
-#         apple = DataFits(config = self.config)
-#         apple.image = bkg_image
-#         apple.save(os.path.join(os.path.split(self.datain.filename)[0],'bgimg.fits'))
-#         apple = DataFits(config = self.config)
-#         apple.image = image_sub
-#         apple.save(os.path.join(os.path.split(self.datain.filename)[0],'imgsub.fits'))
-
-		#Create variables that are used during source Extraction and Flux Calculation
-        #Some defined in the param are grabbed now
+        ''' Create variable values needed for source extraction.'''
+        
         extract_thresh = self.getarg('ext_thresh')
-        bright_factor= self.getarg('ext_bfactor')
         deblend_nthresh = self.getarg('ext_deblend')
         kfactor = self.getarg('phot_kronf')
         extract_err = bkg_rms
-        #Extract sources from the subtracted image. It extracts a low threshold list and a high threshold list
+        
+        '''Extract sources from the background-subtracted image.'''
+        
         sources = sep.extract(image_sub, extract_thresh, err=extract_err, deblend_nthresh= deblend_nthresh)
-        sourcesb= sep.extract(image_sub, extract_thresh*bright_factor, err=extract_err, deblend_nthresh= deblend_nthresh)
+        print('Length of sources =', len(sources))
 
-        ### Sort sources by descending isophotal flux. (Taken from Dr. Harper's Explore SEP Notebook)
+        ''' Eliminate very small sources.'''
+                
+        alow, blow = 1.25, 1.25
+        smalls = []
+        for i, s in enumerate(sources):
+            if s['a']<-alow or s['b']<=blow:
+                smalls.append(i)
+        print('length of smalls =', len(smalls))
+        sources = np.delete(sources, smalls, 0)
+        print('length of sources after removing smalls =', len(sources))
+        
+        '''
+        Delete any rows containing NaNs in a or b columns. This code was added
+        to prevent "invalid aperture parameters" errors which crashed the pipeline.
+        '''
+        
+        nan_rows = []
+        for i, s in enumerate(sources):
+            if np.isnan(s['a']) or np.isnan(s['b']):
+                nan_rows.append(i)
+        print('length of nan_rows =', len(nan_rows))
+        sources = np.delete(sources, nan_rows, 0)
+        print('length of sources after removing rows with NaNs =', len(sources))
+        
+        '''Sort sources by descending isophotal flux'''
+
         ind = np.argsort(sources['flux'])
         reverser = np.arange(len(ind) - 1,-1,-1)
         rev_ind = np.take_along_axis(ind, reverser, axis = 0)
-        
         objects = np.take_along_axis(sources, rev_ind, axis = 0)
-
-        indb = np.argsort(sourcesb['flux'])
-        reverserbri = np.arange(len(indb) - 1,-1,-1)
-        rev_indb = np.take_along_axis(indb, reverserbri, axis = 0)
-        objectsb = np.take_along_axis(sourcesb, rev_indb, axis = 0)
         
-        #Correcting instances of floating point errors in theta from SEP
-        #Other issues will be flagged with an invalid aperture parameters error
+        '''
+        The following code prevents floating point errors arising from theta
+        values that are too close to pi/2.
+        '''
         objects['theta'] = np.where(abs(objects['theta'] - np.pi/2) < 0.001, np.pi/2, objects['theta'])
-        objectsb['theta'] = np.where(abs(objectsb['theta'] - np.pi/2) < 0.001, np.pi/2, objectsb['theta'])
-
-        ###Do basic uncalibrated measurments of flux for use in step astrometry. 
+        
         '''
-        First we calculate flux using Ellipses. In order to do this we need to calculate
-        the Kron Radius for the ellipses the Extract process identified using the ellipse 
-        parameters it gives. 
-        R is equal to 6 as that is the default used in Source Extractor
+        Calculate fluxes using sep.sum_ellipse. This is equivalent to FLUX_AUTO
+        in SExtractor. Set hard-coded value of R=6, since that is the default
+        value used in SExtractor.
         '''
+        
+        # First, calculate kron radii (needed as input arguments for sep.sum_ellipse)
         kronrad, krflag = sep.kron_radius(image_sub, objects['x'], objects['y'], 
         	objects['a'], objects['b'], objects['theta'], r=6.0)
-
-        kronradb, krflagb= sep.kron_radius(image_sub, objectsb['x'], objectsb['y'], 
-            objectsb['a'],objectsb['b'], objectsb['theta'], r=6.0)
-
-        #Using this Kron radius we calculate the flux
-        #This is equivalent to FLUX_AUTO in SExtractor
+        	
+        ## Print some diagnostics.
+        #print( kr[0], krflags[0], len(kr))
+        kronrad_notfinite = len(kronrad) - len(np.isfinite(kronrad))
+        #print('Number kronrad not finite =', kronrad_notfinite)
+        numnans = np.sum(np.isnan(image_sub))
+        #print('Number of nans in image_sub =', numnans)
+        numnans = np.sum(np.isnan(objects['theta']))
+        #print('Number of nans in theta =', numnans) 
+        numnans = np.sum(np.isnan(objects['b']))
+        #print('Number of nans in b =', numnans)
+        #for i in range(len(objects)):
+        #    print(i, objects['a'][i], objects['b'][i])
+               
+        # Now calculate the elliptical fluxes.
         flux_elip, fluxerr_elip, flag = sep.sum_ellipse(image_sub, objects['x'], objects['y'], objects['a'], 
         objects['b'], objects['theta'], r= kfactor*kronrad, err=bkg_rms, subpix=1)
-        flux_elipb, fluxerr_elipb, flag = sep.sum_ellipse(image_sub, objectsb['x'], 
-        objectsb['y'], objectsb['a'], objectsb['b'], objectsb['theta'],
-        r= kfactor*kronradb, err=bkg_rms, subpix=1)
-
-        #Now we want to calculate the Half-flux Radius. This will be reported later
-        #First in order to establish a zone to integrate over we need an Rmax
+        
+        '''
+        Calculate circular half-flux radii using sep.flux_radius.
+        '''
+        # First we need a maximum radius (Rmax) for the integral.
         dx = (objects['xmax'] - objects['xmin']) / 2
         dy = (objects['ymax'] - objects['ymin']) / 2
-
-        dxb = (objectsb['xmax'] - objectsb['xmin']) / 2
-        dyb = (objectsb['ymax'] - objectsb['ymin']) / 2
-
-
         rmax = np.sqrt(dx*dx + dy*dy)
-        rmaxb= np.sqrt(dxb*dxb + dyb*dyb)
-        '''Frac is the percentage of flux we want contained within the radius,
-        since we want half flux radius, frac is .5 '''
-        
+        # Now we need the argument for the percentage of flux contained within the radius.
         frac=0.5
+        # Now do the calculation.
         rh, rh_flag = sep.flux_radius(image_sub, objects['x'], objects['y'], rmax, frac)
-        rhb, rhb_flag = sep.flux_radius(image_sub, objectsb['x'], objectsb['y'], rmaxb, frac)
 
-   
-        #Sort the individual arrays so that the final table is sorted by flux
-        #create sorting index by using flux. This is for the boosted threshold
-        indb = np.argsort(flux_elipb)
-        reverserb = np.arange(len(indb) - 1,-1,-1)
-        rev_indb = np.take_along_axis(indb, reverserb, axis = 0)
-        flux_elipb = np.take_along_axis(flux_elipb, rev_indb, axis = 0)
-        #now apply it to all the axis
-        fluxerr_elipb = np.take_along_axis(fluxerr_elipb, rev_indb, axis = 0)
-        objectsb = np.take_along_axis(objectsb, rev_indb, axis = 0)
-        rhb = np.take_along_axis(rhb, rev_indb, axis = 0)
-
-        #now for normal threshold
-
+        '''
+        Sort all the arrays that will go into the output table (including the
+        list of extracted sources) by descending elliptical flux.
+        '''
         ind = np.argsort(flux_elip)
         reverser = np.arange(len(ind) - 1,-1,-1)
         rev_ind = np.take_along_axis(ind, reverser, axis = 0)
         flux_elip = np.take_along_axis(flux_elip, rev_ind, axis = 0)
-        #now apply it to all the axis
         fluxerr_elip = np.take_along_axis(fluxerr_elip, rev_ind, axis = 0)
-        objects = np.take_along_axis(objects, rev_ind, axis = 0)
         rh = np.take_along_axis(rh, rev_ind, axis = 0)
+        objects = np.take_along_axis(objects, rev_ind, axis = 0)
 
         
         # Select only the stars in the image: circular image and S/N > 10
         #Establish an elongation limit
-        elim=1.5
-        #Create cuts
+        
+        '''
+        Create data cuts aimed at identifying isolated stars in the object list.
+        Select for circular, unsaturated stellar images with good signal to noise.
+        List will be passed to StepFluxcal to match with GSC calibration stars,
+        '''
+        
+        elim=1.5    # Set limit on ellipticity of extracted, unsaturated sources
+        # Create cuts
         a2b= (objects['a']/objects['b'])
         semimajor = objects['a'] < 1.0
         semiminor = objects['b'] < 1.0
@@ -299,22 +306,16 @@ class StepSrcExtPy(StepParent):
         elong = a2b<elim
         seo_SN = (elong)  & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip > 0) & (flux_elip > 0) 
 
-        #Now do this for the high threshold sources
-        elongb = (objectsb['a']/objectsb['b'])<elim
-        semimajorb = (objectsb['a']) < 1.0
-        semiminorb = (objectsb['b']) < 1.0
-        smallmomentb = (semimajorb) & (semiminorb)
-        seo_SNB = (elongb)  & ((flux_elipb/fluxerr_elipb)<1000) & (fluxerr_elipb > 0) & (flux_elipb >0)
 
         self.log.debug('Selected %d low threshold stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
-        self.log.debug('Selected %d high threshold stars from Source Extrator catalog' % np.count_nonzero(seo_SNB))
+        #self.log.debug('Selected %d high threshold stars from Source Extrator catalog' % np.count_nonzero(seo_SNB))
 
         #Calculate mean RH, its STD, and mean Elongation to report in header
         rhmean, rhstd = np.nanmean(rh[seo_SN]), mad_std(rh[seo_SN], ignore_nan = True)
         elmean= np.nanmean(objects['a'][seo_SN]/objects['b'][seo_SN])
 
         
-        ### Make table with the restricted data from SEP
+        '''Make table with the selected subset of data from SEP'''
 
         # Collect data columns
         cols = []
@@ -337,82 +338,65 @@ class StepSrcExtPy(StepParent):
         cols.append(fits.Column(name='Half-light Radius', format='D',
                                 array=rh[seo_SN], unit='pixel'))
 
-
-
-        # Now lets make a table using the Brighter threshold
-        colsb = []
-        numb = np.arange(1, len(objectsb['x'][seo_SNB]) + 1 )
-        colsb.append(fits.Column(name='ID', format='D',
-                                array=numb))
-        colsb.append(fits.Column(name='X', format='D',
-                                array=objectsb['x'][seo_SNB],
-                                unit='pixel'))
-        colsb.append(fits.Column(name='Y', format='D',
-                                array=objectsb['y'][seo_SNB],
-                                unit='pixel'))
-        colsb.append(fits.Column(name='Uncalibrated Flux', format='D',
-                                array=flux_elipb[seo_SNB],
-                                unit='flux'))
-        colsb.append(fits.Column(name='Uncalibrated Flux Error', format='D',
-                                array=fluxerr_elipb[seo_SNB],
-                                unit='flux'))
-        colsb.append(fits.Column(name='Half-light Radius', format='D',
-                                array=rhb[seo_SNB], unit='pixel'))
-        # Make table
+        # Make selected subset table
         c = fits.ColDefs(cols)
-
-        cb=fits.ColDefs(colsb)
-
         sources_table = fits.BinTableHDU.from_columns(c)
 
-        sourceb_table= fits.BinTableHDU.from_columns(cb)
-        ### Make output data
+        '''Make output DataFits object (self.dataout)'''
+        
         # Copy data from datain
-        self.dataout = self.datain.copy()  
-        #This is making a third table which includes all of objects and more for future use
+        self.dataout = self.datain.copy()
+         
+        # Make a table which includes all extracted objects and add to output data
         self.dataout.tableset(objects, tablename='SEP_objects')
         self.dataout.tableaddcol('rh', rh, 'SEP_objects')
         self.dataout.tableaddcol('kflux', flux_elip, 'SEP_objects')
         self.dataout.tableaddcol('a2b', a2b, 'SEP_objects')
+        
+        # Add table with selected subset of data
+        self.dataout.tableset(sources_table.data,'LTS',sources_table.header)
 
-        # This saves the background subtracted image for use in Fluxcal
+        # Save the background-subtracted image in a second image HDU
         dataname = "IMSUB"
         self.dataout.imageset(image_sub, imagename=dataname)
         self.dataout.setheadval('HISTORY', 'IMSUB',
                                 dataname=dataname)
-        #If save Background are true, this saves it as an HDU
+                                
+        #If save_background is true, save background image in a third image HDU
         if self.getarg('save_background'):
             dataname = "BACKGROUND"
             self.dataout.imageset(bkg_image, imagename=dataname)
             self.dataout.setheadval('HISTORY', 'BACKGROUND', 
                                     dataname=dataname)
-        #Add other headers and tables
+            dataname = "BACKGROUND RMS"
+            self.dataout.imageset(bkg_rms, imagename=dataname)
+            self.dataout.setheadval('HISTORY', 'BACKGROUND RMS', 
+                                    dataname=dataname)                                    
+        #Add header keywords
         self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)') 
         self.dataout.setheadval ('RHALFSTD', rhstd, 'STD of masked mean of half-power radius')
         self.dataout.setheadval ('ELONG',elmean, 'Mean elong of accepted sources')
-        self.dataout.tableset(sources_table.data,'LTS',sources_table.header)
-        self.dataout.tableset(sourceb_table.data, 'HTS', sourceb_table.header)
-        self.dataout.setheadval ('ETHRESH', extract_thresh, 'Extraction Thershold for Low Thershold Table')
-        self.dataout.setheadval ('BFACTOR', bright_factor, 'Multiplier to create High Threshold Table')
+        self.dataout.setheadval ('ETHRESH', extract_thresh, 'Extraction threshold for SEP_objects table')
        
-        ### If requested make a text file with the sources list
+        '''
+        If requested, make a text file with the selected sources list
+        in DS9 region file format
+        '''
+        
         if self.getarg('sourcetable'):
-
-            # Save region file
-
+            # Save sources from LTS table as a DS9 *.reg file
             filename = self.dataout.filenamebegin + 'FCALsources.reg'
             with open(filename, 'w+') as f:
                 f.write("# Region file format: DS9 version 4.1\n")
-                f.write("""global color=green dashlist=8 3 width=1 font="helvetica
-                 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1
-                  delete=1 include=1 source=1 image\n""")
+                f.write("""global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+                image \n""")
                 for i in range(len(objects['x'][seo_SN])):
-                    f.write("circle(%.7f,%.7f,0.005) # text={%i}\n"%(objects['x']
+                    f.write("circle(%.7f,%.7f,5) # text={%i}\n"%(objects['x']
                     [seo_SN][i],objects['y'][seo_SN][i],num[i]))
-
-            # Save the table
-            txtname = self.dataout.filenamebegin + 'FALsources.txt'
-            ascii.write(self.dataout.tableget('Low Threshold Sources'),txtname,
+                    
+            # Save the LTS table as a text file
+            txtname = self.dataout.filenamebegin + 'FCALsources.txt'
+            ascii.write(self.dataout.tableget('LTS'),txtname,
                         format = self.getarg('sourcetableformat'))
             self.log.debug('Saved sources table under %s' % txtname)
 
@@ -430,4 +414,6 @@ if __name__ == '__main__':
 
 '''HISTORY:
 2018-09-019 - Started based on Amanda's code. - Marc Berthoud
+2022-12-06 - Updated documentation. Eliminated HTS table. Added work-around for
+             "invalid aperture parameters" issue. - Al Harper
 '''
