@@ -46,7 +46,7 @@ import string # string library
 import logging # logging object library
 #import subprocess # running a subprocess library
 #import requests # http request library
-#import astropy.table # Read astropy tables
+import astropy.table # Read astropy tables
 import sep # Extracts Sources and Calculates Flux
 from astropy.io import fits
 from astropy.io import ascii
@@ -146,6 +146,8 @@ class StepSrcExtPy(StepParent):
         
         binning = self.datain.getheadval('XBIN')
         psimage = self.datain.image.copy()   # Get image data from fits file.
+        psimage = psimage + 1000.
+        
         # Byteswap if required
         maxexp = np.max(np.abs(np.frexp(psimage)[1]))
         self.log.debug('Initial max exponent value: %d' % maxexp)
@@ -153,15 +155,18 @@ class StepSrcExtPy(StepParent):
         if maxexp > 19:
             self.log.debug("Performing byte swap")
             image = psimage.byteswap(inplace=True)
+            print('Byte swap performed')
         else:
             self.log.debug("No byte swap required")
             image = psimage
+            print('No byte swap required')
         # Convert to float64, if necessary.
         self.log.debug("Initial data type: %s" % psimage.dtype)
         if psimage.dtype != np.float64:
             self.log.debug("Converting to float64")
             image = image.astype(np.float64)
-
+            print('Conversion to float64 required')
+                        
         '''Get variable values used to compute background (from paramlist).'''
         
         maskthresh = self.getarg('bkg_maskthreshold')
@@ -180,6 +185,7 @@ class StepSrcExtPy(StepParent):
         self.log.debug('Background image global')
         if bkg.globalback < np.nanmin(image) or bkg.globalback > np.nanmax(image):
             self.log.warn('Background has out of bounds values - image may not reduce')
+        print('globalback =', bkg.globalback)
             
         '''Subtract the background from the image. Calculate its median and mad.'''
         
@@ -275,6 +281,11 @@ class StepSrcExtPy(StepParent):
         # Now do the calculation.
         rh, rh_flag = sep.flux_radius(image_sub, objects['x'], objects['y'], rmax, frac)
 
+        '''Check for nans in rh. Diagnostic for issues experienced with some files.'''
+        
+        numnans = np.sum(np.isnan(rh))
+        print('Number of nans in rh =', numnans)
+
         '''
         Sort all the arrays that will go into the output table (including the
         list of extracted sources) by descending elliptical flux.
@@ -286,17 +297,12 @@ class StepSrcExtPy(StepParent):
         fluxerr_elip = np.take_along_axis(fluxerr_elip, rev_ind, axis = 0)
         rh = np.take_along_axis(rh, rev_ind, axis = 0)
         objects = np.take_along_axis(objects, rev_ind, axis = 0)
-
-        
-        # Select only the stars in the image: circular image and S/N > 10
-        #Establish an elongation limit
         
         '''
         Create data cuts aimed at identifying isolated stars in the object list.
         Select for circular, unsaturated stellar images with good signal to noise.
         List will be passed to StepFluxcal to match with GSC calibration stars,
         '''
-        
         elim=1.5    # Set limit on ellipticity of extracted, unsaturated sources
         # Create cuts
         a2b= (objects['a']/objects['b'])
@@ -305,18 +311,11 @@ class StepSrcExtPy(StepParent):
         smallmoment = (semimajor) & (semiminor)
         elong = a2b<elim
         seo_SN = (elong)  & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip > 0) & (flux_elip > 0) 
-
-
         self.log.debug('Selected %d low threshold stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
-        #self.log.debug('Selected %d high threshold stars from Source Extrator catalog' % np.count_nonzero(seo_SNB))
-
-        #Calculate mean RH, its STD, and mean Elongation to report in header
-        rhmean, rhstd = np.nanmean(rh[seo_SN]), mad_std(rh[seo_SN], ignore_nan = True)
-        elmean= np.nanmean(objects['a'][seo_SN]/objects['b'][seo_SN])
-
-        
-        '''Make table with the selected subset of data from SEP'''
-
+                        
+        '''
+        Make table with the selected subset of data from SEP
+        '''
         # Collect data columns
         cols = []
         num = np.arange(1, len(objects['x'][seo_SN]) + 1 )
@@ -341,6 +340,11 @@ class StepSrcExtPy(StepParent):
         # Make selected subset table
         c = fits.ColDefs(cols)
         sources_table = fits.BinTableHDU.from_columns(c)
+        
+        #Calculate mean RH, its STD, and mean a/b to report in header
+        rhmean = np.nanmean(rh[seo_SN])
+        rhstd = np.std(rh[seo_SN])
+        elmean= np.nanmean(objects['a'][seo_SN]/objects['b'][seo_SN])
 
         '''Make output DataFits object (self.dataout)'''
         
@@ -373,9 +377,9 @@ class StepSrcExtPy(StepParent):
             self.dataout.setheadval('HISTORY', 'BACKGROUND RMS', 
                                     dataname=dataname)                                    
         #Add header keywords
-        self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of stars (in pixels)') 
-        self.dataout.setheadval ('RHALFSTD', rhstd, 'STD of masked mean of half-power radius')
-        self.dataout.setheadval ('ELONG',elmean, 'Mean elong of accepted sources')
+        self.dataout.setheadval ('RHALF',rhmean, 'Mean half-power radius of LTS stars (pixels)') 
+        self.dataout.setheadval ('RHALFSTD', rhstd, 'std of half-power radii of LTS stars (pixels)')
+        self.dataout.setheadval ('ELONG',elmean, 'Mean elongation ratio of accepted sources')
         self.dataout.setheadval ('ETHRESH', extract_thresh, 'Extraction threshold for SEP_objects table')
        
         '''
@@ -392,7 +396,7 @@ class StepSrcExtPy(StepParent):
                 image \n""")
                 for i in range(len(objects['x'][seo_SN])):
                     f.write("circle(%.7f,%.7f,5) # text={%i}\n"%(objects['x']
-                    [seo_SN][i],objects['y'][seo_SN][i],num[i]))
+                    [seo_SN][i]+1,objects['y'][seo_SN][i]+1,num[i]))
                     
             # Save the LTS table as a text file
             txtname = self.dataout.filenamebegin + 'FCALsources.txt'
