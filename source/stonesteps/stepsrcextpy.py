@@ -152,7 +152,8 @@ class StepSrcExtPy(StepParent):
         maxexp = np.max(np.abs(np.frexp(psimage)[1]))
         self.log.debug('Initial max exponent value: %d' % maxexp)
         self.log.debug('Isnative: %s' % repr(psimage.dtype.isnative))
-        if maxexp > 19:
+        # if maxexp > 19:
+        if not psimage.dtype.isnative:
             self.log.debug("Performing byte swap")
             image = psimage.byteswap(inplace=True)
             print('Byte swap performed')
