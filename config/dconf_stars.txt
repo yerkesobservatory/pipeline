@@ -103,4 +103,6 @@
 [srcextpy]
     #Extraction Threshold, used during source extraction as the signal to noise ratio required to be recorded
     ext_thresh = 5.0
+    # Flag for making txt table of all sources
+    sourcetable = true
 
