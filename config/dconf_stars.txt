@@ -57,6 +57,7 @@
     # Enter your own API key from your astrometry.net account
     api_key = 'aavwhfejgcgqazqd'
 
+# Configuration for BDF
 [bdf]
     # filename that overrules the fit keys
     biasfile = $MASTER_BDF_FOLDER/Bias/*.fits
