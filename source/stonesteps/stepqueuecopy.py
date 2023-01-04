@@ -19,7 +19,10 @@
     * High gain file must have GAIN < 2.0 e/ADU and '.fits' at end of filename
     * The observer is the last '_' separated word in the filename
     * Input filename is of the form
-      m16_g-band_256s_bin1_2022-06-08_seo_apagul.fitsL.fits
+        m16_g-band_256s_bin1_2022-06-08_seo_apagul.fitsL.fits
+      or
+        m16_g-band_256s_bin1_2022-06-08_seo_apagul_0.fitsL.fits
+      for multi-file observations. No 'fitsL.' for high gain for no gain files.
     * Output filename is of the form
       m16_g-band_256s_bin1L_220608_104633_apagul_seo_0_RAW.fits
     * Observation folder stays unchanged and should have observer at the end
@@ -76,6 +79,8 @@ class StepQueueCopy(StepMIParent):
             'Output path will be OUTPATH/observer/observation/file.fits'])
         self.paramlist.append(['piperunpath', '/data/queue/piperuns',
             'Folder for the piperun files'])
+        self.paramlist.append(['gainlimit', 2.0,
+            'high / low gain threshold (set 0 when not using high/low gain)'])
 
     def run(self):
         """ Runs the data reduction algorithm. The self.datain is run
@@ -84,6 +89,7 @@ class StepQueueCopy(StepMIParent):
         # For each file add gain, observer to header, then make filename
         observers = [] # list of observers
         observations = {}
+        gainlimit = self.getarg('gainlimit')
         for dat in self.datain:
             # Get filepath / name
             filepath, filename = os.path.split(dat.filename)
@@ -91,47 +97,55 @@ class StepQueueCopy(StepMIParent):
             obspath = os.path.split(obspath)[0]
             obspath = os.path.split(obspath)[1]
 
-            # Check gain / remove end of filename
+            # Check gain
             # fitsL.fits i.e. bin1L files have gain 18.31
             # fits i.e. bin1H files have gain 0.86
-            try:
-                gain = dat.getheadval('GAIN')
-            except KeyError:
-                # all data is in the second header, load it
-                hdus = fits.open(dat.filename)
-                dat.header = hdus[1].header
-            if not (dat.getheadval('GAIN') > 2.0 and '.fitsL.fits' in filename):
-                self.log.warn("Image %s has mismatched gain/filename" % filename)
-            # Remove end of filename
+            if gainlimit:
+                try:
+                    gain = dat.getheadval('GAIN')
+                except KeyError:
+                    # all data is in the second header, load it
+                    hdus = fits.open(dat.filename)
+                    dat.header = hdus[1].header
+                if not (dat.getheadval('GAIN') > gainlimit and '.fitsL.fits' in filename):
+                    self.log.warn("Image %s has mismatched gain/filename" % filename)
+            # Remove end of filename (both .fits and .fitsL if present)
             fname = filename
             if fname[-5:] == '.fits':
                 fname = fname[:-5]
             if fname[-6:] == '.fitsL':
                 fname = fname[:-6]
-            # Get observer into OBSERVER keyword
+            # Get observer into OBSERVER keyword and optional file number
+            #   Check if filename ends with a number in which case name has
+            #   format _OBSERVER_FILENUMBER.fits
             observer = fname.split('_')[-1]
+            filenumber = 0
+            if observer.isdigit():
+                filenumber = int(observer)
+                observer = fname.split('_')[-2]
             dat.setheadval('OBSERVER',observer.capitalize())
             # Make output filename
             outfname = fname[:fname.index('_bin')+5] # get all to binN
-            try:
-                if dat.getheadval('GAIN') > 2.0: outfname += 'L_' # add high/low gain
-                else: outfname += 'H_'
-            except:
-                outfname += 'L_'
+            if gainlimit: # If high / low gain used, add high/low gain
+                try:
+                    if dat.getheadval('GAIN') > 2.0: outfname += 'L'
+                    else: outfname += 'H'
+                except:
+                    outfname += 'L'
             fdate = datetime.strptime(dat.getheadval('DATE-OBS'),'%Y-%m-%dT%H:%M:%S')
-            outfname += fdate.strftime('%y%m%d_%H%M%S_') # add date_time
-            outfname += observer + '_seo_0_RAW.fits' # and end of name
+            outfname += fdate.strftime('_%y%m%d_%H%M%S_') # add _date_time_
+            outfname += observer + f'_seo_{filenumber}_RAW.fits' # add observer_seo_filenumber.fits
             # Get output path
             outpath = os.path.join(self.getarg('outpath'), 
                                    observer.capitalize(), obspath)
             outfname = os.path.join(outpath,outfname)
             dat.setheadval('OUTFNAME', outfname)
             self.log.debug(f'{dat.filename} -> {outfname}')
-            # Add observer and observation
+            # Add observer to observers list
             if observer not in observers:
                 observers.append(observer)
                 observations[observer] = []
-            # Add observation
+            # Add observation to observations[observer] list
             if obspath not in observations[observer]:
                 observations[observer].append(obspath)
         # Print observers and observations
@@ -139,14 +153,14 @@ class StepQueueCopy(StepMIParent):
         # Make folders and piperun objects
         # Loop through observers
         for observer in observers:
-            # Make folder
+            # Make observer folder
             outpath = os.path.join(self.getarg('outpath'), 
                                    observer.capitalize())
             if not os.path.exists(outpath):
                 os.mkdir(outpath)
             # Loop through observations
             for obspath in observations[observer]:
-                # Make folder
+                # Make observation folder
                 outpath = os.path.join(self.getarg('outpath'),
                                        observer.capitalize(), obspath)
                 if not os.path.exists(outpath):

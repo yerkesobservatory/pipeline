@@ -406,6 +406,9 @@
 	outpath = /data/images/queue
 	# Path for piperun files
 	piperunpath = /data/images/queue/A_Test/piperuns
+	# Gain threshold for High / Low gain files.
+	#   If gainlimit = 0 -> no H/L gain files are used.
+	gainlimit = 0
 
 # Resample step configuration
 [resample]
