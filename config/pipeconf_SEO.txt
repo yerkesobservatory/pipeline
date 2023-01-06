@@ -4,16 +4,15 @@
 #   either make your own copy of this file and change it or make a deltaconfig.
 #
 #   2008-11-3 Marc Berthoud Version 0.1: Configuration file for Pipeline Testing
-#   2013-10-09 Nicholas Chapman: Made a config validation file
 #   2017-07-28 Atreyo Pal: added bdf section, removed KEYS)
 #   2020-08 Josh Garza, Lorenzo Orders: Added new keywords for Astrometry* and BiasDarkFlat
 
 # General Section: configuration of the pipeline
 [general]
     # list of packages to look for pipe step modules (order matters)
-    steppacks = darepype.drp, stonesteps, darepype.drp, darepype.utils
+    steppacks = darepype.drp, stonesteps, darepype.utils
     # list of steps for unknown instrument mode
-    stepslist = StepLoadStoneedge, StepDemod
+    stepslist = load, StepRGB # Just make a .jpg image
 
 ### Environment Variables
 #   Instead of using environment variables you can also enter the information
@@ -21,8 +20,8 @@
 [envars]
     # Master and Raw Bias, Dark, Flat Folder
     #   Uncomment and set these to use environment variables for [masterbias/dark/flat]
-    #MASTER_BDF_FOLDER = /path/to/master/bias/dark/flats 
-    #RAW_BDF_FOLDER = /path/to/raw/bias/dark/flats
+    MASTER_BDF_FOLDER = /path/to/master/bias/dark/flats 
+    RAW_BDF_FOLDER = /path/to/raw/bias/dark/flats
     # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
     SEO_AUXFOLDER = /path/to/auxfiles
 
@@ -37,18 +36,19 @@
     filenameend = '\.fits(\.gz)?\Z' # .fits with optional .gz
     # What pipedata objects to use for opening files with DataParent.load()
     dataobjects = DataFits, DataText
-    # Regexp to specify file number in a file (not used for SEO)
-    filenum = ''
+    # Regexp to specify file number in a file:
+    #   last number(range) before optional filetype and '.fits'
+    filenum = '(?:((?:\\d+-)?\\d+)(?:_[A-Z]+)?\\.fits)'
 
 # Pipeline Section: Configuration of the pipeline
 [pipeline]
     # Number of final results to save
-    finalsaveN = 5
+    finalsaveN = 1
 
-### Pipelines Section: configuration for individual pipeline modes
+### Pipelines Modes Section: configuration for individual pipeline modes
 
-# Stoneedge User Mode - for reducing data on your own computer
-#     Use this if you don't have sextractor installed
+# Stoneedge User Mode for CCD - for reducing data on your own computer
+#     Use this if you don't have astrometry / sextractor installed
 [mode_seo_user_ccd]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
@@ -57,7 +57,8 @@
     stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryWeb, save, StepFluxCalSex, save, StepRGB
 
 # Stoneedge User HDR Mode - for reducing data on your own computer
-#     Use this if you don't have sextractor installed and have HDR images
+#     Use this if you don't have astrometry / sextractor installed
+#     and have HDR (High Dynamic Range i.e. low and high gain) images
 [mode_seo_user_hdr]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
@@ -83,7 +84,7 @@
 
 # Stoneedge Server HDR Mode - for reducing HDR data on the server
 #     Use this if you have sextractor and astrometry installed and are
-#     reducing HDR (High Dynamic Range i.e. low and high gain) data
+#     reducing HDR (High Dynamic Range i.e. low and high gain) images
 [mode_seo_server_hdr]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
@@ -97,8 +98,8 @@
         groupkeys = DATE-OBS
         saveoutput = True
 
-# Stoneedge Server Mode - for reducing data on the server from 2020
-#     Use this if you have sextractor and astrometry installed but no HDR images
+# Stoneedge Server Mode for CCD - for reducing CCD data on the server 
+#     Use this if you have sextractor and astrometry installed and CCD images
 [mode_seo_server_ccd]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
@@ -107,18 +108,6 @@
     stepslist = load, StepAddKeys, StepBiasDarkFlat, save, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
     # list of steps
     #stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
-
-# Sort Observation Mode
-# Distributes pictures in itzamna into one folder for each object. To be run before regular reduction.
-[mode_sortobs]
-    datakeys = "OBSERVAT=StoneEdge"
-    stepslist = StepLoadInput, StepSortObs, save
-    [[loadinput]]
-        # Filename for input, can contain glob symbols and datetime keys
-        filelocation = /data/images/StoneEdge/0.5meter/2021/%Y-%m-%d/itzamna/*RAW.fits.gz
-        #filelocation = /data/images/StoneEdge/0.5meter/2021/2021-04-20/itzamna/*RAW.fits.gz
-        # List of strings which filename must not contain to be loaded (ignore BDFs)
-        fileexclude = bias_|dark_|flat_
 
 # Master Bias Mode - to make master bias files
 [mode_masterbias]
@@ -165,16 +154,6 @@
         redstepname = StepMasterFlat
         groupkeys = XBIN|FILTER
         
-# Copy Queue data
-[mode_copyqueue]
-    stepslist = StepLoadInput, StepQueueCopy
-    # Loadinput step details
-    [[loadinput]]
-        # Location of files
-        filelocation = '/data/public/queue/*/*%Y-%m-%d*/raw/science/*.fits'
-        fileexclude = 'bias|dark|flat'		
-        headeronly = True
-
 ### Pipe Steps Section
 #   One entry for each pipe step which is used
 #   Please list steps ALPHABETICALLY (makes simpler to find them)
@@ -257,7 +236,7 @@
     # Reload: Set to True to look for new bias files for every input
     reload = T
 
-# Datagroup step configuration
+# Datagroup step configuration (set up to reduce focus data)
 [datagroup]
     # data reduction step to use
     redstepname = StepMIParent
@@ -400,16 +379,6 @@
     # i.e. number of overscaned columns = number of columns / this fraction
     ovrscncolsfrac = 257
 
-# Queue Copy step configuration
-[queuecopy]
-	# Output path
-	outpath = /data/images/queue
-	# Path for piperun files
-	piperunpath = /data/images/queue/A_Test/piperuns
-	# Gain threshold for High / Low gain files.
-	#   If gainlimit = 0 -> no H/L gain files are used.
-	gainlimit = 0
-
 # Resample step configuration
 [resample]
     # Downsample factor - integer
@@ -417,11 +386,6 @@
     # list of header keywords to divide by samplefac
     divkeys = CRPIX1, CRPIX2
     multkeys = PIXSIZE1, PIXSIZE2, CD1_1, CD1_2, CD2_1, CD2_2
-
-# SortObs step configuration
-[sortobs]
-    # Valid Filters
-    pattern = '(^.+_([gri]-band|oiii|sii|clear|h-alpha))'
 
 # SrcExtPy step configuration
 [srcextpy]
