@@ -150,6 +150,11 @@ class StepQueueCopy(StepMIParent):
                 observations[observer].append(obspath)
         # Print observers and observations
         self.log.info(f'Observer {observer}: {" ".join(observations[observer])}')
+        # select pipemode based on gainlimit
+        if gainlimit:
+            pipemode = 'seo_server_hdr'
+        else:
+            pipemode = ' seo_server_ccd'
         # Make folders and piperun objects
         # Loop through observers
         for observer in observers:
@@ -176,7 +181,7 @@ class StepQueueCopy(StepMIParent):
                     f'pythonpath = /data/scripts/pipeline/source\n'
                     f'pipeconf = /data/scripts/pipeline/config/pipeconf_SEO.txt\n'
                     f'/data/scripts/pipeline/config/dconf_stars.txt\n'
-                    f'pipemode = seo_server_hdr\n'
+                    f'pipemode = {pipemode}\n'
                     f'loglevel = DEBUG\n'
                     f'logfile = /data/scripts/pipeline/PipeLineLog.txt\n'
                     f'{os.path.join(outpath, obspath+"_log.txt")}\n' # Additional logfile

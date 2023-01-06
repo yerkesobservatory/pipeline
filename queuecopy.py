@@ -6,6 +6,9 @@
 """ QUEUE COPY
     ==========
 
+    WARNING: As of Summer 2022 this program is not being used anymore.
+             Use mode_copyqueue with StepQueueCopy instead.
+
     This program copies Stoneedge data from the queue folder on stars:
     - Science raw data gets copied into the data folder and if not available
       .RAW.fits is attached to the filename.

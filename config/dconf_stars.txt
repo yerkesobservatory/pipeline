@@ -9,10 +9,10 @@
     # Master Bias, Dark, Flat Folder
     #MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2022/m5C
     #MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2022/Masters-15C 
-    MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2022/MastersCCD
+    MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2023/MastersCCD
     # Path for reducing BDF Files (use one of them)
-    RAW_BDF_FOLDER = '/data/images/StoneEdge/0.5meter/2022/2022-11-02' # for given date
-    #RAW_BDF_FOLDER = '/data/images/StoneEdge/0.5meter/2022/%Y-%m-%d' # for current date
+    #RAW_BDF_FOLDER = '/data/images/StoneEdge/0.5meter/2022/2022-11-02' # for given date
+    RAW_BDF_FOLDER = '/data/images/StoneEdge/0.5meter/%Y/%Y-%m-%d' # for current date
     # Auxiliary file folder - NEEDS TO BE SET as this will not work for most users
     SEO_AUXFOLDER = /data/scripts/pipeline/auxfiles
 
@@ -32,7 +32,7 @@
 # Copy Queue data (only needed when debugging)x
 #[mode_copyqueue]
 #    [[loadinput]]
-#        filelocation = '/data/public/queue/*/*2022-07-15_seo_*/raw/science/*.fits'
+#        filelocation = '/data/public/queue/*/*2022-12-15_seo_*/raw/science/*.fits'
 
 # Mode to reduce after BDF/HDR step
 [mode_postbdf]
