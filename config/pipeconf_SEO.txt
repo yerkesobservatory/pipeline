@@ -434,7 +434,7 @@
 # instead (This only works if the other keywords starts with an alphabetic
 # character).
 [header]
-    OBSERVAT = "Stone Edge"
+    OBSERVAT = "'Stone Edge'"
     COMPLETE = 1
     
 # Treatement for table values when combining images
