@@ -60,7 +60,7 @@
 #     Use this if you don't have astrometry / sextractor installed
 #     and have HDR (High Dynamic Range i.e. low and high gain) images
 [mode_seo_user_hdr]
-# List of keyword=values required in file header to select this pipeline mode
+    # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
@@ -76,7 +76,7 @@
 #     This will skip several steps which require configuration settings for
 #     the computer you're running the pipeline on.
 [mode_seo_short]
-# List of keyword=values required in file header to select this pipeline mode
+    # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
@@ -86,7 +86,7 @@
 #     Use this if you have sextractor and astrometry installed and are
 #     reducing HDR (High Dynamic Range i.e. low and high gain) images
 [mode_seo_server_hdr]
-# List of keyword=values required in file header to select this pipeline mode
+    # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
@@ -111,6 +111,10 @@
 
 # Master Bias Mode - to make master bias files
 [mode_masterbias]
+    # List of keyword=values required in file header to select this pipeline mode
+    #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
+    datakeys = "OBSERVAT=StoneEdge"
+    # list of steps
     stepslist = StepLoadInput, StepDataGroup, save
     #stepslist = StepLoadInput, StepOverCut, save, StepDataGroup, save # Pre 2022 version
     # BDF load step configuration
@@ -126,6 +130,10 @@
 
 # Master Dark Mode - to make master dark files
 [mode_masterdark]
+    # List of keyword=values required in file header to select this pipeline mode
+    #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
+    datakeys = "OBSERVAT=StoneEdge"
+    # list of steps
     stepslist = StepLoadInput, StepDataGroup, save
     # stepslist = StepLoadInput, StepOverCut, save, StepDataGroup, save # Pre 2022 version
     # BDF load step configuration
@@ -141,6 +149,10 @@
 
 # Master Flat Mode - to make master flat files
 [mode_masterflat]
+    # List of keyword=values required in file header to select this pipeline mode
+    #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
+    datakeys = "OBSERVAT=StoneEdge"
+    # list of steps
     stepslist = StepLoadInput, StepDataGroup, save
     #stepslist = StepLoadInput, StepOverCut, save, StepDataGroup, save # Pre 2022 version
     # BDF load step configuration
