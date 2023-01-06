@@ -422,7 +422,7 @@
 # instead (This only works if the other keywords starts with an alphabetic
 # character).
 [header]
-    INSTMODE = "stoneedge"
+    OBSERVAT = "StoneEdge"
     COMPLETE = 1
     
 # Treatement for table values when combining images
