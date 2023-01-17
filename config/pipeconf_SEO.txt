@@ -52,7 +52,7 @@
 [mode_seo_user_ccd]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
-    datakeys = "OBSERVAT=StoneEdge"
+    datakeys = "OBSERVAT=Stoneedge"
     # list of steps
     stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryWeb, save, StepFluxCalSex, save, StepRGB
 
@@ -62,7 +62,7 @@
 [mode_seo_user_hdr]
     # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
-    datakeys = "OBSERVAT=StoneEdge"
+    datakeys = "OBSERVAT=Stoneedge"
     # list of steps
     stepslist = load, StepAddKeys, StepDataGroup, save, StepSrcExtPy, save, StepAstrometryWeb, save, StepFluxCalSex, save, StepRGB
 	# Settings for StepDataGroup to run StepHdr
@@ -78,7 +78,7 @@
 [mode_seo_short]
     # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
-    datakeys = "OBSERVAT=StoneEdge"
+    datakeys = "OBSERVAT=Stoneedge"
     # list of steps
     stepslist = load, StepAddKeys, save, StepHotpix, save, StepRGB
 
@@ -88,7 +88,7 @@
 [mode_seo_server_hdr]
     # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
-    datakeys = "OBSERVAT=StoneEdge"
+    datakeys = "OBSERVAT=Stoneedge"
     # list of steps
     stepslist = load, StepAddKeys, StepDataGroup, save, StepHotpix, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
 
@@ -103,7 +103,7 @@
 [mode_seo_server_ccd]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
-    datakeys = "OBSERVAT=StoneEdge"
+    datakeys = "OBSERVAT=Stoneedge"
     # list of steps
     stepslist = load, StepAddKeys, StepBiasDarkFlat, save, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
     # list of steps
@@ -113,7 +113,7 @@
 [mode_masterbias]
     # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
-    datakeys = "OBSERVAT=StoneEdge"
+    datakeys = "OBSERVAT=Stoneedge"
     # list of steps
     stepslist = StepLoadInput, StepDataGroup, save
     #stepslist = StepLoadInput, StepOverCut, save, StepDataGroup, save # Pre 2022 version
@@ -132,7 +132,7 @@
 [mode_masterdark]
     # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
-    datakeys = "OBSERVAT=StoneEdge"
+    datakeys = "OBSERVAT=Stoneedge"
     # list of steps
     stepslist = StepLoadInput, StepDataGroup, save
     # stepslist = StepLoadInput, StepOverCut, save, StepDataGroup, save # Pre 2022 version
@@ -151,7 +151,7 @@
 [mode_masterflat]
     # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
-    datakeys = "OBSERVAT=StoneEdge"
+    datakeys = "OBSERVAT=Stoneedge"
     # list of steps
     stepslist = StepLoadInput, StepDataGroup, save
     #stepslist = StepLoadInput, StepOverCut, save, StepDataGroup, save # Pre 2022 version
