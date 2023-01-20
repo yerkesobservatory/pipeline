@@ -67,6 +67,7 @@
     #astrocmd = '/data/scripts/astrometry/install/bin/solve-field --batch --no-verify --crpix-center --no-plots --overwrite --continue --skip-solved --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none --pnm none --scale-units arcsecperpix --cpulimit 300 --guess-scale %s --out %s' # for 2017 camera 1024x1024 pixels with changes by Matt
     #astrocmd = '/data/scripts/astrometry/install/bin/solve-field         --no-verify --crpix-center --no-plots --overwrite --continue               --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none --pnm none --scale-units arcsecperpix --cpulimit 300 --scale-low 0.5 --scale-high 2.0 --sort-column FLUX %s --out %s' # same as above with changes as suggested by Emil (see projects page) - didn't use --no-fits2fits since our solve-field doesn't know this option
     astrocmd = '/data/scripts/astrometry/install/bin/solve-field         --no-verify --crpix-center --no-plots --overwrite --continue               --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none            --scale-units arcsecperpix --cpulimit 300 --scale-low 0.5 --scale-high 2.0 --sort-column FLUX %s --out %s' # removed --pnm option since it treats "none" as a filename
+    timeout = 120
 
 # Web Astrometry Step Configuration
 [astrometryweb]
