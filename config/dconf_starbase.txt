@@ -19,8 +19,5 @@
     astrocmd = 'solve-field         --no-verify --crpix-center --no-plots --overwrite --continue               --index-xyls none --axy none --temp-axy --solved none --match none --rdls none --corr none            --scale-units arcsecperpix --cpulimit 300 --scale-low 0.5 --scale-high 2.0 --sort-column FLUX %s --out %s' # removed --pnm option since it treats "none" as a filename
 
 # Web Astrometry Step Configuration
-[astrometryweb]
-    # API key used for interfacing with Astrometry.net
-    # USE THE API KEY BELOW ONLY FOR THE STARS SERVER
-    # Enter your own API key from your astrometry.net account
-    api_key = 'aavwhfejgcgqazqd'
+# THIS IS MISSING ON PURPOSE: Starbase has astrometry.net installed
+#     So use StepAstrometryLocal instead.
