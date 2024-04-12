@@ -7,7 +7,7 @@
 # Environment Variables
 [envars]
     # Master Bias, Dark, Flat Folder
-    MASTER_BDF_FOLDER = /data/Archive/StoneEdge0.5m/2022/Masters-15C 
+    MASTER_BDF_FOLDER = /data/Archive/StoneEdge0.5m/2024/MastersCCD 
     # Path for reducing BDF Files (use one of them)
     #RAW_BDF_FOLDER = '/data/images/StoneEdge/0.5meter/2021/2021-04-26' # for given date
     RAW_BDF_FOLDER = '/data/images/StoneEdge/0.5meter/2021/%Y-%m-%d' # for current date
