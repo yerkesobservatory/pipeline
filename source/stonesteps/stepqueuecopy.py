@@ -91,11 +91,13 @@ class StepQueueCopy(StepMIParent):
         observations = {}
         gainlimit = self.getarg('gainlimit')
         for dat in self.datain:
-            # Get filepath / name
+            # Get filepath / name from
+            # /public/queue/user/m42_60s_bin1_230201_041748_user_seo/raw/science
             filepath, filename = os.path.split(dat.filename)
-            obspath = os.path.split(filepath)[0]
-            obspath = os.path.split(obspath)[0]
-            obspath = os.path.split(obspath)[1]
+            obspath = os.path.split(filepath)[0] # remove science
+            obspath = os.path.split(obspath)[0] # remove raw
+            observer,obspath = os.path.split(obspath) # folder name for obs
+            observer = os.path.split(observer)[1] # observer name
 
             # Check gain
             # fitsL.fits i.e. bin1L files have gain 18.31
@@ -107,8 +109,10 @@ class StepQueueCopy(StepMIParent):
                     # all data is in the second header, load it
                     hdus = fits.open(dat.filename)
                     dat.header = hdus[1].header
-                if not (dat.getheadval('GAIN') > gainlimit and '.fitsL.fits' in filename):
-                    self.log.warn("Image %s has mismatched gain/filename" % filename)
+                if not (dat.getheadval('GAIN') > 
+                        gainlimit and '.fitsL.fits' in filename):
+                    self.log.warn("Image %s has mismatched gain/filename" %
+                                  filename)
             # Remove end of filename (both .fits and .fitsL if present)
             fname = filename
             if fname[-5:] == '.fits':
@@ -116,14 +120,12 @@ class StepQueueCopy(StepMIParent):
             if fname[-6:] == '.fitsL':
                 fname = fname[:-6]
             # Get observer into OBSERVER keyword and optional file number
-            #   Check if filename ends with a number in which case name has
-            #   format _OBSERVER_FILENUMBER.fits
-            observer = fname.split('_')[-1]
             filenumber = 0
-            if observer.isdigit():
-                filenumber = int(observer)
-                observer = fname.split('_')[-2]
             dat.setheadval('OBSERVER',observer.capitalize())
+            if fname[-1].isnumeric():
+                filenumber = int(fname.split('_')[-1])
+            else:
+                filenumber = -1
             # Make output filename
             outfname = fname[:fname.index('_bin')+5] # get all to binN
             if gainlimit: # If high / low gain used, add high/low gain
@@ -134,7 +136,12 @@ class StepQueueCopy(StepMIParent):
                     outfname += 'L'
             fdate = datetime.strptime(dat.getheadval('DATE-OBS'),'%Y-%m-%dT%H:%M:%S')
             outfname += fdate.strftime('_%y%m%d_%H%M%S_') # add _date_time_
-            outfname += observer + f'_seo_{filenumber}_RAW.fits' # add observer_seo_filenumber.fits
+            outfname += observer + '_seo' # add observer_seo
+            # add (_filenumber)_RAW.fits
+            if filenumber > -1:
+                outfname += f'_{filenumber}_RAW.fits'
+            else:
+                outfname += f'_RAW.fits'
             # Get output path
             outpath = os.path.join(self.getarg('outpath'), 
                                    observer.capitalize(), obspath)
@@ -195,7 +202,8 @@ class StepQueueCopy(StepMIParent):
         # Copy the files
         for dat in self.datain:
             # Set up command
-            shutil.copy(dat.filename, dat.getheadval('OUTFNAME'))               
+            shutil.copy(dat.filename, dat.getheadval('OUTFNAME'))
+            #pass
         # Populate dataout (just so there's something in it)
         self.dataout = self.datain[0]
     

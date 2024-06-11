@@ -34,7 +34,7 @@ outpath = '/data/images/queue'
 # piperunpath: folder for the piperun files
 piperunpath = '/data/images/queue/A_Test/piperuns'
 # pythonpath
-pypath = '/data/scripts/DataReduction/source'
+pypath = '/data/scripts/pipeline/source'
 
 ### Preparation
 # Imports
@@ -53,7 +53,7 @@ from darepype.drp.datafits import DataFits
 logging.basicConfig(level = logging.DEBUG)
 log=logging.getLogger('QueueCopy')
 log.setLevel(logging.DEBUG)
-log.info('Logging Set Up')
+log.info('Logging Set Up. Argv = ' + ', '.join(sys.argv))
 
 # Read Source Folders
 if len(sys.argv) > 1:
@@ -169,12 +169,12 @@ for source_folder in source_folders:
     text = """# === Piperun file for %s ===
 
 # !!! Auto-generated Pipeconf file - may be overwritten !!!
-pythonpath = /data/scripts/DataReduction/source
-pipeconf = /data/scripts/DataReduction/config/pipeconf_SEO.txt
-/data/scripts/DataReduction/config/dconf_stars.txt
-pipemode = seo_server
+pythonpath = /data/scripts/pipeline/source
+pipeconf = /data/scripts/pipeline/config/pipeconf_SEO.txt
+/data/scripts/pipeline/config/dconf_stars.txt
+pipemode = seo_server_ccd
 loglevel = DEBUG
-logfile = /data/scripts/DataReduction/PipeLineLog.txt
+logfile = /data/scripts/pipeline/PipeLineLog.txt
 """ % (runame)
     # Add custom log file
     #logfile = '%s_%s_%d_%s_pipelog.txt' % (suser, sobject, expt, sdate )

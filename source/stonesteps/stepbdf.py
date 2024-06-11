@@ -61,7 +61,7 @@ from darepype.drp import DataFits # pipeline data object class
 from darepype.drp.stepmiparent import StepParent # pipestep Multi-Input parent
 from darepype.tools.steploadaux import StepLoadAux # pipestep steploadaux object class
 from astropy.convolution import Gaussian2DKernel, interpolate_replace_nans # For masking/replacing
-from skimage.measure import block_reduce # for optional downsampling
+#from skimage.measure import block_reduce # for optional downsampling
 import astroscrappy # for optional cosmic-ray removal
 
 

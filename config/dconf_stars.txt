@@ -9,7 +9,7 @@
     # Master Bias, Dark, Flat Folder
     #MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2022/m5C
     #MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2022/Masters-15C 
-    MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2023/MastersCCD
+    MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2024/MastersCCD
     # Path for reducing BDF Files (use one of them)
     #RAW_BDF_FOLDER = '/data/images/StoneEdge/0.5meter/2022/2022-11-02' # for given date
     RAW_BDF_FOLDER = '/data/images/StoneEdge/0.5meter/%Y/%Y-%m-%d' # for current date
@@ -35,8 +35,8 @@
     # Loadinput step details
     [[loadinput]]
         # Location of files
-        filelocation = '/data/public/queue/*/*%Y-%m-%d*/raw/science/*.fits'
-        #filelocation = '/data/public/queue/*/*2022-12-15_seo_*/raw/science/*.fits'
+        filelocation = '/data/public/queue/*/*%y%m%d*/raw/science/*.fits'
+        #filelocation = '/data/public/queue/*/*_230201_*/raw/science/*.fits'
         fileexclude = 'bias|dark|flat'		
         headeronly = True
 
@@ -47,7 +47,7 @@
     stepslist = StepLoadInput, StepSortObs, save
     [[loadinput]]
         # Filename for input, can contain glob symbols and datetime keys
-        filelocation = /data/images/StoneEdge/0.5meter/2021/%Y-%m-%d/itzamna/*RAW.fits.gz
+        filelocation = /data/images/StoneEdge/0.5meter/2024/%Y-%m-%d/itzamna/*RAW.fits.gz
         #filelocation = /data/images/StoneEdge/0.5meter/2021/2021-04-20/itzamna/*RAW.fits.gz
         # List of strings which filename must not contain to be loaded (ignore BDFs)
         fileexclude = bias_|dark_|flat_
