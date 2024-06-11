@@ -28,7 +28,8 @@
         An image of the background provided by the function sep.Background().
         An image of the rms background noise.
 
-    For more info check out the read the docs for SEP: https://sep.readthedocs.io/
+    For more info check out the read the docs for SEP: https://sep.readthedocs.io
+      Also sep uses Sextractor, more info at https://astromatic.github.io/sextractor
     
     Bugfixes:
     - Exception: object deblending overflow: limit of 1024 sub-objects reached while
