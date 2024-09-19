@@ -425,6 +425,22 @@
     save_background = true
     #The image most likely wants the bytes to be swapped during analysis, but some formats do not want them swapped
     byte_swap = true
+    
+# StatsMqtt step configuration
+[statsmqtt]
+	# List of step identifiers to log
+	steplist = RAW BDF WCS FCAL
+	# List of header keywords to report on
+	keylist = OBJECT FILTER EXPTIME
+	# Url for MQTT broker
+	broker = starbase.uchicago.edu
+	# port for MQTT
+	port = 8883
+	# Username and password, separated by '|'. Alternatively,
+	# full path of a file containing this information
+	userpass = username|password
+	# MQTT  topic to publish under
+	topic = seo/server/pipeline
 
 ### Data Handling Section
 
