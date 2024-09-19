@@ -172,7 +172,7 @@ for source_folder in source_folders:
 pythonpath = /data/scripts/pipeline/source
 pipeconf = /data/scripts/pipeline/config/pipeconf_SEO.txt
 /data/scripts/pipeline/config/dconf_stars.txt
-pipemode = seo_server_ccd
+pipemode = seo_server_queue_ccd
 loglevel = DEBUG
 logfile = /data/scripts/pipeline/PipeLineLog.txt
 """ % (runame)

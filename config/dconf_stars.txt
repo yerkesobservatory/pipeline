@@ -28,7 +28,7 @@
     #stepslist = load, StepAddKeys, StepBdf, save, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
     # list of steps
     #stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
-    
+
 # Stoneedge Queue Server Mode - for reducing queue data
 [mode_seo_server_queue_ccd]
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
