@@ -9,7 +9,8 @@
 
 ### Setup
 export PATH=/usr/lib64/qt-3.3/bin:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:$HOME/bin:$PATH
-export PYTHONPATH=/data/scripts/pipeline/source
+# Have extra /darepype path to use non-published version of darepype
+export PYTHONPATH=/home/berthoud/darepype:/data/scripts/pipeline/source
 
 DRPath=/usr/local/lib/python3.6/site-packages/darepype
 
