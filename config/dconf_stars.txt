@@ -114,3 +114,6 @@
     # Flag for making txt table of all sources
     sourcetable = true
 
+# MQTT Statistics
+[statsmqtt]
+    userpass = /home/berthoud/mqttkey.txt
