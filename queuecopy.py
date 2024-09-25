@@ -124,6 +124,9 @@ for source_folder in source_folders:
     sobject = ''.join(ssplit[2:-1]) # i.e. NGC_2129
     # Get list of files in raw folder
     sfiles = glob.glob(os.path.join(source_folder,'raw/science','*.fits') )
+    # Keep only files with size > 0
+    sfiles = [sf for sf in sfiles if os.stat(sf).st_size]
+    # Make sure there's any files left
     if len(sfiles) < 1:
         log.error("No files found for folder %s" % source_folder)
         continue
