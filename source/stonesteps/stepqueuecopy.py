@@ -189,6 +189,7 @@ class StepQueueCopy(StepMIParent):
                     f'pipeconf = /data/scripts/pipeline/config/pipeconf_SEO.txt\n'
                     f'/data/scripts/pipeline/config/dconf_stars.txt\n'
                     f'pipemode = {pipemode}\n'
+                    f'ignorebad = True'
                     f'loglevel = DEBUG\n'
                     f'logfile = /data/scripts/pipeline/PipeLineLog.txt\n'
                     f'{os.path.join(outpath, obspath+"_log.txt")}\n' # Additional logfile
