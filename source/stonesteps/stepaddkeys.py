@@ -131,7 +131,7 @@ class StepAddKeys(StepParent):
                 loc = fileonly[:match.start()].rfind('_')
                 if loc > 0:
                     objname = fileonly[:loc]
-            if len(objname):
+            if not len(objname):
                 objname = fileonly.split('_')[0]
             self.log.debug('Object from Filename = ' + objname)
         if objname.lower() in  ['', 'unk', 'unknown']:
