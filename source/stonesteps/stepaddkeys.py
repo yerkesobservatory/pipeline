@@ -128,7 +128,7 @@ class StepAddKeys(StepParent):
             # Getting the object from the file name (all before first "_filter_\d+s_")
             match = re.search('_\\d+s_',fileonly)
             if match:
-                loc = rfind(fileonly[:match.start()])
+                loc = fileonly[:match.start()].rfind('_')
                 if loc > 0:
                     objname = fileonly[:loc]
             if len(objname):
