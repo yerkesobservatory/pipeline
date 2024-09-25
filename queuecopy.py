@@ -173,9 +173,9 @@ pythonpath = /data/scripts/pipeline/source
 pipeconf = /data/scripts/pipeline/config/pipeconf_SEO.txt
 /data/scripts/pipeline/config/dconf_stars.txt
 pipemode = seo_server_queue_ccd
+ignorebad = True
 loglevel = DEBUG
 logfile = /data/scripts/pipeline/PipeLineLog.txt
-ignorebad = True
 """ % (runame)
     # Add custom log file
     #logfile = '%s_%s_%d_%s_pipelog.txt' % (suser, sobject, expt, sdate )
