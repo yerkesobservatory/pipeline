@@ -124,13 +124,16 @@ class StepAddKeys(StepParent):
         except KeyError:
             pass # b/c got_object is already false
         if not got_object:
-            # Getting the object from the file name (all before first "_\d+s_")
+            objname = ''
+            # Getting the object from the file name (all before first "_filter_\d+s_")
             match = re.search('_\\d+s_',fileonly)
             if match:
-                objname = fileonly[:match.start()]
-            else:
+                loc = rfind(fileonly[:match.start()])
+                if loc > 0:
+                    objname = fileonly[:loc]
+            if len(objname):
                 objname = fileonly.split('_')[0]
-            self.log.debug('Object from Filename = ' + fileonly.split('_')[0])
+            self.log.debug('Object from Filename = ' + objname)
         if objname.lower() in  ['', 'unk', 'unknown']:
             # Finds and formats RA/DEC values from the fits header if present,
             # if not sets objname to unknown
