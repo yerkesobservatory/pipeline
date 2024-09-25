@@ -178,8 +178,13 @@ class StepAddKeys(StepParent):
         except KeyError:
             pass # b/c got_filter is already false
         if not got_filter:
+            # Getting the filter from the file name ( '_' separated part before -\d+s_ )
+            match = re.search('_\\d+s_',fileonly)
+            if match:
+                filtername = fileonly[:match.start()].split('_')[-1]
             # Getting the filter from the file name (second '_' separated part)
-            filtername = fileonly.split('_')[1]
+            else:
+                filtername = fileonly.split('_')[1]
 #             filtername = 'unknown' # in case no filter name is found
 #             for f in self.getarg('filternames'):
 #                 if f in fileonly:
