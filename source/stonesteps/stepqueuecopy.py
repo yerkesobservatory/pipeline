@@ -38,6 +38,7 @@ from darepype.drp.stepmiparent import StepMIParent
 from datetime import datetime
 import os
 import shutil
+import unicodedata
 from astropy.io import fits
 
 class StepQueueCopy(StepMIParent):
@@ -142,10 +143,18 @@ class StepQueueCopy(StepMIParent):
                 outfname += f'_{filenumber}_RAW.fits'
             else:
                 outfname += f'_RAW.fits'
+            # Replace unicode chars and spaces from observer, obspath and filename
+            observer = unicodedata.normalize('NFKC', observer)
+            observer = observer.replace(' ','_')
+            obspath = unicodedata.normalize('NFKC', obspath)
+            obspath = obspath.replace(' ','_')
+            filename = unicodedata.normalize('NFKC', filename)
+            filename = filename.replace(' ','_')
             # Get output path
             outpath = os.path.join(self.getarg('outpath'), 
                                    observer.capitalize(), obspath)
             outfname = os.path.join(outpath,outfname)
+            # Store outfname in header
             dat.setheadval('OUTFNAME', outfname)
             self.log.debug(f'{dat.filename} -> {outfname}')
             # Add observer to observers list
