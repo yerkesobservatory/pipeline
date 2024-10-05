@@ -36,7 +36,7 @@
     # list of steps
     stepslist = load, StepAddKeys, StepBdf, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepStatsMqtt, StepRGB
     [[statsmqtt]]
-        topic = seo/server/queuepipe
+        topic = seo/stars/queuepipe
 
     
 # Copy Queue data
