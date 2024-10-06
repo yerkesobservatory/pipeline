@@ -230,6 +230,7 @@ if __name__ == '__main__':
     StepQueueCopy().execute()
 
 """ === History ===
+* 2024-10-5: Marc Berthoud - remove unicode chars and spaces from filepathnames
 * 2022-6-27: Marc Berthoud - First Version
   * Development thoughts:
     * Stepdatagroup can not be used since header keys may be missing
