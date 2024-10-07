@@ -431,7 +431,7 @@
 	# List of step identifiers to log
 	steplist = RAW BDF WCS FCAL
 	# List of header keywords to report on
-	keylist = OBJECT FILTER EXPTIME
+	keylist = OBJECT OBSERVER FILTER EXPTIME
 	# Url for MQTT broker
 	broker = starbase.uchicago.edu
 	# port for MQTT

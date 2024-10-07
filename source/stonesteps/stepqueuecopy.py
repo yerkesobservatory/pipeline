@@ -170,7 +170,7 @@ class StepQueueCopy(StepMIParent):
         if gainlimit:
             pipemode = 'seo_server_hdr'
         else:
-            pipemode = ' seo_server_ccd'
+            pipemode = ' seo_server_queue_ccd'
         # Make folders and piperun objects
         # Loop through observers
         for observer in observers:
