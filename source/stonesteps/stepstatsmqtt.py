@@ -94,13 +94,16 @@ class StepStatsMqtt(StepMOParent):
             numbdict[stepname] = []
         # Get filelist from pipeline
         dp = DataParent(config = self.config)
-        if self.pipeline:
-            for fname in self.pipeline.outfiles+self.pipeline.infiles:
-                dp.filename = fname
-                fstep = fname[len(dp.filenamebegin):-len(dp.filenameend)]
-                if fstep in steplist:
-                    if not fname in numbdict[fstep]:
-                        numbdict[fstep].append(fname)
+        try:
+            if self.pipeline:
+                for fname in self.pipeline.outfiles+self.pipeline.infiles:
+                    dp.filename = fname
+                    fstep = fname[len(dp.filenamebegin):-len(dp.filenameend)]
+                    if fstep in steplist:
+                        if not fname in numbdict[fstep]:
+                            numbdict[fstep].append(fname)
+        except:
+            pass
         # Get header keyword information
         keylist = [ s.strip() for s in self.getarg('keylist').split(' ') if len(s.strip())]
         keydict = {}
