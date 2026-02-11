@@ -123,7 +123,7 @@ class StepQueueCopy(StepMIParent):
             # Get observer into OBSERVER keyword and optional file number
             filenumber = 0
             dat.setheadval('OBSERVER',observer.capitalize())
-            if fname[-1].isnumeric():
+            if fname.split('_')[-1].isnumeric():
                 filenumber = int(fname.split('_')[-1])
             else:
                 filenumber = -1
