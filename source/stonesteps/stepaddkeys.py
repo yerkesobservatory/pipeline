@@ -51,7 +51,7 @@ class StepAddKeys(StepParent):
         # Append parameters
         self.paramlist.append(['filternames', ['unknown'], 'List of valid strings for filter names'])
         self.paramlist.append(['keystocopy',[],'List of Keywords to copy to primary HDU if they are missing there (default is empty [] list)'])
-        self.paramlist.append(['keysdodelete',[],'List of Keywords to remove from primary HDU'])
+        self.paramlist.append(['keystodelete',[],'List of Keywords to remove from primary HDU'])
 
     def run(self):
         """ Runs the data reduction algorithm. The self.datain is run
