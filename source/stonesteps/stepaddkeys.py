@@ -51,6 +51,7 @@ class StepAddKeys(StepParent):
         # Append parameters
         self.paramlist.append(['filternames', ['unknown'], 'List of valid strings for filter names'])
         self.paramlist.append(['keystocopy',[],'List of Keywords to copy to primary HDU if they are missing there (default is empty [] list)'])
+        self.paramlist.append(['keysdodelete',[],'List of Keywords to remove from primary HDU'])
 
     def run(self):
         """ Runs the data reduction algorithm. The self.datain is run
@@ -72,6 +73,9 @@ class StepAddKeys(StepParent):
                     self.log.debug('Setting primary header[%s] to %s' % (key,repr(val)))
                 except KeyError:
                     self.log.debug('Header key %s not found in data' % key)
+        ### Delete keys
+        keystodelete = self.getarg('keystodelete')
+        self.dataout.delheadval(keystodelete)
         ### Get file name only (no path)
         fileonly = os.path.split(self.dataout.filename)[1]
         ### Add OBSERVER
