@@ -85,6 +85,11 @@
     # USE THE API KEY BELOW ONLY FOR THE STARS SERVER
     # Enter your own API key from your astrometry.net account
     api_key = 'aavwhfejgcgqazqd'
+    
+# MakeRGB step configuration
+[makergb]
+    # Flag to use astroalign for alignment
+    useastroalign = True
 
 # MasterBias step configuration
 [masterbias]
