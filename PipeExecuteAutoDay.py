@@ -31,6 +31,7 @@ logfile = '/data/scripts/pipeline/PipeLineLog.txt'
 # Set logging format
 logging.basicConfig(filename = logfile, level = logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s' )
+logroot = logging.getLogger()
 log = logging.getLogger('pipe.ExecuteAutoDay')
 log.info('Starting up')
 
@@ -54,10 +55,6 @@ date = year + '-' + month + '-' + day
 datefilepath = '/data/images/StoneEdge/0.5meter/'+year+'/'+date
 
 def execute():
-    # Call the pipeline configuration
-    #pipe = PipeLine(config = '/Users/atreyopal/Desktop/pipeline/pipeconf_stonedge_remote.txt')
-    pipe = PipeLine(config = ['/data/scripts/pipeline/config/pipeconf_SEO.txt',
-                              '/data/scripts/pipeline/config/dconf_stars.txt'])
     # This version only needs to be executed from a terminal. A specific image folder
     # (like the ones on the stars base) is specified for the pipeline.  The pipeline
     # will look in the folder and find any of the sub-folders that contain the FITS images.
@@ -99,10 +96,20 @@ def execute():
             # Adds the correct images to imagelist
             imagelist.append(os.path.join(fullentry,image))
         log.info('Object = %s Image list = %s' % (entry, repr(imagelist)))
+        # Check if image list is empty -> skip this folder
         if len(imagelist) == 0 :
             log.warning('Image List is Empty, skipping object = %s' % entry)
             continue
-        pipe.reset()
+        # Start local logfile handler
+        localogfile = os.path.join(fullentry,time.strftime(f'pipelog_{entry}_%Y%m%d_%H%M%S.txt'))
+        localoghand = logging.FileHandler(localogfile)
+        logroot.addHandler(localoghand)
+        log.debug(f'Started local logfile {localogfile}')
+        log.info(f'Starting reduction for {entry} with {len(imagelist)} files')
+        # Create the pipeline with configuration
+        #pipe = PipeLine(config = '/Users/atreyopal/Desktop/pipeline/pipeconf_stonedge_remote.txt')
+        pipe = PipeLine(config = ['/data/scripts/pipeline/config/pipeconf_SEO.txt',
+                                  '/data/scripts/pipeline/config/dconf_stars.txt'])
         # Cut the imagelist to 100 images
         if len(imagelist) > 100:
             imagelist = imagelist[:100]
@@ -125,7 +132,11 @@ def execute():
             except Exception as f:
                 log.warning('Unable to print traceback')
                 print(traceback.format_exc(),trb)
-
+        # Delete all pipeline data and free the varuable
+        pipe.reset()
+        pipe = None
+        # Remove local logfile handler
+        logroot.removeHandler(localoghand)
 
 # Run the setup code in an error with reporting traceback
 #execute()
