@@ -22,6 +22,7 @@ import sys
 import logging
 import traceback
 import datetime
+import time
 import re
 
 # Set system variables
@@ -103,6 +104,7 @@ def execute():
         # Start local logfile handler
         localogfile = os.path.join(fullentry,time.strftime(f'pipelog_{entry}_%Y%m%d_%H%M%S.txt'))
         localoghand = logging.FileHandler(localogfile)
+        localoghand.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         logroot.addHandler(localoghand)
         log.debug(f'Started local logfile {localogfile}')
         log.info(f'Starting reduction for {entry} with {len(imagelist)} files')
