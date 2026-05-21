@@ -5,3 +5,4 @@
 .DS_Store
 *Log.txt
 config/dconf_HDR.txt
+pipelog*.txt
