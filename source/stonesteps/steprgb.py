@@ -157,8 +157,20 @@ class StepRGB(StepMOParent):
         self.log.debug('Files used: R = %s  G = %s  B = %s' % (datause[0].filename, datause[1].filename, datause[2].filename) )
         jpeg_dataout = DataFits(config = self.config)
         jpeg_dataout.header = datause[0].header
-	# removing filter from filename
-        jpeg_dataout.filename = '_'.join(datause[0].filename.split('_')[:-9] + datause[0].filename.split('_')[-8:])
+	
+    # removing filter from filename   
+        # OLD: jpeg_dataout.filename = '_'.join(datause[0].filename.split('_')[:-9] + datause[0].filename.split('_')[-8:]) 
+        filternames=self.config['addkeys']['filternames']
+        filename = datause[0].filename
+        for name in filternames:
+            newfilename = filename.replace(f'_{name}_', '_', 1)
+            if newfilename != filename:
+                filename = newfilename
+                break
+        if not filename:
+            filename = "image"    
+        jpeg_dataout.filename = filename
+
 
         img = datause[0].image
         img1 = datause[1].image
