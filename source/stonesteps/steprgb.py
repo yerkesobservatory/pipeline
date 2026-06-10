@@ -354,19 +354,20 @@ class StepRGB(StepMOParent):
 
         # Optional folder output setup
         baseimgname = os.path.basename(imgname)
-        folderpaths_list = self.getarg('folderpaths').split(':')
-        for path in folderpaths_list:
-            path = time.strftime(path, time.localtime())
-            if not os.path.exists(path):
-                if self.getarg('createfolders'):
-                    os.makedirs(path)
-                    self.log.info('Creating directory %s' %path)
-                else:
-                    self.log.info('Invalid folder path %s' %path)
-            try:
-                imgcolor.save(os.path.join(path, baseimgname))
-            except:
-                self.log.exception('Could not save image to directory %s' %path)
+        if len(self.getarg('folderpaths')):
+            folderpaths_list = self.getarg('folderpaths').split(':')
+            for path in folderpaths_list:
+                path = time.strftime(path, time.localtime())
+                if not os.path.exists(path):
+                    if self.getarg('createfolders'):
+                        os.makedirs(path)
+                        self.log.info('Creating directory %s' %path)
+                    else:
+                        self.log.info('Invalid folder path %s' %path)
+                try:
+                    imgcolor.save(os.path.join(path, baseimgname))
+                except:
+                    self.log.exception('Could not save image to directory %s' %path)
 
         
         ''' End of Label Code '''
