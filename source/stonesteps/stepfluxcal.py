@@ -59,14 +59,19 @@ class StepFluxCal(StepParent):
         ### Set Names
         # Name of the pipeline reduction step
         self.name='fluxcal'
-        # Shortcut for pipeline reduction step and identifier for
-        # saved file names.
+        
+        # Shortcut for pipeline reduction step and identifier for saved file names.
         self.procname = 'FCAL'
-        # Set Logger for this pipe step
+        
+
+        ### Set Logger
         self.log = logging.getLogger('pipe.step.%s' % self.name)
+        
+        
         ### Set Parameter list
         # Clear Parameter list
         self.paramlist = []
+        
         # Append parameters
         self.paramlist.append(['filtermap', 'g-band=g|r-band=r|i-band=i|z-band=z',
                                'Mapping from telescope filter names to SDSS filter names. ' +
@@ -103,10 +108,10 @@ class StepFluxCal(StepParent):
         self.log.debug('Using RA/Dec = %s / %s' % (center_coordinates.ra, center_coordinates.dec))
         
         # Query guide star catalog 2 with center coordinates
-        gsc2_query = 'http://gsss.stsci.edu/webservices/vo/CatalogSearch.aspx?'
+        gsc2_query = 'https://gsss.stsci.edu/webservices/vo/CatalogSearch.aspx?'
         gsc2_query += 'RA='+str(center_coordinates.ra.value)
         gsc2_query += '&DEC='+str(center_coordinates.dec.value)
-        gsc2_query += '&DSN=+&FORMAT=CSV&CAT=GSC&SR=0.5&'
+        gsc2_query += '&DSN=+&FORMAT=CSV&CAT=GSC241&SR=0.5&'
         self.log.debug('Running URL = %s' % gsc2_query)
         gsc2_result = requests.get(gsc2_query)
         gsc_table = ascii.read(gsc2_result.text)
