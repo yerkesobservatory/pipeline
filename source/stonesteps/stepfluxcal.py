@@ -257,6 +257,15 @@ class StepFluxCal(StepParent):
         # Add fitdata table
         self.dataout.tableset(fitdata_table.data,'Fit Data',fitdata_table.header)
 
+
+        ### Add calibrated data to LTS table
+        self.dataout.tableaddcol(colname="RA", array=ra, tablename="LTS")
+        self.dataout.tableaddcol(colname="Dec", array=dec, tablename="LTS")
+        lts_mag = sep_catalog['Uncalibrated Flux'] * bscale
+        lts_mag_err = sep_catalog['Uncalibrated Flux Error'] * bscale
+        self.dataout.tableaddcol(colname="Calibrated Flux", array=lts_mag, tablename="LTS")
+        self.dataout.tableaddcol(colname="Calibrated Flux Error", array=lts_mag_err, tablename="LTS")
+
         ### If requested make a plot of the fit and save as png
         if self.getarg('fitplot'):
             # Set up plot
