@@ -1,14 +1,10 @@
 #!/usr/bin/env python
 """
-    Pipestep FluxCalSex
+    Pipestep FluxCal
 
     This module defines the pipeline step to flux calibrate data files.
-    The pipe step runs sextractor on the data and compares itentified
-    sources with values from the StSci guide star catalog.
-
-    Requirements: This step requires the source extractor program see
-        https://www.astromatic.net/software/sextractor
-      for details.
+    The pipe step looks at previously extracted sources from the LTS table 
+    and compares itentified sources with values from the StSci guide star catalog.
 
     Author: Amanda Pagul / Marc Berthoud
 
@@ -39,7 +35,7 @@ class StepFluxCal(StepParent):
     """ Pipeline Step Object to calibrate Bias/Dark/Flat files
     """
 
-    stepver = '0.1' # pipe step version
+    stepver = '0.2' # pipe step version
 
 
     def setup(self):
@@ -56,15 +52,14 @@ class StepFluxCal(StepParent):
                        '' for strings, 0 for integers and 0.0 for floats
             - help: A short description of the parameter.
         """
-        ### Set Names
-        # Name of the pipeline reduction step
+        ### Set Misc.
+        # Set name of the pipeline reduction step
         self.name='fluxcal'
         
-        # Shortcut for pipeline reduction step and identifier for saved file names.
+        # Set shortcut for pipeline reduction step and identifier for saved file names.
         self.procname = 'FCAL'
         
-
-        ### Set Logger
+        # Set Logger
         self.log = logging.getLogger('pipe.step.%s' % self.name)
         
         
@@ -82,6 +77,7 @@ class StepFluxCal(StepParent):
         self.paramlist.append(['fitplot',False,
                                'Flag for making png plot of the fit'])
         self.log.debug('Setup: done')
+
 
     def run(self):
         """ Runs the calibrating algorithm. The calibrated data is
@@ -208,9 +204,9 @@ class StepFluxCal(StepParent):
             # Can be searched at https://gsss.stsci.edu/webservices/GSC2/WebForm.aspx
             # If the above fails, replace the id number in the following query:
                 # https://gsss.stsci.edu/webservices/vo/CatalogSearch.aspx?FORMAT=HTML&id=NBQI004317
-        cols.append(fits.Column(name='RA', format='D', array=GSC_RA[mask][sort],
+        cols.append(fits.Column(name='RA (GSC)', format='D', array=GSC_RA[mask][sort],
                                 unit='deg'))
-        cols.append(fits.Column(name='Dec', format='D', array=GSC_DEC[mask][sort],
+        cols.append(fits.Column(name='Dec (GSC)', format='D', array=GSC_DEC[mask][sort],
                                 unit='deg'))
         cols.append(fits.Column(name='Diff_Deg', format='D', array=d2d[mask][sort],
                                 unit='deg'))
@@ -294,7 +290,7 @@ class StepFluxCal(StepParent):
             
             # Plot fits
             ax.plot([gmin, gmax],[gmin, gmax]+b_ml0, label='Initial Guess', c="xkcd:green")
-            ax.plot([gmin, gmax],np.array([gmin, gmax])*m_ml+b_ml, label='Best fit', c="xkcd:orange")
+            ax.plot([gmin, gmax],np.array([gmin, gmax])*m_ml+b_ml, label='Linear fit', c="xkcd:orange")
             ax.plot([gmin, gmax],[gmin, gmax]+b_ml_corr, label='Corrected offset (Used)', c="xkcd:blue")
             
             ax.legend()
@@ -332,4 +328,5 @@ if __name__ == '__main__':
 
 '''HISTORY:
 2018-09-019 - Started based on Amanda's code. - Marc Berthoud
+2026-06 - Updated for increased clarity and ease of information access - Will Rehmus
 '''
