@@ -286,7 +286,7 @@ class StepSrcExtPy(StepParent):
         '''Check for nans in rh. Diagnostic for issues experienced with some files.'''
         
         numnans = np.sum(np.isnan(rh))
-        print('Number of nans in rh =', numnans)
+        self.log.debug('Number of nans in rh =', numnans)
 
         '''
         Sort all the arrays that will go into the output table (including the
