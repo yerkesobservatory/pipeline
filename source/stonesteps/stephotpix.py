@@ -16,7 +16,7 @@ import os # os library
 import numpy # numpy library
 import scipy.ndimage #scipy sublibrary
 import logging # logging object library
-from scipy.ndimage import median_filter #Used to filter hot pixels
+from scipy.ndimage import vectorized_filter #Used to filter hot pixels
 from darepype.drp import StepParent # pipe step parent object
 
 class StepHotpix(StepParent):
@@ -78,7 +78,7 @@ class StepHotpix(StepParent):
         img = self.datain.image
         ''' Cleaning Algorithm '''
         #Apply a filter that creates a threshold for hotpixels
-        blurred = median_filter(img, size=2)
+        blurred = vectorized_filter(img, numpy.nanmedian, size=2)
         difference = img - blurred
         threshold = 10*numpy.std(difference)
         #Find the hotpixels
