@@ -80,16 +80,17 @@ class StepHotpix(StepParent):
         #Apply a filter that creates a threshold for hotpixels
         blurred = vectorized_filter(img, numpy.nanmedian, size=2)
         difference = img - blurred
-        threshold = 10*numpy.std(difference)
+        threshold = 10*numpy.nanstd(difference)
         #Find the hotpixels
         hot_pixels = numpy.nonzero((numpy.abs(difference[1:-1,1:-1])>threshold))
         hot_pixels = numpy.array(hot_pixels) +1 #ignored the edges
         #This is the image with the hot pixels removed
         for y,x in zip(hot_pixels[0],hot_pixels[1]):
-            img[y,x]=blurred[y,x]
+            img[y,x]=numpy.nan
         ''' Cleaning Algorithm (end) '''
         self.dataout.image = img
         # Set complete flag
+        self.dataout.setheadval('HISTORY', f"StepHotPix found {hot_pixels.shape[1]} hot pixels")
         self.dataout.setheadval('COMPLETE',1,
                                 'Data Reduction Pipe: Complete Data Flag')
 
