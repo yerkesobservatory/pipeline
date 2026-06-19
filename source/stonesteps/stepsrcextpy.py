@@ -317,7 +317,10 @@ class StepSrcExtPy(StepParent):
         semiminor = objects['b'] < 1.0
         smallmoment = (semimajor) & (semiminor)
         elong = a2b<elim
-        seo_SN = (elong)  & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip > 0) & (flux_elip > 0) 
+        seo_SN = (elong) & (fluxerr_elip > 0) & (flux_elip > 0)
+        seo_SN[seo_SN] = ((flux_elip[seo_SN]/fluxerr_elip[seo_SN])<1000)
+            # Split onto second line to avoid RuntimeError from division by 0
+            # bc np array and operators don't short circuit
         self.log.debug('Selected %d low threshold stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
                         
         '''

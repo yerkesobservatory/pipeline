@@ -143,7 +143,7 @@ class StepFluxCal(StepParent):
         # Filter to only include pairs within one pixel of each other
         binning = self.datain.getheadval('XBIN')
         pixel_scale = self.datain.getheadval('TELSCALE') * self.datain.getheadval('PIXSIZE1') / 1000
-            # Factor of 100 to convert between microns and mm
+            # Factor of 1000 to convert between microns and mm
         dist_value = 1*pixel_scale*binning/3600. #Maximum distance is 1 pixel
             # Factor of 3600 to convert between arcsec and deg
         mask = d2d.value<dist_value
@@ -164,12 +164,12 @@ class StepFluxCal(StepParent):
         eps_data = np.sqrt(GSC_MagErr**2+seo_MagErr[idx]**2)
         
         # Make estimate for intercept to give as initial guess
-        b_ml0 = np.median(seo_Mag[idx][mask]-GSC_Mag[mask])
+        b_ml0 = np.ma.median(seo_Mag[idx][mask]-GSC_Mag[mask])
         self.log.debug('Offset guess is %f mag' % b_ml0)
         
         # Calculate distance from that guess and get median
         guessdistances = np.abs(b_ml0 - (seo_Mag[idx] - GSC_Mag))
-        guessdistmed = np.median(guessdistances[mask])
+        guessdistmed = np.ma.median(guessdistances[mask])
         
         # Update mask to ignore sources with SEO magnitudes far from the expected value 
             # based on the initial offset guess 
@@ -188,7 +188,7 @@ class StepFluxCal(StepParent):
         
         # Calculate b_ml_corr 
             # find the value of the best fit at the median magnitude source, takes that as true calibration
-        b_ml_corr = b_ml + (m_ml-1) * np.median(GSC_Mag[mask])
+        b_ml_corr = b_ml + (m_ml-1) * np.ma.median(GSC_Mag[mask])
         self.log.info('Corrected offset is %f mag' % b_ml_corr)
         self.log.debug(f'Corrected offset residuals = {residual((1, b_ml_corr), *arguments)}')
 
