@@ -6,7 +6,7 @@
     The pipe step looks at previously extracted sources from the LTS table 
     and compares itentified sources with values from the StSci guide star catalog.
 
-    Author: Amanda Pagul / Marc Berthoud
+    Author: Amanda Pagul / Marc Berthoud / Will Rehmus
 
     export PYTHONPATH=/Users/berthoud/edu/outreach/Telescopes/pipeline/source
 

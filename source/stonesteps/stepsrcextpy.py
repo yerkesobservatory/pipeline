@@ -37,7 +37,7 @@
                  detection threshold.
       => Increase the ext_thresh parameter
     
-    Authors: Amanda Pagul / Daniel Sharkey/ Al Harper/ Alexa Bukowski/ Alexandra Masegian
+    Authors: Amanda Pagul / Daniel Sharkey/ Al Harper/ Alexa Bukowski/ Alexandra Masegian / Will Rehmus
 """
 import os # os library
 import sys # sys library
@@ -430,4 +430,5 @@ if __name__ == '__main__':
 2018-09-019 - Started based on Amanda's code. - Marc Berthoud
 2022-12-06 - Updated documentation. Eliminated HTS table. Added work-around for
              "invalid aperture parameters" issue. - Al Harper
+2026-06 - implement NaN handling
 '''
