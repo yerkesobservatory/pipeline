@@ -212,7 +212,7 @@
     # ENTER YOUR KEY HERE OR IN DELTA-CONFIG FILE
     api_key = 'XXXXXXXX'
     # Name of table that should be used when solving
-    table_name = ''
+    table_name = 'LTS'
 
 # BiasDarkFlat step configuration
 [biasdarkflat]

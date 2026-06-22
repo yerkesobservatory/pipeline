@@ -73,7 +73,7 @@ class StepAstrometryWeb(StepParent):
                                'Image plate scale units'])
         self.paramlist.append(['api_key', 'XXXXXXXX',
                                'API key used for interfacing with Astrometry.net'])
-        self.paramlist.append(['table_name', 'HTS',
+        self.paramlist.append(['table_name', 'LTS',
                                'Name of table that should be used when solving'])
         # confirm end of setup
         self.log.debug('Setup: done')
