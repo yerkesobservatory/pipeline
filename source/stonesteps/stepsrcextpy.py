@@ -252,7 +252,7 @@ class StepSrcExtPy(StepParent):
         '''
         
         # First, calculate kron radii (needed as input arguments for sep.sum_ellipse)
-        blurred = vectorized_filter(image_sub, np.nanmedian, size=2)
+        blurred = vectorized_filter(image_sub, np.nanmedian, size=3)
         image_sub_no_nans = image_sub.copy()
         image_sub_no_nans[np.isnan(image_sub_no_nans)] = blurred[np.isnan(image_sub_no_nans)]
         image_sub_no_nans[np.isnan(image_sub_no_nans)] = np.nanmedian(image_sub)
@@ -411,7 +411,7 @@ class StepSrcExtPy(StepParent):
             # Save the LTS table as a text file
             txtname = self.dataout.filenamebegin + 'FCALsources.txt'
             ascii.write(self.dataout.tableget('LTS'),txtname,
-                        format = self.getarg('sourcetableformat'))
+                        format = self.getarg('sourcetableformat'), overwrite=True)
             self.log.debug('Saved sources table under %s' % txtname)
 
 

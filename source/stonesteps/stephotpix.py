@@ -78,7 +78,7 @@ class StepHotpix(StepParent):
         img = self.datain.image
         ''' Cleaning Algorithm '''
         #Apply a filter that creates a threshold for hotpixels
-        blurred = vectorized_filter(img, numpy.nanmedian, size=2)
+        blurred = vectorized_filter(img, numpy.nanmedian, size=3)
         difference = img - blurred
         threshold = 10*numpy.nanstd(difference)
         #Find the hotpixels
