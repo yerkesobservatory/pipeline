@@ -11,7 +11,7 @@
     Source tables with souces extracted using SExtractor or SEP are
     supported.
     
-    @author: Josh Garza / Prechelt / Berthoud
+    @author: Josh Garza / Prechelt / Berthoud / Will Rehmus
 """
 # TODO more descriptive for scale_lower and scale_upper
 
@@ -96,7 +96,8 @@ class StepAstrometryWeb(StepParent):
                 hdu = self.datain.tableget(tb_name)
             else:
                 hdu = self.datain.tableget()
-            tbl = pd.DataFrame(np.array(hdu).byteswap(inplace=True).newbyteorder('='))
+            hdu_arr = np.array(hdu)
+            tbl = pd.DataFrame(hdu_arr.view(hdu_arr.dtype.newbyteorder()).byteswap())
             col_names = ['ID', 'X_IMAGE', 'Y_IMAGE', 'FLUX']
             [col_names.append('PLACEHOLDER' + str(i)) for i in range(len(tbl.columns) - 4)]
             tbl.columns = col_names
@@ -204,7 +205,8 @@ if __name__ == '__main__':
     StepAstrometryWeb().execute()
 
 """ === History ===
-2020-08-17  -Compatibility for files source extracted using sextractor 
+2026-07-01  -Fixed byteswap, updated table names
+2020-08-17  -Compatibility for files source extracted using sextractor
 2020-08-13  -Added ability to upload source tables to Astrometry
 2020-08-10  -Removed overwriting of RAW files
 2020-08-07  -Removed unused code from previous version, combined webastrometry
