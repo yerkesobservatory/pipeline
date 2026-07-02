@@ -14,7 +14,7 @@
 import os # os library
 # import sys # sys library
 import numpy as np # numpy library
-import scipy # scipy library
+from scipy.optimize import minimize # scipy library
 # import string # string library
 import logging # logging object library
 # import subprocess # running a subprocess library
@@ -181,7 +181,7 @@ class StepFluxCal(StepParent):
                        (guessdistmed, np.sum(mask)))
         
         # Solve linear equation
-        result = scipy.optimize.minimize(nll, [1, b_ml0], args=arguments)
+        result = minimize(nll, [1, b_ml0], args=arguments)
         m_ml, b_ml = result["x"]
         self.log.info('Fitted offset is %f mag, fitted slope is %f' % (b_ml, m_ml))
         self.log.debug(f'Best fit residuals = {residual((m_ml, b_ml), *arguments)}')
