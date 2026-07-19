@@ -284,7 +284,7 @@ class StepFluxCalSex(StepParent):
         self.dataout.setheadval('PHOTZP', 8.9,  'Photometric zeropoint MAG=-2.5*log(data)+PHOTZP')
         self.dataout.setheadval('BUNIT', 'Jy/pixel', 'Units for the data')
         # Scale the image using calculated b_ml_corr
-        image_background = fits.open(bkgdfilename)[0].data
+        image_background = fits.open(bkgdfilename)[3].data
         #bzero = np.nanpercentile(self.dataout.image,self.getarg('zeropercent'))
         bzero = image_background
         #-- Alternative bzero idea:
@@ -334,7 +334,7 @@ class StepFluxCalSex(StepParent):
             filename = self.dataout.filenamebegin + 'FCALsources.reg'
             with open(filename, 'w+') as f:
                 f.write("# Region file format: DS9 version 4.1\n")
-                f.write("""global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1 image\n""")
+                f.write("""global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1\nfk5\n""")
                 for i in range(len(seo_catalog['ALPHA_J2000'][seo_SN])):
                     f.write("circle(%.7f,%.7f,0.005) # text={%i}\n"%(seo_catalog['ALPHA_J2000'][seo_SN][i],seo_catalog['DELTA_J2000'][seo_SN][i],num[i]))
 
