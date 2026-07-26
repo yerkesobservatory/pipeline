@@ -4,7 +4,7 @@
 #   either make your own copy of this file and change it or make a deltaconfig.
 #
 #   2008-11-3 Marc Berthoud Version 0.1: Configuration file for Pipeline Testing
-#   2017-07-28 Atreyo Pal: added bdf section, removed KEYS)
+#   2017-07-28 Atreyo Pal: added bdf section, removed KEYS
 #   2020-08 Josh Garza, Lorenzo Orders: Added new keywords for Astrometry* and BiasDarkFlat
 
 # General Section: configuration of the pipeline
@@ -48,23 +48,24 @@
 ### Pipelines Modes Section: configuration for individual pipeline modes
 
 # Stoneedge User Mode for CCD - for reducing data on your own computer
-#     Use this if you don't have astrometry / sextractor installed
+#     Use this if you don't have astrometry installed
 [mode_seo_user_ccd]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=Stoneedge"
     # list of steps
-    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryWeb, save, StepFluxCalSex, save, StepRGB
+    stepslist = load, StepAddKeys, StepBiasDarkFlat, save, StepHotpix, save, StepSrcExtPy, save, StepAstrometryWeb, save, StepFluxCal, save, StepRGB
+
 
 # Stoneedge User HDR Mode - for reducing data on your own computer
-#     Use this if you don't have astrometry / sextractor installed
+#     Use this if you don't have astrometry installed
 #     and have HDR (High Dynamic Range i.e. low and high gain) images
 [mode_seo_user_hdr]
     # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=Stoneedge"
     # list of steps
-    stepslist = load, StepAddKeys, StepDataGroup, save, StepSrcExtPy, save, StepAstrometryWeb, save, StepFluxCalSex, save, StepRGB
+    stepslist = load, StepAddKeys, StepDataGroup, save, StepSrcExtPy, save, StepAstrometryWeb, save, StepFluxCal, save, StepRGB
 	# Settings for StepDataGroup to run StepHdr
     [[datagroup]]
         redstepname = StepHdr
@@ -83,7 +84,7 @@
     stepslist = load, StepAddKeys, save, StepHotpix, save, StepRGB
 
 # Stoneedge Server HDR Mode - for reducing HDR data on the server
-#     Use this if you have sextractor and astrometry installed and are
+#     Use this if you have astrometry installed and are
 #     reducing HDR (High Dynamic Range i.e. low and high gain) images
 [mode_seo_server_hdr]
     # List of keyword=values required in file header to select this pipeline mode
@@ -99,7 +100,7 @@
         saveoutput = True
 
 # Stoneedge Server Mode for CCD - for reducing CCD data on the server 
-#     Use this if you have sextractor and astrometry installed and CCD images
+#     Use this if you have astrometry installed and CCD images
 [mode_seo_server_ccd]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
@@ -211,7 +212,7 @@
     # ENTER YOUR KEY HERE OR IN DELTA-CONFIG FILE
     api_key = 'XXXXXXXX'
     # Name of table that should be used when solving
-    table_name = ''
+    table_name = 'LTS'
 
 # BiasDarkFlat step configuration
 [biasdarkflat]
@@ -409,7 +410,7 @@
     sourcetableformat = csv
     #Mask Threshold, a variable for the background detection that we don't use
     maskthreshold = 0.0
-    #Background width and height, controls size of background boxes)
+    #Background width and height, controls size of background boxes
     bkg_wh = 16, 16
     #Filter width and height, controls filter width and height in boxes
     bkg_filterwh = 3, 3

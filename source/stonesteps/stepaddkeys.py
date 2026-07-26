@@ -96,13 +96,13 @@ class StepAddKeys(StepParent):
             # filepatt[2] <==> OBJECT_BAND_EXPOSURE_BINNING_YYYYmmmDD_OBSERVER_OBSNUM_seo.fits
             # filepatt[3] <==> YYYY-MM-DD_OBSERVER_OBJECT_Ez5/ (astroclass)
 
-            filepatt = ['(_\d{6}){2}', # two sets of 6 numbers (date and time)
-                        'bin\d_[a-zA-Z]', # Binning followed by alphabetic character (observer)
-                        'bin\d_\d{4}[a-z]{3}\d{2}', # Binning followed by Date in YYYYmmmDD format
-                        '^20\d{2}\-[0-1]\d\-[0-3]\d'] # Starts with date in YYYY-MM-DD format
+            filepatt = [r'(_\d{6}){2}', # two sets of 6 numbers (date and time)
+                        r'bin\d_[a-zA-Z]', # Binning followed by alphabetic character (observer)
+                        r'bin\d_\d{4}[a-z]{3}\d{2}', # Binning followed by Date in YYYYmmmDD format
+                        r'^20\d{2}\-[0-1]\d\-[0-3]\d'] # Starts with date in YYYY-MM-DD format
 
-            obsbefore = ['\d{6}_','bin\d_','20\d{2}[a-z]{3}\d{2}_','^.{11}']
-            obsafter = ['_seo_','_20\d{2}','_num','_[a-zA-Z]|_\d']
+            obsbefore = [r'\d{6}_',r'bin\d_',r'20\d{2}[a-z]{3}\d{2}_','^.{11}']
+            obsafter = [r'_seo_','_20\d{2}','_num',r'_[a-zA-Z]|_\d']
 
             fileindex = 0
             for i in range(len(filepatt)):

@@ -16,7 +16,7 @@ import os # os library
 import numpy # numpy library
 import scipy.ndimage #scipy sublibrary
 import logging # logging object library
-from scipy.ndimage import median_filter #Used to filter hot pixels
+from scipy.ndimage import generic_filter #Used to filter hot pixels
 from darepype.drp import StepParent # pipe step parent object
 
 class StepHotpix(StepParent):
@@ -78,18 +78,19 @@ class StepHotpix(StepParent):
         img = self.datain.image
         ''' Cleaning Algorithm '''
         #Apply a filter that creates a threshold for hotpixels
-        blurred = median_filter(img, size=2)
+        blurred = generic_filter(img, numpy.nanmedian, size=3)
         difference = img - blurred
-        threshold = 10*numpy.std(difference)
+        threshold = 10*numpy.nanstd(difference)
         #Find the hotpixels
         hot_pixels = numpy.nonzero((numpy.abs(difference[1:-1,1:-1])>threshold))
         hot_pixels = numpy.array(hot_pixels) +1 #ignored the edges
         #This is the image with the hot pixels removed
         for y,x in zip(hot_pixels[0],hot_pixels[1]):
-            img[y,x]=blurred[y,x]
+            img[y,x]=numpy.nan
         ''' Cleaning Algorithm (end) '''
         self.dataout.image = img
         # Set complete flag
+        self.dataout.setheadval('HISTORY', f"StepHotPix found {hot_pixels.shape[1]} hot pixels")
         self.dataout.setheadval('COMPLETE',1,
                                 'Data Reduction Pipe: Complete Data Flag')
 

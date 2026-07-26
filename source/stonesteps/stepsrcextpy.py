@@ -37,7 +37,7 @@
                  detection threshold.
       => Increase the ext_thresh parameter
     
-    Authors: Amanda Pagul / Daniel Sharkey/ Al Harper/ Alexa Bukowski/ Alexandra Masegian
+    Authors: Amanda Pagul / Daniel Sharkey/ Al Harper/ Alexa Bukowski/ Alexandra Masegian / Will Rehmus
 """
 import os # os library
 import sys # sys library
@@ -49,6 +49,7 @@ import logging # logging object library
 #import requests # http request library
 import astropy.table # Read astropy tables
 import sep # Extracts Sources and Calculates Flux
+from scipy.ndimage import generic_filter
 from astropy.io import fits
 from astropy.io import ascii
 from astropy.stats import mad_std
@@ -130,7 +131,7 @@ class StepSrcExtPy(StepParent):
         self.paramlist.append(['phot_kronf', 2.5,
                                 'factor multiplied into kronrad to get radius for integration'])
         self.paramlist.append(['save_background', True,
-                                'option to save the background as a seprate hdu'])
+                                'option to save the background as a separate hdu'])
         #self.paramlist.append(['byte_swap', False,
         # 	                    'says if the bytes should be swapped or not for the image'])
         # confirm end of setup
@@ -157,17 +158,17 @@ class StepSrcExtPy(StepParent):
         if not psimage.dtype.isnative:
             self.log.debug("Performing byte swap")
             image = psimage.byteswap(inplace=True)
-            print('Byte swap performed')
+            self.log.debug('Byte swap performed')
         else:
             self.log.debug("No byte swap required")
             image = psimage
-            print('No byte swap required')
+            self.log.debug('No byte swap required')
         # Convert to float64, if necessary.
         self.log.debug("Initial data type: %s" % psimage.dtype)
         if psimage.dtype != np.float64:
             self.log.debug("Converting to float64")
             image = image.astype(np.float64)
-            print('Conversion to float64 required')
+            self.log.debug('Conversion to float64 required')
                         
         '''Get variable values used to compute background (from paramlist).'''
         
@@ -182,12 +183,12 @@ class StepSrcExtPy(StepParent):
         
         bkg = sep.Background(image, maskthresh=maskthresh,bw=bw, bh=bh, fw=fw,
             fh=fh, fthresh=fthresh) 
-        bkg_image=bkg.back()
-        bkg_rms =bkg.rms()
+        bkg_image = bkg.back()
+        bkg_rms = bkg.rms()
         self.log.debug('Background image global')
         if bkg.globalback < np.nanmin(image) or bkg.globalback > np.nanmax(image):
             self.log.warn('Background has out of bounds values - image may not reduce')
-        print('globalback =', bkg.globalback)
+        self.log.debug(f'globalback = {bkg.globalback}')
             
         '''Subtract the background from the image. Calculate its median and mad.'''
         
@@ -205,7 +206,7 @@ class StepSrcExtPy(StepParent):
         '''Extract sources from the background-subtracted image.'''
         
         sources = sep.extract(image_sub, extract_thresh, err=extract_err, deblend_nthresh= deblend_nthresh)
-        print('Length of sources =', len(sources))
+        self.log.debug(f'Length of sources = {len(sources)}')
 
         ''' Eliminate very small sources.'''
                 
@@ -214,9 +215,9 @@ class StepSrcExtPy(StepParent):
         for i, s in enumerate(sources):
             if s['a']<-alow or s['b']<=blow:
                 smalls.append(i)
-        print('length of smalls =', len(smalls))
+        self.log.debug(f'length of smalls = {len(smalls)}')
         sources = np.delete(sources, smalls, 0)
-        print('length of sources after removing smalls =', len(sources))
+        self.log.debug(f'length of sources after removing smalls = {len(sources)}')
         
         '''
         Delete any rows containing NaNs in a or b columns. This code was added
@@ -227,9 +228,9 @@ class StepSrcExtPy(StepParent):
         for i, s in enumerate(sources):
             if np.isnan(s['a']) or np.isnan(s['b']):
                 nan_rows.append(i)
-        print('length of nan_rows =', len(nan_rows))
+        self.log.debug(f'length of nan_rows = {len(nan_rows)}')
         sources = np.delete(sources, nan_rows, 0)
-        print('length of sources after removing rows with NaNs =', len(sources))
+        self.log.debug(f'length of sources after removing rows with NaNs = {len(sources)}')
         
         '''Sort sources by descending isophotal flux'''
 
@@ -251,24 +252,29 @@ class StepSrcExtPy(StepParent):
         '''
         
         # First, calculate kron radii (needed as input arguments for sep.sum_ellipse)
-        kronrad, krflag = sep.kron_radius(image_sub, objects['x'], objects['y'], 
+        blurred = generic_filter(image_sub, np.nanmedian, size=3)
+        image_sub_no_nans = image_sub.copy()
+        image_sub_no_nans[np.isnan(image_sub_no_nans)] = blurred[np.isnan(image_sub_no_nans)]
+        image_sub_no_nans[np.isnan(image_sub_no_nans)] = np.nanmedian(image_sub)
+
+        kronrad, krflag = sep.kron_radius(image_sub_no_nans, objects['x'], objects['y'], 
         	objects['a'], objects['b'], objects['theta'], r=6.0)
         	
-        ## Print some diagnostics.
-        #print( kr[0], krflags[0], len(kr))
-        kronrad_notfinite = len(kronrad) - len(np.isfinite(kronrad))
-        #print('Number kronrad not finite =', kronrad_notfinite)
-        numnans = np.sum(np.isnan(image_sub))
-        #print('Number of nans in image_sub =', numnans)
-        numnans = np.sum(np.isnan(objects['theta']))
-        #print('Number of nans in theta =', numnans) 
-        numnans = np.sum(np.isnan(objects['b']))
-        #print('Number of nans in b =', numnans)
-        #for i in range(len(objects)):
-        #    print(i, objects['a'][i], objects['b'][i])
+        # # self.log.debug some diagnostics.
+        # self.log.debug(f'{kronrad[0]} {krflags[0]} {len(kronrad)}')
+        # kronrad_notfinite = len(kronrad) - len(np.isfinite(kronrad))
+        # self.log.debug(f'Number kronrad not finite = {kronrad_notfinite}')
+        # numnans = np.sum(np.isnan(image_sub))
+        # self.log.debug(f'Number of nans in image_sub = {numnans}')
+        # numnans = np.sum(np.isnan(objects['theta']))
+        # self.log.debug(f'Number of nans in theta = {numnans}') 
+        # numnans = np.sum(np.isnan(objects['b']))
+        # self.log.debug(f'Number of nans in b = {numnans}')
+        # for i in range(len(objects)):
+        #    self.log.debug(f'{i} {objects['a'][i]} {objects['b'][i]}')
                
         # Now calculate the elliptical fluxes.
-        flux_elip, fluxerr_elip, flag = sep.sum_ellipse(image_sub, objects['x'], objects['y'], objects['a'], 
+        flux_elip, fluxerr_elip, flag = sep.sum_ellipse(image_sub_no_nans, objects['x'], objects['y'], objects['a'], 
         objects['b'], objects['theta'], r= kfactor*kronrad, err=bkg_rms, subpix=1)
         
         '''
@@ -281,12 +287,11 @@ class StepSrcExtPy(StepParent):
         # Now we need the argument for the percentage of flux contained within the radius.
         frac=0.5
         # Now do the calculation.
-        rh, rh_flag = sep.flux_radius(image_sub, objects['x'], objects['y'], rmax, frac)
+        rh, rh_flag = sep.flux_radius(image_sub_no_nans, objects['x'], objects['y'], rmax, frac)
 
         '''Check for nans in rh. Diagnostic for issues experienced with some files.'''
-        
-        numnans = np.sum(np.isnan(rh))
-        print('Number of nans in rh =', numnans)
+        # numnans = np.sum(np.isnan(rh))
+        # self.log.debug(f'Number of nans in rh = {numnans}')
 
         '''
         Sort all the arrays that will go into the output table (including the
@@ -312,7 +317,10 @@ class StepSrcExtPy(StepParent):
         semiminor = objects['b'] < 1.0
         smallmoment = (semimajor) & (semiminor)
         elong = a2b<elim
-        seo_SN = (elong)  & ((flux_elip/fluxerr_elip)<1000) & (fluxerr_elip > 0) & (flux_elip > 0) 
+        seo_SN = (elong) & (fluxerr_elip > 0) & (flux_elip > 0)
+        seo_SN[seo_SN] = ((flux_elip[seo_SN]/fluxerr_elip[seo_SN])<1000)
+            # Split onto second line to avoid RuntimeError from division by 0
+            # bc np array and operators don't short circuit
         self.log.debug('Selected %d low threshold stars from Source Extrator catalog' % np.count_nonzero(seo_SN))
                         
         '''
@@ -345,7 +353,7 @@ class StepSrcExtPy(StepParent):
         
         #Calculate mean RH, its STD, and mean a/b to report in header
         rhmean = np.nanmean(rh[seo_SN])
-        rhstd = np.std(rh[seo_SN])
+        rhstd = np.nanstd(rh[seo_SN])
         elmean= np.nanmean(objects['a'][seo_SN]/objects['b'][seo_SN])
 
         '''Make output DataFits object (self.dataout)'''
@@ -403,7 +411,7 @@ class StepSrcExtPy(StepParent):
             # Save the LTS table as a text file
             txtname = self.dataout.filenamebegin + 'FCALsources.txt'
             ascii.write(self.dataout.tableget('LTS'),txtname,
-                        format = self.getarg('sourcetableformat'))
+                        format = self.getarg('sourcetableformat'), overwrite=True)
             self.log.debug('Saved sources table under %s' % txtname)
 
 
@@ -422,4 +430,5 @@ if __name__ == '__main__':
 2018-09-019 - Started based on Amanda's code. - Marc Berthoud
 2022-12-06 - Updated documentation. Eliminated HTS table. Added work-around for
              "invalid aperture parameters" issue. - Al Harper
+2026-06 - implement NaN handling
 '''

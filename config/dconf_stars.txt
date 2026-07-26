@@ -26,7 +26,7 @@
     # list of steps
     stepslist = load, StepAddKeys, StepBdf, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepStatsMqtt, StepRGB
     # list of steps
-    #stepslist = load, StepAddKeys, StepBdf, save, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
+    #stepslist = load, StepAddKeys, StepBdf, save, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepStatsMqtt, StepRGB
     # list of steps
     #stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
 
