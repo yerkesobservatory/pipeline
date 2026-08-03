@@ -49,7 +49,7 @@ import logging # logging object library
 #import requests # http request library
 import astropy.table # Read astropy tables
 import sep # Extracts Sources and Calculates Flux
-from scipy.ndimage import generic_filter
+from scipy.ndimage import vectorized_filter
 from astropy.io import fits
 from astropy.io import ascii
 from astropy.stats import mad_std
@@ -252,7 +252,7 @@ class StepSrcExtPy(StepParent):
         '''
         
         # First, calculate kron radii (needed as input arguments for sep.sum_ellipse)
-        blurred = generic_filter(image_sub, np.nanmedian, size=3)
+        blurred = vectorized_filter(image_sub, np.nanmedian, size=3)
         image_sub_no_nans = image_sub.copy()
         image_sub_no_nans[np.isnan(image_sub_no_nans)] = blurred[np.isnan(image_sub_no_nans)]
         image_sub_no_nans[np.isnan(image_sub_no_nans)] = np.nanmedian(image_sub)
