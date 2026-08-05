@@ -17,6 +17,10 @@ PipelineDir= /data/scripts/pipeline
 
 DRPath=$PythonVenv/lib/python3.12/site-packages/darepype
 
+### Clear Temp Files
+find /data/images/fitsview/temp/images -type f -atime +2 -delete
+find /tmp -type f \( ! -user 0 \) -atime +2 -delete
+
 ### Run Sort Obs
 cd "$PipelineDir"
 
