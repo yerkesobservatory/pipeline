@@ -132,5 +132,5 @@
 
 # MQTT Statistics
 [statsmqtt]
-    userpass = /home/berthoud/mqttkey.txt
+    userpass = /home/marcberthoud/mqttkey.txt
     topic = seo/stars/daypipe
