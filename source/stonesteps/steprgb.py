@@ -312,7 +312,12 @@ class StepRGB(StepMOParent):
                 # Find parameters for normalization function
                 kr_res = minimize(rmse_builder(xarray[:, i], noiselum_list[i]), [0.001, 1], method='Nelder-Mead')
                 # Apply normalizaton function
-                imgcube[:,:,i] = logy(numpy.clip(datause[i].image, minsv[i], maxsv[i]), minsv[i], kr_res.x[0], kr_res.x[1]) * 255.
+                scaled = logy(numpy.clip(datause[i].image, minsv[i], maxsv[i]), minsv[i], kr_res.x[0], kr_res.x[1]) 
+
+                scaled = numpy.nan_to_num(scaled, nan=0.0, posinf=1.0, neginf=0.0)
+                scaled = numpy.clip(scaled, 0.0, 1.0)
+
+                imgcube[:, :, i] = (scaled * 255)
 
         else:
             # Old scaling uses square root (sqrt) scaling for each filter
