@@ -348,7 +348,7 @@ class StepRGB(StepMOParent):
                     imgcube[:,:,2] = aligned_img2
 
 
-        jpeg_dataout.image = imgcube
+        jpeg_dataout.image = imgcube.astype(numpy.uint8)
         # Create variable containing all the scaled image data
         imgcolor = Image.fromarray(jpeg_dataout.image, mode='RGB')
         # Save colored image as a .tif file (without the labels)
