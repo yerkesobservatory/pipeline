@@ -34,7 +34,7 @@ outpath = '/data/images/queue'
 # piperunpath: folder for the piperun files
 piperunpath = '/data/images/queue/A_Test/piperuns'
 # pythonpath
-pypath = '/data/scripts/DataReduction/source'
+pypath = '/data/scripts/pipeline/source'
 
 ### Preparation
 # Imports
@@ -53,7 +53,7 @@ from darepype.drp.datafits import DataFits
 logging.basicConfig(level = logging.DEBUG)
 log=logging.getLogger('QueueCopy')
 log.setLevel(logging.DEBUG)
-log.info('Logging Set Up')
+log.info('Logging Set Up. Argv = ' + ', '.join(sys.argv))
 
 # Read Source Folders
 if len(sys.argv) > 1:
@@ -124,6 +124,9 @@ for source_folder in source_folders:
     sobject = ''.join(ssplit[2:-1]) # i.e. NGC_2129
     # Get list of files in raw folder
     sfiles = glob.glob(os.path.join(source_folder,'raw/science','*.fits') )
+    # Keep only files with size > 0
+    sfiles = [sf for sf in sfiles if os.stat(sf).st_size]
+    # Make sure there's any files left
     if len(sfiles) < 1:
         log.error("No files found for folder %s" % source_folder)
         continue
@@ -169,12 +172,13 @@ for source_folder in source_folders:
     text = """# === Piperun file for %s ===
 
 # !!! Auto-generated Pipeconf file - may be overwritten !!!
-pythonpath = /data/scripts/DataReduction/source
-pipeconf = /data/scripts/DataReduction/config/pipeconf_SEO.txt
-/data/scripts/DataReduction/config/dconf_stars.txt
-pipemode = seo_server
+pythonpath = /data/scripts/pipeline/source
+pipeconf = /data/scripts/pipeline/config/pipeconf_SEO.txt
+/data/scripts/pipeline/config/dconf_stars.txt
+pipemode = seo_server_queue_ccd
+ignorebad = True
 loglevel = DEBUG
-logfile = /data/scripts/DataReduction/PipeLineLog.txt
+logfile = /data/scripts/pipeline/PipeLineLog.txt
 """ % (runame)
     # Add custom log file
     #logfile = '%s_%s_%d_%s_pipelog.txt' % (suser, sobject, expt, sdate )

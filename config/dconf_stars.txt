@@ -9,7 +9,8 @@
     # Master Bias, Dark, Flat Folder
     #MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2022/m5C
     #MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2022/Masters-15C 
-    MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2023/MastersCCD
+    #MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2026/MastersCCD
+    MASTER_BDF_FOLDER = /data/images/StoneEdge/0.5meter/2026/MastersCCD260415
     # Path for reducing BDF Files (use one of them)
     #RAW_BDF_FOLDER = '/data/images/StoneEdge/0.5meter/2022/2022-11-02' # for given date
     RAW_BDF_FOLDER = '/data/images/StoneEdge/0.5meter/%Y/%Y-%m-%d' # for current date
@@ -23,11 +24,21 @@
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=StoneEdge"
     # list of steps
-    stepslist = load, StepAddKeys, StepBdf, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
+    stepslist = load, StepAddKeys, StepBdf, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepStatsMqtt, StepRGB
     # list of steps
-    #stepslist = load, StepAddKeys, StepBdf, save, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
+    #stepslist = load, StepAddKeys, StepBdf, save, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepStatsMqtt, StepRGB
     # list of steps
     #stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
+
+# Stoneedge Queue Server Mode - for reducing queue data
+[mode_seo_server_queue_ccd]
+    #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
+    datakeys = "OBSERVAT=StoneEdge"
+    # list of steps
+    stepslist = load, StepAddKeys, StepBdf, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepStatsMqtt, StepRGB
+    [[statsmqtt]]
+        topic = seo/stars/queuepipe
+
     
 # Copy Queue data
 [mode_copyqueue]
@@ -36,8 +47,8 @@
     [[loadinput]]
         # Location of files
         filelocation = '/data/public/queue/*/*%Y-%m-%d*/raw/science/*.fits'
-        #filelocation = '/data/public/queue/*/*2022-12-15_seo_*/raw/science/*.fits'
-        fileexclude = 'bias|dark|flat'		
+        #filelocation = '/data/public/queue/*/*_2024-11-16_*/raw/science/*.fits'
+        fileexclude = 'bias|dark|flat'
         headeronly = True
 
 # Sort Observation Mode
@@ -47,7 +58,7 @@
     stepslist = StepLoadInput, StepSortObs, save
     [[loadinput]]
         # Filename for input, can contain glob symbols and datetime keys
-        filelocation = /data/images/StoneEdge/0.5meter/2021/%Y-%m-%d/itzamna/*RAW.fits.gz
+        filelocation = /data/images/StoneEdge/0.5meter/%Y/%Y-%m-%d/itzamna/*RAW.fits.gz
         #filelocation = /data/images/StoneEdge/0.5meter/2021/2021-04-20/itzamna/*RAW.fits.gz
         # List of strings which filename must not contain to be loaded (ignore BDFs)
         fileexclude = bias_|dark_|flat_
@@ -75,6 +86,11 @@
     # USE THE API KEY BELOW ONLY FOR THE STARS SERVER
     # Enter your own API key from your astrometry.net account
     api_key = 'aavwhfejgcgqazqd'
+    
+# MakeRGB step configuration
+[makergb]
+    # Flag to use astroalign for alignment
+    useastroalign = True
 
 # MasterBias step configuration
 [masterbias]
@@ -114,3 +130,7 @@
     # Flag for making txt table of all sources
     sourcetable = true
 
+# MQTT Statistics
+[statsmqtt]
+    userpass = /home/marcberthoud/mqttkey.txt
+    topic = seo/stars/daypipe

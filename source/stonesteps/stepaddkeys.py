@@ -51,6 +51,7 @@ class StepAddKeys(StepParent):
         # Append parameters
         self.paramlist.append(['filternames', ['unknown'], 'List of valid strings for filter names'])
         self.paramlist.append(['keystocopy',[],'List of Keywords to copy to primary HDU if they are missing there (default is empty [] list)'])
+        self.paramlist.append(['keystodelete',[],'List of Keywords to remove from primary HDU'])
 
     def run(self):
         """ Runs the data reduction algorithm. The self.datain is run
@@ -72,6 +73,9 @@ class StepAddKeys(StepParent):
                     self.log.debug('Setting primary header[%s] to %s' % (key,repr(val)))
                 except KeyError:
                     self.log.debug('Header key %s not found in data' % key)
+        ### Delete keys
+        keystodelete = self.getarg('keystodelete')
+        self.dataout.delheadval(keystodelete)
         ### Get file name only (no path)
         fileonly = os.path.split(self.dataout.filename)[1]
         ### Add OBSERVER
@@ -92,13 +96,13 @@ class StepAddKeys(StepParent):
             # filepatt[2] <==> OBJECT_BAND_EXPOSURE_BINNING_YYYYmmmDD_OBSERVER_OBSNUM_seo.fits
             # filepatt[3] <==> YYYY-MM-DD_OBSERVER_OBJECT_Ez5/ (astroclass)
 
-            filepatt = ['(_\d{6}){2}', # two sets of 6 numbers (date and time)
-                        'bin\d_[a-zA-Z]', # Binning followed by alphabetic character (observer)
-                        'bin\d_\d{4}[a-z]{3}\d{2}', # Binning followed by Date in YYYYmmmDD format
-                        '^20\d{2}\-[0-1]\d\-[0-3]\d'] # Starts with date in YYYY-MM-DD format
+            filepatt = [r'(_\d{6}){2}', # two sets of 6 numbers (date and time)
+                        r'bin\d_[a-zA-Z]', # Binning followed by alphabetic character (observer)
+                        r'bin\d_\d{4}[a-z]{3}\d{2}', # Binning followed by Date in YYYYmmmDD format
+                        r'^20\d{2}\-[0-1]\d\-[0-3]\d'] # Starts with date in YYYY-MM-DD format
 
-            obsbefore = ['\d{6}_','bin\d_','20\d{2}[a-z]{3}\d{2}_','^.{11}']
-            obsafter = ['_seo_','_20\d{2}','_num','_[a-zA-Z]|_\d']
+            obsbefore = [r'\d{6}_',r'bin\d_',r'20\d{2}[a-z]{3}\d{2}_','^.{11}']
+            obsafter = [r'_seo_','_20\d{2}','_num',r'_[a-zA-Z]|_\d']
 
             fileindex = 0
             for i in range(len(filepatt)):
@@ -124,14 +128,21 @@ class StepAddKeys(StepParent):
         except KeyError:
             pass # b/c got_object is already false
         if not got_object:
-            # Getting the object from the file name (all before first "_")
-            objname = fileonly.split('_')[0]
-            self.log.debug('Object from Filename = ' + fileonly.split('_')[0])
+            objname = ''
+            # Getting the object from the file name (all before first "_filter_\d+s_")
+            match = re.search('_\\d+s_',fileonly)
+            if match:
+                loc = fileonly[:match.start()].rfind('_')
+                if loc > 0:
+                    objname = fileonly[:loc]
+            if not len(objname):
+                objname = fileonly.split('_')[0]
+            self.log.debug('Object from Filename = ' + objname)
         if objname.lower() in  ['', 'unk', 'unknown']:
             # Finds and formats RA/DEC values from the fits header if present,
             # if not sets objname to unknown
             objname = ''
-            self.log.info('Object unknown, changeing object name to RA/DEC')
+            self.log.info('Object unknown, changing object name to RA/DEC')
             try:
                 ra = self.dataout.getheadval('RA')
                 dec = self.dataout.getheadval('DEC')
@@ -171,8 +182,13 @@ class StepAddKeys(StepParent):
         except KeyError:
             pass # b/c got_filter is already false
         if not got_filter:
+            # Getting the filter from the file name ( '_' separated part before -\d+s_ )
+            match = re.search('_\\d+s_',fileonly)
+            if match:
+                filtername = fileonly[:match.start()].split('_')[-1]
             # Getting the filter from the file name (second '_' separated part)
-            filtername = fileonly.split('_')[1]
+            else:
+                filtername = fileonly.split('_')[1]
 #             filtername = 'unknown' # in case no filter name is found
 #             for f in self.getarg('filternames'):
 #                 if f in fileonly:

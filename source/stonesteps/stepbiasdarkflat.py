@@ -240,7 +240,7 @@ class StepBiasDarkFlat(StepLoadAux, StepParent):
         # Divide by the flat
         flat_corrected = image.copy()
         
-        flat_median = np.median(flat)
+        flat_median = np.nanmedian(flat)
 
         # Normalize the flat.
         flat_normed = flat / flat_median

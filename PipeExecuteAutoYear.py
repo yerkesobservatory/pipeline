@@ -20,7 +20,7 @@ import logging
 import traceback
 
 # Set system variables
-logfile = '/data/scripts/DataReduction/PipeLineLog.txt'
+logfile = '/data/scripts/pipeline/PipeLineLog.txt'
 
 # Set logging format
 logging.basicConfig(filename = logfile, level = logging.DEBUG, 
@@ -30,12 +30,12 @@ log.info('Starting up')
 
 
 # Change directory & import the pipeline settings
-sys.path.append('/data/scripts/DataReduction/source/')
+sys.path.append('/data/scripts/pipeline/source/')
 from drp.pipeline import PipeLine
 
 def execute():
     # Call the pipeline configuration
-    pipe = PipeLine(config = '/data/scripts/DataReduction/pipeconf_stonedge_auto.txt')
+    pipe = PipeLine(config = '/data/scripts/pipeline/pipeconf_stonedge_auto.txt')
     # This version only needs to be executed from a terminal. A specific image folder
     # (like the ones on the stars base) is specified for the pipeline.  The pipeline
     # will look in the folder and find any of the sub-folders that contain the FITS images.

@@ -115,49 +115,109 @@ class StepRGB(StepMOParent):
             filterorder_list = self.getarg('filterorder').split('|')
             filterprefs_list = self.getarg('filterprefs').split('|')
 
-            datain_filter_list = [element.getheadval('filter') for element in self.datain]
-            used_filter_flags = [False] * len(self.datain)
+            raw_data=[]
+            chosen_exptime = None
+            #def finding images()
+            #exp_times = [element.getheadval('EXPTIME') for element in self.datain]
+            #filters = [band.getheadval('filter') for band in self.datain]
+            #filters_times_chart = [exp_time_options, filters]
+
+            for element in self.datain:
+                exptime = float(element.getheadval('EXPTIME'))
+                filters = str(element.getheadval('filter'))
+                raw_data.append([element, filters, exptime])
+
+            used_input_flags = [False] * len(self.datain)
 
             if len(filterprefs_list) != 3:
                 self.log.error('Invalid number of preferred filters provided (should be 3): ' + 
                                self.getarg('filterprefs'))
             else:
-                # Locate data matching the filters specified in filterprefs
-                for i, preferred_filter in enumerate(filterprefs_list):
-                    for j, element in enumerate(self.datain):
-                        if element.getheadval('filter') == preferred_filter:
-                            datause[i] = element
-                            used_filter_flags[j] = True
-                            break
+                # sort raw data by decreasing exptime
+                sorted_raw_data=sorted(raw_data, key=lambda x: (x[2], x[1]),reverse=True)
+                print([row[2] for row in sorted_raw_data])
 
-            # Select missing filters from filterorder
-            filterorder_walker = 0
-            for i, channel in enumerate(datause):
-                if channel == None:
-                    for ordered_filter in filterorder_list[filterorder_walker:]:
-                        filterorder_walker = filterorder_walker + 1
-                        if ordered_filter in datain_filter_list:
-                            datain_index = datain_filter_list.index(ordered_filter)
-                            if not used_filter_flags[datain_index]:
-                                datause[i] = self.datain[datain_index]
-                                used_filter_flags[datain_index] = True
+                #group by exposure time
+                from collections import defaultdict
+                exptime_groups = defaultdict(list)
+                for row in sorted_raw_data:
+                    exptime_groups[row[2]].append(row)
+              
+                #search through groups for exptime with filterprefs
+                chosen_exptime=None
+                for exptime, rows in exptime_groups.items():
+                # get all filters available at this specific exposure time
+                    filters_at_this_time = {row[1] for row in rows}  
+                    # Check if filter_prefs are subset 
+                    if set(filterprefs_list).issubset(set(filters_at_this_time)):
+                        chosen_exptime = rows
+                        exptime_value = exptime
+                        print([row[0].filename for row in rows])
+                        break
+
+                #fill specific slots of datause in order of i,r,g
+                if chosen_exptime is not None:
+                    self.log.debug(f'Used {exptime_value}s exposure time.')
+                    for i, preferred_filter in enumerate(filterprefs_list):
+                        for row in chosen_exptime:
+                            element, filters, _ = row
+                            if filters==preferred_filter:
+                                datause[i]=element
+                                element_index=self.datain.index(element)
+                                used_input_flags[element_index]=True
                                 break
-                elif channel.getheadval('filter') in filterorder_list:
-                    filterorder_walker = filterorder_list.index(channel.getheadval('filter'))
+
+                # run original code if exposure times check fails
+                else:
+                    # Select missing filters from filterorder
+                    datain_filter_list = [element.getheadval('filter') for element in self.datain]
+                    filterorder_walker = 0
+                    for i, channel in enumerate(datause):
+                        if channel == None:
+                            for ordered_filter in filterorder_list[filterorder_walker:]:
+                                filterorder_walker = filterorder_walker + 1
+                                if ordered_filter in datain_filter_list:
+                                    datain_index = datain_filter_list.index(ordered_filter)
+                                    if not used_input_flags[datain_index]:
+                                        datause[i] = self.datain[datain_index]
+                                        used_input_flags[datain_index] = True
+                                        break
+                        elif channel.getheadval('filter') in filterorder_list:
+                            filterorder_walker = filterorder_list.index(channel.getheadval('filter'))
+                        
+                    # Select missing filters from any remaining fits files
+                    for i, channel in enumerate(datause):
+                        if channel == None:
+                            for j, datain_filter in enumerate(datain_filter_list):
+                                if not used_input_flags[j]:
+                                    datause[i] = self.datain[j]
+                                    used_input_flags[j] = True
+                                    break
+
+        self.log.debug('Files used: R = %s  G = %s  B = %s' % (datause[0].filename, datause[1].filename, datause[2].filename))
                     
-            # Select missing filters from any remaining fits files
-            for i, channel in enumerate(datause):
-                if channel == None:
-                    for j, datain_filter in enumerate(datain_filter_list):
-                        if not used_filter_flags[j]:
-                            datause[i] = self.datain[j]
-                            used_filter_flags[j] = True
-                            break
-                    
-        self.log.debug('Files used: R = %s  G = %s  B = %s' % (datause[0].filename, datause[1].filename, datause[2].filename) )
+        # Check exposure times
+        exposure_times = [element.getheadval('EXPTIME') for element in datause]
+        if len(set(exposure_times)) != 1:
+            self.log.warning(
+                'Input files have different exposure times: {exposure_times}'
+            )
+
         jpeg_dataout = DataFits(config = self.config)
         jpeg_dataout.header = datause[0].header
-        jpeg_dataout.filename = datause[0].filename
+
+        # removing filter from filename   
+        filternames=self.config['addkeys']['filternames']
+        filename = datause[0].filename
+        for name in filternames:
+            newfilename = filename.replace(f'_{name}_', '_', 1)
+            if newfilename != filename:
+                filename = newfilename
+                break
+        if not filename:
+            filename = "image"    
+        jpeg_dataout.filename = filename
+
         img = datause[0].image
         img1 = datause[1].image
         img2 = datause[2].image
@@ -252,7 +312,12 @@ class StepRGB(StepMOParent):
                 # Find parameters for normalization function
                 kr_res = minimize(rmse_builder(xarray[:, i], noiselum_list[i]), [0.001, 1], method='Nelder-Mead')
                 # Apply normalizaton function
-                imgcube[:,:,i] = logy(numpy.clip(datause[i].image, minsv[i], maxsv[i]), minsv[i], kr_res.x[0], kr_res.x[1]) * 255.
+                scaled = logy(numpy.clip(datause[i].image, minsv[i], maxsv[i]), minsv[i], kr_res.x[0], kr_res.x[1]) 
+
+                scaled = numpy.nan_to_num(scaled, nan=0.0, posinf=1.0, neginf=0.0)
+                scaled = numpy.clip(scaled, 0.0, 1.0)
+
+                imgcube[:, :, i] = (scaled * 255)
 
         else:
             # Old scaling uses square root (sqrt) scaling for each filter
@@ -283,7 +348,7 @@ class StepRGB(StepMOParent):
                     imgcube[:,:,2] = aligned_img2
 
 
-        jpeg_dataout.image = imgcube
+        jpeg_dataout.image = imgcube.astype(numpy.uint8)
         # Create variable containing all the scaled image data
         imgcolor = Image.fromarray(jpeg_dataout.image, mode='RGB')
         # Save colored image as a .tif file (without the labels)
@@ -348,23 +413,24 @@ class StepRGB(StepMOParent):
         imgname +='.jpg'
         # Save the completed image
         imgcolor.save(imgname)
-        self.log.info('Saving file %sjpg' %jpeg_dataout.filenamebegin)
+        self.log.info('Saving file %sjpg' %imgname)
 
         # Optional folder output setup
         baseimgname = os.path.basename(imgname)
-        folderpaths_list = self.getarg('folderpaths').split(':')
-        for path in folderpaths_list:
-            path = time.strftime(path, time.localtime())
-            if not os.path.exists(path):
-                if self.getarg('createfolders'):
-                    os.makedirs(path)
-                    self.log.info('Creating directory %s' %path)
-                else:
-                    self.log.info('Invalid folder path %s' %path)
-            try:
-                imgcolor.save(os.path.join(path, baseimgname))
-            except:
-                self.log.exception('Could not save image to directory %s' %path)
+        if len(self.getarg('folderpaths')):
+            folderpaths_list = self.getarg('folderpaths').split(':')
+            for path in folderpaths_list:
+                path = time.strftime(path, time.localtime())
+                if not os.path.exists(path):
+                    if self.getarg('createfolders'):
+                        os.makedirs(path)
+                        self.log.info('Creating directory %s' %path)
+                    else:
+                        self.log.info('Invalid folder path %s' %path)
+                try:
+                    imgcolor.save(os.path.join(path, baseimgname))
+                except:
+                    self.log.exception('Could not save image to directory %s' %path)
 
         
         ''' End of Label Code '''

@@ -4,7 +4,7 @@
 #   either make your own copy of this file and change it or make a deltaconfig.
 #
 #   2008-11-3 Marc Berthoud Version 0.1: Configuration file for Pipeline Testing
-#   2017-07-28 Atreyo Pal: added bdf section, removed KEYS)
+#   2017-07-28 Atreyo Pal: added bdf section, removed KEYS
 #   2020-08 Josh Garza, Lorenzo Orders: Added new keywords for Astrometry* and BiasDarkFlat
 
 # General Section: configuration of the pipeline
@@ -48,23 +48,24 @@
 ### Pipelines Modes Section: configuration for individual pipeline modes
 
 # Stoneedge User Mode for CCD - for reducing data on your own computer
-#     Use this if you don't have astrometry / sextractor installed
+#     Use this if you don't have astrometry installed
 [mode_seo_user_ccd]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=Stoneedge"
     # list of steps
-    stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryWeb, save, StepFluxCalSex, save, StepRGB
+    stepslist = load, StepAddKeys, StepBiasDarkFlat, save, StepHotpix, save, StepSrcExtPy, save, StepAstrometryWeb, save, StepFluxCal, save, StepRGB
+
 
 # Stoneedge User HDR Mode - for reducing data on your own computer
-#     Use this if you don't have astrometry / sextractor installed
+#     Use this if you don't have astrometry installed
 #     and have HDR (High Dynamic Range i.e. low and high gain) images
 [mode_seo_user_hdr]
     # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=Stoneedge"
     # list of steps
-    stepslist = load, StepAddKeys, StepDataGroup, save, StepSrcExtPy, save, StepAstrometryWeb, save, StepFluxCalSex, save, StepRGB
+    stepslist = load, StepAddKeys, StepDataGroup, save, StepSrcExtPy, save, StepAstrometryWeb, save, StepFluxCal, save, StepRGB
 	# Settings for StepDataGroup to run StepHdr
     [[datagroup]]
         redstepname = StepHdr
@@ -83,7 +84,7 @@
     stepslist = load, StepAddKeys, save, StepHotpix, save, StepRGB
 
 # Stoneedge Server HDR Mode - for reducing HDR data on the server
-#     Use this if you have sextractor and astrometry installed and are
+#     Use this if you have astrometry installed and are
 #     reducing HDR (High Dynamic Range i.e. low and high gain) images
 [mode_seo_server_hdr]
     # List of keyword=values required in file header to select this pipeline mode
@@ -99,13 +100,13 @@
         saveoutput = True
 
 # Stoneedge Server Mode for CCD - for reducing CCD data on the server 
-#     Use this if you have sextractor and astrometry installed and CCD images
+#     Use this if you have astrometry installed and CCD images
 [mode_seo_server_ccd]
 # List of keyword=values required in file header to select this pipeline mode
     #   Format is: Keyword=Value|Keyword=Value|Keyword=Value
     datakeys = "OBSERVAT=Stoneedge"
     # list of steps
-    stepslist = load, StepAddKeys, StepBiasDarkFlat, save, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepRGB
+    stepslist = load, StepAddKeys, StepBiasDarkFlat, save, StepHotpix, save, StepSrcExtPy, save, StepAstrometryLocal, save, StepFluxCal, save, StepStatsMqtt, StepRGB
     # list of steps
     #stepslist = load, StepAddKeys, StepBiasDarkFlat, StepHotpix, save, StepAstrometryLocal, save, StepFluxCalSex, save, StepRGB
 
@@ -173,8 +174,10 @@
 # ADDKEYS step configuration
 [addkeys]
     # List of valid strings for filter names (only used if FILTER keyword is not set)
-    filternames = u-band, g-band, i-band, r-band, z-band, h-alpha, clear
+    #filternames = u-band, g-band, i-band, r-band, z-band, h-alpha, clear
+    filternames = oiii, sii, g-band, i-band, r-band, h-alpha, clear
     keystocopy = OBSERVER, OBJECT, FILTER, GAIN, RA, DEC, DATE-OBS
+    keystodelete = PC1_1, PC1_2, PC2_2, PC2_1
 
 # Local Astrometry Step Configuration
 [astrometrylocal]
@@ -209,7 +212,7 @@
     # ENTER YOUR KEY HERE OR IN DELTA-CONFIG FILE
     api_key = 'XXXXXXXX'
     # Name of table that should be used when solving
-    table_name = ''
+    table_name = 'LTS'
 
 # BiasDarkFlat step configuration
 [biasdarkflat]
@@ -407,7 +410,7 @@
     sourcetableformat = csv
     #Mask Threshold, a variable for the background detection that we don't use
     maskthreshold = 0.0
-    #Background width and height, controls size of background boxes)
+    #Background width and height, controls size of background boxes
     bkg_wh = 16, 16
     #Filter width and height, controls filter width and height in boxes
     bkg_filterwh = 3, 3
@@ -425,6 +428,22 @@
     save_background = true
     #The image most likely wants the bytes to be swapped during analysis, but some formats do not want them swapped
     byte_swap = true
+    
+# StatsMqtt step configuration
+[statsmqtt]
+	# List of step identifiers to log
+	steplist = RAW BDF WCS FCAL
+	# List of header keywords to report on
+	keylist = OBJECT OBSERVER FILTER EXPTIME
+	# Url for MQTT broker
+	broker = starbase.uchicago.edu
+	# port for MQTT
+	port = 8883
+	# Username and password, separated by '|'. Alternatively,
+	# full path of a file containing this information
+	userpass = username|password
+	# MQTT  topic to publish under
+	topic = seo/server/pipeline
 
 ### Data Handling Section
 
