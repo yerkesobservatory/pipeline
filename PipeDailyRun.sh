@@ -38,6 +38,6 @@ python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pip
 python3 ./PipeExecuteAutoDay.py >> AstroLog.txt 2>&1
 
 ### Copy queue data
-python3 /usr/local/lib/python3.6/site-packages/darepype/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode copyqueue -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1
+python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode copyqueue -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1
 ### Run the queue pipeline
 for dpr in $(ls /data/images/queue/A_Test/piperuns/*`date "+_%Y-%m-%d_"`*.txt) ; do darepyperun.py $dpr ; done >> /data/scripts/pipeline/QueueLog.txt 2>&1
