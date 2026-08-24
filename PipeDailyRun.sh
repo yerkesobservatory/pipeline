@@ -10,7 +10,7 @@
 ### Setup
 export PATH=/usr/lib64/qt-3.3/bin:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:$HOME/bin:$PATH
 # Add non-installed packages to path (can add darepype if wanting to use unpublished version)
-export PYTHONPATH=/data/scripts/pipeline/source
+export PYTHONPATH=/data/scripts/darepype:/data/scripts/pipeline/source
 
 PythonVenv=/data/scripts/pipeline/.venv
 PipelineDir=/data/scripts/pipeline
@@ -28,8 +28,6 @@ date >> AstroLog.txt
 
 ### Clear Temp Files
 find /data/images/fitsview/temp/images -type f -atime +2 -delete
-echo Deleting from /tmp:
-find /tmp -type f \( ! -user 0 \) -atime +2 -print -delete 2>&1 >> $PipelineDir/AstroLog.txt | grep -v ": Permission denied" >> $PipelineDir/AstroLog.txt
 
 ### Run Sort Obs
 python3 $DRPath/drp/pipeline.py --loglevel DEBUG --logfile PipeLineLog.txt --pipemode sortobs -c config/dconf_stars.txt config/pipeconf_SEO.txt >> AstroLog.txt 2>&1
