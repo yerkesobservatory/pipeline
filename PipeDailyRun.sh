@@ -15,7 +15,7 @@ export PYTHONPATH=/data/scripts/darepype:/data/scripts/pipeline/source
 PythonVenv=/data/scripts/pipeline/.venv
 PipelineDir=/data/scripts/pipeline
 
-DRPath=/data/scripts/darepype
+DRPath=/data/scripts/darepype/darepype
 
 ### Enter directory and venv
 cd "$PipelineDir"
