@@ -16,7 +16,12 @@ import os # os library
 import numpy # numpy library
 import scipy.ndimage #scipy sublibrary
 import logging # logging object library
-from scipy.ndimage import generic_filter #Used to filter hot pixels
+try:
+    from scipy.ndimage import vectorized_filter as filter
+    backup_filter = False
+except ImportError:
+    from scipy.ndimage import generic_filter as filter
+    backup_filter = True
 from darepype.drp import StepParent # pipe step parent object
 
 class StepHotpix(StepParent):
@@ -59,6 +64,11 @@ class StepHotpix(StepParent):
         self.procname = 'hpx'
         # Set Logger for this pipe step
         self.log = logging.getLogger('hawc.pipe.step.%s' % self.name)
+
+        # Log if using generic_fiilter
+        if backup_filter:
+            self.log.debug('Fell back to generic_filter. Expect slow runtime. Upgrade to Scipy>=1.16 to resolve.')
+
         ### Set Parameter list
         # Clear Parameter list
         self.paramlist = []
@@ -78,7 +88,7 @@ class StepHotpix(StepParent):
         img = self.datain.image
         ''' Cleaning Algorithm '''
         #Apply a filter that creates a threshold for hotpixels
-        blurred = generic_filter(img, numpy.nanmedian, size=3)
+        blurred = filter(img, numpy.nanmedian, size=3)
         difference = img - blurred
         threshold = 10*numpy.nanstd(difference)
         #Find the hotpixels
